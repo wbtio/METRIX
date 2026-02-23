@@ -1,27 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { 
-  RefreshCw, 
-  TrendingUp, 
-  Calendar, 
-  Target, 
-  Lightbulb, 
-  Sparkles, 
-  ChevronDown, 
-  ChevronUp, 
-  Medal,
-  ArrowRight,
-  CheckCircle2,
-  Quote
+import {
+  RefreshCw,
+  Quote,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-// افترض أن ملف الترجمة موجود كما هو
 import { translations, type Language } from '@/lib/translations';
 
 interface WeeklySummary {
@@ -41,13 +27,11 @@ interface WeeklySummaryCardProps {
 }
 
 export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySummaryCardProps) {
-  // تحديد الاتجاه تلقائياً: إذا عربي (rtl) وإلا (ltr)
-  // هذا السطر هو المسؤول عن قلب التصميم كاملاً بشكل سحري
   const direction = language === 'ar' ? 'rtl' : 'ltr';
-  
+  const isArabic = language === 'ar';
+
   const [data, setData] = useState<WeeklySummary | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function loadSummary(forceRefresh = false) {
@@ -68,7 +52,6 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
       const json = await res.json();
       setData(json.data);
     } catch (err: any) {
-      console.error('Error loading summary:', err);
       setError(err?.message || String(err));
     } finally {
       setLoading(false);
@@ -77,262 +60,106 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
 
   useEffect(() => {
     if (goalId) loadSummary();
-    setIsOpen(false);
   }, [goalId]);
 
-  const getWeekRange = () => {
-    const now = new Date();
-    const day = (now.getDay() + 6) % 7; 
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - day);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    return {
-      start: monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      end: sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    };
-  };
-
-  const weekRange = getWeekRange();
-
-  // Loading State
-  if (loading && !data) {
+  if (loading) {
     return (
-      <Card className="w-full rounded-3xl border-border/40 shadow-sm bg-card/50" dir={direction}>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-xl" />
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-24 w-full rounded-2xl" />
-          <div className="grid grid-cols-3 gap-3">
-             <Skeleton className="h-20 w-full rounded-2xl" />
-             <Skeleton className="h-20 w-full rounded-2xl" />
-             <Skeleton className="h-20 w-full rounded-2xl" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8" dir={direction}>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span>{isArabic ? 'جاري التحليل...' : 'Loading...'}</span>
+        </div>
+      </div>
     );
   }
 
-  // Error State
-  if (error && !data) {
+  if (error) {
     return (
-      <Card className="w-full rounded-3xl border-destructive/20 bg-destructive/5" dir={direction}>
-        <CardContent className="p-8 flex flex-col items-center justify-center text-center">
-          <p className="text-destructive mb-4 font-medium">
-            {language === 'ar' ? 'عذراً، حدث خطأ أثناء جلب الملخص' : 'Failed to load summary'}
-          </p>
-          <Button variant="outline" size="sm" onClick={() => loadSummary()} className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-between p-3 rounded-xl border border-destructive/20 bg-destructive/5" dir={direction}>
+        <p className="text-destructive text-xs font-medium">
+          {isArabic ? 'فشل تحميل الملخص' : 'Failed to load'}
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => loadSummary()} className="h-7 text-xs gap-1.5">
+          <RefreshCw className="w-3 h-3" />
+          {isArabic ? 'إعادة' : 'Retry'}
+        </Button>
+      </div>
     );
   }
 
   if (!data) return null;
 
+  const focusTask = data.next_week_plan?.[0]?.task || null;
+
   return (
-    <div 
-      className="bg-card/30 backdrop-blur-xl rounded-2xl border border-border shadow-lg overflow-hidden"
-      dir={direction}
-    >
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        {/* Compact Header - Same style as AdvancedAnalytics */}
-        <div className={cn("px-4 py-3 border-b border-border/40 bg-card/20 transition-all", isOpen && "pb-3")}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div className="shrink-0 w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-                <Sparkles className="w-4 h-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-foreground">
-                  {language === 'ar' ? 'ملخص الأسبوع' : 'Weekly Summary'}
-                </h3>
-                {!isOpen && data && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-medium text-chart-2">
-                      {data.completed_count} {language === 'ar' ? 'نشاط' : 'activities'}
-                    </span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="font-medium text-primary">
-                      {data.total_points} {language === 'ar' ? 'نقطة' : 'pts'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); loadSummary(true); }}
-                disabled={loading}
-                className="h-7 w-7 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-              >
-                <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-              </Button>
-              <CollapsibleTrigger asChild>
-                <button className="shrink-0 p-1.5 hover:bg-muted rounded-lg transition-colors">
-                  {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-              </CollapsibleTrigger>
-            </div>
-          </div>
+    <div className="space-y-2" dir={direction}>
+
+      {/* ROW 1: Points + Activities + Best Day */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+        {/* Points */}
+        <div className="bg-primary/5 border border-primary/10 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+          <span className="text-[9px] sm:text-[10px] font-bold text-primary uppercase">
+            {isArabic ? 'نقاط' : 'Points'}
+          </span>
+          <span className="text-base sm:text-xl font-black text-foreground">{data.total_points}</span>
         </div>
 
-        <CollapsibleContent>
-          <div className="p-4 space-y-4">
-            
-            {/* Coach Message Section */}
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
-              <div className="relative bg-card/80 border border-primary/10 rounded-2xl p-5">
-                <div className="flex gap-4 items-start">
-                   <div className="shrink-0 mt-1">
-                      <Quote className="w-5 h-5 text-primary/60" />
-                   </div>
-                   <p className="text-sm md:text-base text-foreground/90 leading-relaxed font-medium">
-                     {data.coach_message}
-                   </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-3">
-              <StatBox 
-                icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
-                label={language === 'ar' ? 'الأنشطة' : 'Activities'}
-                value={data.completed_count}
-              />
-              <StatBox 
-                icon={<TrendingUp className="w-4 h-4 text-blue-500" />}
-                label={language === 'ar' ? 'النقاط' : 'Points'}
-                value={data.total_points}
-                highlight
-              />
-              <StatBox 
-                icon={<Calendar className="w-4 h-4 text-orange-500" />}
-                label={language === 'ar' ? 'أفضل يوم' : 'Best Day'}
-                value={data.best_day ? new Date(data.best_day).toLocaleDateString('en-US', { weekday: 'short' }) : '-'}
-              />
-            </div>
-
-            {/* Best Activity */}
-            {data.best_activity && (
-              <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500/10 to-transparent p-3 rounded-xl border-l-4 border-orange-500/50 ltr:border-l-4 rtl:border-r-4 rtl:border-l-0">
-                <Medal className="w-5 h-5 text-orange-600 shrink-0" />
-                <span className="text-sm font-medium text-foreground/80">
-                  {language === 'ar' ? 'أفضل نشاط:' : 'Best Activity:'} <span className="text-foreground font-bold">{data.best_activity}</span>
-                </span>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              {/* Patterns */}
-              {data.patterns?.length > 0 && (
-                <SectionList 
-                  title={language === 'ar' ? 'الأنماط الملاحظة' : 'Observed Patterns'}
-                  icon={<TrendingUp className="w-4 h-4" />}
-                  items={data.patterns}
-                  colorClass="text-blue-500"
-                  bgClass="bg-blue-500/10"
-                />
-              )}
-
-              {/* Improvements */}
-              {data.improvements?.length > 0 && (
-                <SectionList 
-                  title={language === 'ar' ? 'اقتراحات للتحسين' : 'Improvements'}
-                  icon={<Lightbulb className="w-4 h-4" />}
-                  items={data.improvements}
-                  colorClass="text-yellow-600"
-                  bgClass="bg-yellow-500/10"
-                />
-              )}
-
-              {/* Next Week Plan */}
-              {data.next_week_plan?.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-primary/10 rounded-lg">
-                      <Target className="w-4 h-4 text-primary" />
-                    </div>
-                    <h4 className="text-sm font-bold text-foreground">
-                      {language === 'ar' ? 'خطة الأسبوع القادم' : 'Next Week Plan'}
-                    </h4>
-                  </div>
-                  <div className="grid gap-2">
-                    {data.next_week_plan.map((task, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors border border-transparent hover:border-border">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                          <span className="text-sm font-medium truncate">{task.task}</span>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] h-5 rounded-full px-2 bg-background shrink-0">
-                          {task.frequency}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-}
-
-// مكونات فرعية صغيرة لتبسيط الكود الرئيسي
-
-function StatBox({ icon, label, value, highlight = false }: { icon: any, label: string, value: any, highlight?: boolean }) {
-  return (
-    <div className={cn(
-      "flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200",
-      highlight 
-        ? "bg-primary/5 border-primary/20 shadow-sm" 
-        : "bg-card border-border/40 hover:bg-muted/30"
-    )}>
-      <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-        {icon}
-        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">{label}</span>
-      </div>
-      <p className={cn("text-xl font-bold tracking-tight", highlight ? "text-primary" : "text-foreground")}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function SectionList({ title, icon, items, colorClass, bgClass }: { title: string, icon: any, items: string[], colorClass: string, bgClass: string }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className={cn("p-1.5 rounded-lg", bgClass)}>
-          <div className={colorClass}>{icon}</div>
+        {/* Activities */}
+        <div className="bg-muted/25 border border-border/30 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+          <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+            {isArabic ? 'أنشطة' : 'Activities'}
+          </span>
+          <span className="text-base sm:text-xl font-black text-foreground">{data.completed_count}</span>
         </div>
-        <h4 className="text-sm font-bold text-foreground">{title}</h4>
+
+        {/* Best Day */}
+        <div className="bg-muted/25 border border-border/30 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+          <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+            {isArabic ? 'أفضل يوم' : 'Best Day'}
+          </span>
+          <span className="text-sm sm:text-base font-black text-foreground">
+            {data.best_day
+              ? new Date(data.best_day).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'short' })
+              : '-'}
+          </span>
+        </div>
       </div>
-      <div className="space-y-2 ltr:pl-2 rtl:pr-2">
-        {items.map((item, i) => (
-          <div key={i} className="flex gap-3 text-sm text-muted-foreground/90 group">
-            <ArrowRight className={cn("w-4 h-4 mt-0.5 shrink-0 transition-transform opacity-50 group-hover:opacity-100 rtl:rotate-180", colorClass)} />
-            <span className="leading-relaxed">{item}</span>
+
+      {/* ROW 2: Coach Message + Focus Task + Refresh */}
+      <div className="space-y-1.5 sm:space-y-0 sm:flex sm:items-stretch sm:gap-2">
+        {/* Coach message */}
+        {data.coach_message && (
+          <div className="flex items-center gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-primary/5 rounded-lg sm:rounded-xl border border-primary/10 min-w-0 sm:flex-1">
+            <Quote className="w-3.5 h-3.5 text-primary/40 shrink-0" />
+            <p className="text-[11px] sm:text-xs font-medium text-foreground/70 italic line-clamp-2 sm:truncate" title={data.coach_message}>
+              {data.coach_message}
+            </p>
           </div>
-        ))}
+        )}
+
+        <div className="flex items-stretch gap-1.5 sm:gap-2">
+          {/* Focus task */}
+          {focusTask && (
+            <div className="flex items-center gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-muted/20 rounded-lg sm:rounded-xl border border-border/30 flex-1 sm:flex-none sm:max-w-[40%] min-w-0">
+              <Target className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-[11px] sm:text-xs font-semibold text-foreground/70 truncate" title={focusTask}>
+                {focusTask}
+              </span>
+            </div>
+          )}
+
+          {/* Refresh */}
+          <button
+            onClick={() => loadSummary(true)}
+            disabled={loading}
+            className="shrink-0 px-2.5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-muted/20 border border-border/30 text-muted-foreground/50 hover:text-primary transition-colors"
+            title={isArabic ? 'تحديث' : 'Refresh'}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }

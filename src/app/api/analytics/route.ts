@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: Request) {
     try {
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'goalId is required' }, { status: 400 });
         }
 
-        const supabase = createClient();
+        const supabase = await createClient();
 
         // Check if we have cached analytics (less than 1 hour old)
         if (!forceRefresh) {
@@ -85,8 +85,11 @@ export async function POST(req: Request) {
 
         // Calculate analytics
         const now = new Date();
+
+        // Week starts on Monday (consistent with weekly-summary route)
         const currentWeekStart = new Date(now);
-        currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0, Sun=6
+        currentWeekStart.setDate(now.getDate() - dayOfWeek);
         currentWeekStart.setHours(0, 0, 0, 0);
 
         const lastWeekStart = new Date(currentWeekStart);
@@ -117,11 +120,13 @@ export async function POST(req: Request) {
         const totalPoints = allLogs.reduce((sum, log) => sum + log.ai_score, 0);
         const averagePointsPerLog = totalPoints / allLogs.length;
 
-        // Total active days (unique dates)
-        const uniqueDates = new Set(
-            allLogs.map(log => new Date(log.created_at).toISOString().split('T')[0])
+        // Total active days this week (unique dates within current week)
+        const uniqueThisWeek = new Set(
+            allLogs
+                .filter(log => new Date(log.created_at) >= currentWeekStart)
+                .map(log => new Date(log.created_at).toISOString().split('T')[0])
         );
-        const totalActiveDays = uniqueDates.size;
+        const totalActiveDays = uniqueThisWeek.size;
 
         // Most productive day (day with highest total points)
         const dayPoints: Record<string, number> = {};

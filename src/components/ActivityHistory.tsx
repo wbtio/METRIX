@@ -24,9 +24,10 @@ interface ActivityHistoryProps {
     logs: Log[];
     language?: Language;
     onLogDeleted?: () => void;
+    embedded?: boolean;
 }
 
-export default function ActivityHistory({ logs, language = 'en', onLogDeleted }: ActivityHistoryProps) {
+export default function ActivityHistory({ logs, language = 'en', onLogDeleted, embedded = false }: ActivityHistoryProps) {
     const t = translations[language];
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
     const supabase = createClient();
@@ -52,8 +53,8 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted }:
     };
     if (logs.length === 0) {
         return (
-            <div className="bg-card/30 backdrop-blur-xl p-8 rounded-[32px] shadow-2xl border border-border">
-                <div className="text-center p-8 bg-muted/20 rounded-2xl border border-dashed border-border">
+            <div className={embedded ? "h-full" : "bg-card/30 backdrop-blur-xl p-4 sm:p-8 rounded-[20px] sm:rounded-[32px] shadow-2xl border border-border"}>
+                <div className={embedded ? "text-center p-8 bg-muted/20 rounded-2xl border border-dashed border-border h-full flex flex-col items-center justify-center" : "text-center p-8 bg-muted/20 rounded-2xl border border-dashed border-border"}>
                     <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-muted-foreground font-medium">{t.noActivityYet}</p>
                 </div>
@@ -67,23 +68,33 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted }:
     };
 
     return (
-        <div className="bg-card/30 backdrop-blur-xl p-6 rounded-[32px] shadow-2xl border border-border relative overflow-hidden ring-1 ring-border/5 space-y-4 h-fit">
-            <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-chart-3" /> {t.activityHistory}
+        <div className={embedded ? "h-full min-h-0 flex flex-col overflow-hidden" : "bg-card/40 backdrop-blur-xl p-4 sm:p-6 rounded-[20px] sm:rounded-[32px] shadow-2xl border border-border/80 relative overflow-hidden ring-1 ring-border/10 space-y-3 sm:space-y-4 h-full min-h-[320px]"}>
+            {!embedded && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />}
+
+            <div className={embedded ? "flex items-center justify-between shrink-0 mb-3" : "flex items-center justify-between"}>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-chart-3" /> {t.activityHistory}
                 </h3>
                 <div className="text-xs text-muted-foreground font-medium">
                     {logs.length} {logs.length === 1 ? t.entry : t.entries}
                 </div>
             </div>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-                {logs.slice(0, 10).map((log) => {
+
+            <div
+                className={embedded
+                    ? "flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pl-1 pb-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted/50 transition-colors"
+                    : "space-y-3 max-h-[420px] sm:max-h-[460px] overflow-y-auto pr-3 pl-1 pb-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted/50 transition-colors"
+                }
+            >
+
+                
+                {logs.map((log) => {
                     const userInputRTL = isRTL(log.user_input);
                     const feedbackRTL = log.ai_feedback ? isRTL(log.ai_feedback) : false;
                     const isExpanded = expandedLogId === log.id;
-                    
+
                     return (
-                        <div key={log.id} className="bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border shadow-sm hover:shadow-lg hover:border-chart-3/30 hover:bg-card/70 transition-all group">
+                        <div key={log.id} className="bg-card/60 backdrop-blur-sm p-4 rounded-2xl border border-border/80 shadow-sm hover:shadow-lg hover:border-chart-3/30 hover:bg-card/80 transition-all group">
                             {/* First Row: Date/Time, Points, Menu Button */}
                             <div className="flex items-center justify-between gap-3 mb-2">
                                 <div className="flex items-center gap-2">
@@ -118,9 +129,9 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted }:
                                 </div>
                             </div>
 
-                            {/* Second Row: Activity Text (Full Width - Always Shown) */}
-                            <p 
-                                className="text-foreground font-semibold text-sm leading-relaxed whitespace-pre-wrap"
+                            {/* Second Row: Activity Text */}
+                            <p
+                                className={`text-foreground font-semibold text-sm leading-relaxed whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}
                                 dir={userInputRTL ? 'rtl' : 'ltr'}
                                 style={{ textAlign: userInputRTL ? 'right' : 'left' }}
                             >
@@ -132,12 +143,12 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted }:
                                 <div className="mt-3 pt-3 border-t border-border animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className="bg-chart-1/5 p-3 rounded-xl flex gap-2 text-xs text-chart-1 items-start border border-chart-1/20">
                                         <MessageSquare className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                                        <p 
+                                        <p
                                             className="italic flex-1 leading-relaxed"
                                             dir={feedbackRTL ? 'rtl' : 'ltr'}
                                             style={{ textAlign: feedbackRTL ? 'right' : 'left' }}
                                         >
-                                            "{log.ai_feedback}"
+                                            &quot;{log.ai_feedback}&quot;
                                         </p>
                                     </div>
                                 </div>

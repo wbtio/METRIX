@@ -38,6 +38,10 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
     // In-app notifications
     const [notification, setNotification] = useState<{ type: 'error' | 'warning' | 'info', message: string } | null>(null);
 
+    // Cooldown after quota errors to prevent spamming
+    const [cooldownUntil, setCooldownUntil] = useState<number>(0);
+    const isCoolingDown = Date.now() < cooldownUntil;
+
     // Speech Recognition
     const [isRecording, setIsRecording] = useState(false);
     const recognitionRef = useRef<any>(null);
@@ -196,6 +200,10 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
 
     const handleInvestigate = async (currentAnswers?: any) => {
         if (!goalText.trim()) return;
+        if (isCoolingDown) {
+            setNotification({ type: 'warning', message: resolvedLanguage === 'ar' ? 'يرجى الانتظار قبل المحاولة مرة أخرى.' : 'Please wait before trying again.' });
+            return;
+        }
         setLoading(true);
         try {
             const res = await fetch('/api/goal/investigate', {
@@ -206,7 +214,25 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
                     context: currentAnswers || {}
                 }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                if (data?.error === 'quota_exceeded') {
+                    const cooldownSec = Math.max(30, data.retryAfterSeconds || 60);
+                    setCooldownUntil(Date.now() + cooldownSec * 1000);
+                    setNotification({ type: 'warning', message: resolvedLanguage === 'ar' ? data.message_ar : data.message_en });
+                    return;
+                }
+                throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+            }
+
+            if (data.error === 'quota_exceeded') {
+                const cooldownSec = Math.max(30, data.retryAfterSeconds || 60);
+                setCooldownUntil(Date.now() + cooldownSec * 1000);
+                setNotification({ type: 'warning', message: resolvedLanguage === 'ar' ? data.message_ar : data.message_en });
+                return;
+            }
+
             setInvestigationResult(data);
 
             if (data.status === 'refused') {
@@ -240,7 +266,25 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
                     targetDeadline
                 }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                if (data?.error === 'quota_exceeded') {
+                    const cooldownSec = Math.max(30, data.retryAfterSeconds || 60);
+                    setCooldownUntil(Date.now() + cooldownSec * 1000);
+                    setNotification({ type: 'warning', message: resolvedLanguage === 'ar' ? data.message_ar : data.message_en });
+                    return;
+                }
+                throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+            }
+
+            if (data.error === 'quota_exceeded') {
+                const cooldownSec = Math.max(30, data.retryAfterSeconds || 60);
+                setCooldownUntil(Date.now() + cooldownSec * 1000);
+                setNotification({ type: 'warning', message: resolvedLanguage === 'ar' ? data.message_ar : data.message_en });
+                return;
+            }
+
             if (data.status === 'unrealistic') {
                 setNotification({ type: 'warning', message: data.realism_check?.suggested_adjustments?.[0] || 'This plan might need adjustments.' });
             }
@@ -259,11 +303,20 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
     };
 
     const submitAnswers = () => {
-        // Pass answers directly as an object map { [question_id]: answer }
-        handleInvestigate(answers);
+        // Build a context map that pairs question text with answers
+        // so the AI knows what each answer means (not just "q1": "106")
+        const contextWithQuestions: Record<string, string> = {};
+        if (investigationResult?.questions) {
+            for (const q of investigationResult.questions) {
+                if (answers[q.id]) {
+                    contextWithQuestions[q.question] = answers[q.id];
+                }
+            }
+        }
+        handleInvestigate(contextWithQuestions);
     };
 
-    if (loading && step !== 'INPUT') { // Only show full loader if not in input (input handles its own loading state usually, or we can keep it simple)
+    if (loading && step !== 'INPUT') {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
@@ -302,6 +355,7 @@ export default function GoalCreator({ onComplete, onCancel, language = 'en' }: G
                     onToggleRecording={toggleRecording}
                     isLoading={loading}
                     placeholder={t.goalInputPlaceholder}
+                    language={resolvedLanguage}
                 />
             </div>
         );

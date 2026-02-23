@@ -2,17 +2,20 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import type { User } from '@supabase/supabase-js';
 
 interface OrbitShellProps {
     children: React.ReactNode;
     className?: string;
     backgroundIntensity?: 'low' | 'medium' | 'high';
+    user?: User | null;
 }
 
 export default function OrbitShell({
     children,
     className,
-    backgroundIntensity = 'medium'
+    backgroundIntensity = 'medium',
+    user
 }: OrbitShellProps) {
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground selection:bg-primary/30 font-sans transition-colors duration-300">

@@ -27,13 +27,13 @@ const DockItem = ({ icon: Icon, label, isActive, onClick }: DockItemProps) => {
                     <button
                         onClick={onClick}
                         className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 ease-out group",
-                            isActive
-                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-110 -translate-y-2"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-105 hover:-translate-y-1"
+                              "relative flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl transition-all duration-300 ease-out group",
+                              isActive
+                                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105 sm:scale-110 -translate-y-1 sm:-translate-y-2"
+                                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-105 hover:-translate-y-1"
                         )}
                     >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         {isActive && (
                             <span className="absolute -bottom-2 w-1 h-1 bg-primary-foreground rounded-full opacity-50" />
                         )}
@@ -71,9 +71,9 @@ export default function OrbitDock({
     };
 
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-4">
-            {/* DOCK BAR */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-background/60 backdrop-blur-xl border border-border rounded-3xl shadow-2xl ring-1 ring-border/10">
+          <div className="fixed bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 sm:gap-4 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]">
+              {/* DOCK BAR */}
+              <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 bg-background/80 backdrop-blur-xl border border-border rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-border/10 max-w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
 
                 <DockItem
                     icon={Home}
@@ -89,10 +89,10 @@ export default function OrbitDock({
                     onClick={() => handleTabChange('goals')}
                 />
 
-                <div className="w-px h-8 bg-border mx-1" />
+                <div className="w-px h-6 sm:h-8 bg-border mx-0.5 sm:mx-1" />
 
                 {/* PINNED GOALS */}
-                {goals.filter(g => g.is_pinned).map(goal => {
+                {goals.filter(g => g.is_pinned).slice(0, 4).map(goal => {
                     const GoalIcon = getIconComponent(goal.icon || 'Target');
                     return (
                         <DockItem
@@ -109,7 +109,7 @@ export default function OrbitDock({
                 })}
 
                 {goals.some(g => g.is_pinned) && (
-                    <div className="w-px h-8 bg-border mx-1" />
+                    <div className="w-px h-6 sm:h-8 bg-border mx-0.5 sm:mx-1" />
                 )}
 
                 <DockItem

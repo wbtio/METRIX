@@ -1,25 +1,25 @@
 'use client';
 
-import { 
-    Target, 
-    Zap, 
-    Book, 
-    Briefcase, 
-    Dumbbell, 
-    GraduationCap, 
-    Heart, 
-    Home, 
-    Globe, 
-    Music, 
-    Palette, 
-    Plane, 
-    Code, 
-    Coffee, 
-    Gamepad, 
-    Lightbulb, 
-    Smile, 
-    Star, 
-    Sun, 
+import {
+    Target,
+    Zap,
+    Book,
+    Briefcase,
+    Dumbbell,
+    GraduationCap,
+    Heart,
+    Home,
+    Globe,
+    Music,
+    Palette,
+    Plane,
+    Code,
+    Coffee,
+    Gamepad,
+    Lightbulb,
+    Smile,
+    Star,
+    Sun,
     Trophy,
     User,
     Video,
@@ -221,26 +221,26 @@ export function IconPicker({ selectedIcon, onSelectIcon, className }: IconPicker
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button 
-                    variant="outline" 
+                <Button
+                    variant="outline"
                     className={cn("w-12 h-12 p-0 rounded-xl", className)}
                 >
                     <SelectedIconComponent className="w-6 h-6" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-96 p-4 max-h-96 overflow-y-auto" align="start">
-                <div className="grid grid-cols-8 gap-2">
+            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-3 sm:p-4 max-h-72 sm:max-h-96 overflow-y-auto" align="center" side="bottom" sideOffset={8}>
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 sm:gap-2">
                     {Object.entries(ICONS).map(([name, Icon]) => (
                         <Button
                             key={name}
                             variant="ghost"
                             className={cn(
-                                "w-10 h-10 p-0 rounded-lg hover:bg-muted",
+                                "w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-lg hover:bg-muted",
                                 selectedIcon === name && "bg-primary/20 text-primary hover:bg-primary/30"
                             )}
                             onClick={() => onSelectIcon(name)}
                         >
-                            <Icon className="w-5 h-5" />
+                            <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         </Button>
                     ))}
                 </div>

@@ -1,7 +1,11 @@
 'use client';
 
-import { Target, LayoutDashboard } from 'lucide-react';
+import { Target, LayoutDashboard, LogOut } from 'lucide-react';
 import { getIconComponent } from './IconPicker';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import {
     Sidebar,
     SidebarContent,
@@ -24,12 +28,28 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export default function AppSidebar({ goals, selectedGoalId, onSelectGoal, ...props }: AppSidebarProps) {
     const { isMobile, setOpenMobile } = useSidebar();
+    const supabase = createClient();
+    const router = useRouter();
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+    }, [supabase]);
 
     const handleGoalSelect = (id: string | null) => {
         onSelectGoal(id);
         if (isMobile) {
             setOpenMobile(false);
         }
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push('/login');
     };
 
     return (
@@ -97,14 +117,35 @@ export default function AppSidebar({ goals, selectedGoalId, onSelectGoal, ...pro
             <SidebarFooter>
                  <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg">
-                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-tr from-primary to-chart-4">
-                                {/* User Avatar/Initial could go here */}
+                        <SidebarMenuButton size="lg" className="group">
+                            {user?.user_metadata?.avatar_url ? (
+                                <img 
+                                    src={user.user_metadata.avatar_url} 
+                                    alt={user.user_metadata?.full_name || 'User'} 
+                                    className="flex aspect-square size-8 rounded-lg object-cover"
+                                />
+                            ) : (
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-tr from-primary to-chart-4 text-primary-foreground font-semibold">
+                                    {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                                </div>
+                            )}
+                            <div className="flex flex-col gap-0.5 leading-none text-left flex-1 min-w-0">
+                                <span className="font-semibold truncate">
+                                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                                </span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                    {user?.email || 'No email'}
+                                </span>
                             </div>
-                            <div className="flex flex-col gap-0.5 leading-none text-left">
-                                <span className="font-semibold">My Account</span>
-                                <span className="text-xs text-muted-foreground">Free Plan</span>
-                            </div>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton 
+                            onClick={handleLogout}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                            <LogOut className="size-4" />
+                            <span>Logout</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { Target, Sparkles, Plus, Calendar, Pin } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Pin, Mic, ArrowUp, StopCircle } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import GoalCreator from './GoalCreator';
 import ManualGoalCreator from './ManualGoalCreator';
 import GoalTemplates, { type GoalTemplate } from './GoalTemplates';
 import Image from 'next/image';
 import { getIconComponent } from './IconPicker';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 interface Goal {
     id: string;
@@ -32,44 +34,84 @@ export default function HomePage({ goals, onGoalCreated, onSelectGoal, language 
     const t = translations[language];
     const [creationMode, setCreationMode] = useState<'none' | 'ai' | 'manual' | 'template'>('none');
     const [selectedTemplate, setSelectedTemplate] = useState<GoalTemplate | null>(null);
+    const [goalInput, setGoalInput] = useState('');
+    const [showManualDialog, setShowManualDialog] = useState(false);
+    const [manualInitialData, setManualInitialData] = useState<{ title?: string } | undefined>(undefined);
+    const [isRecording, setIsRecording] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     const isArabic = language === 'ar';
-    const recentGoals = goals.slice(0, 3);
+    const recentGoals = goals.slice(0, 2);
 
     const isRTL = (text: string) => {
         const arabicRegex = /[\u0600-\u06ff]/;
         return arabicRegex.test(text);
     };
 
-    if (creationMode === 'ai') {
-        return (
-            <div className="w-full max-w-3xl animate-in fade-in zoom-in-95 duration-500">
-                <GoalCreator
-                    onComplete={() => {
-                        onGoalCreated();
-                        setCreationMode('none');
-                    }}
-                    onCancel={() => setCreationMode('none')}
-                    language={language}
-                />
-            </div>
-        );
-    }
+    const handleGoalInputSubmit = () => {
+        if (goalInput.trim()) {
+            setCreationMode('ai');
+        }
+    };
 
-    if (creationMode === 'manual') {
-        return (
-            <div className="w-full max-w-3xl animate-in fade-in zoom-in-95 duration-500">
-                <ManualGoalCreator
-                    onComplete={() => {
-                        onGoalCreated();
-                        setCreationMode('none');
-                    }}
-                    onCancel={() => setCreationMode('none')}
-                    language={language}
-                />
-            </div>
-        );
-    }
+    const startRecording = () => {
+        if (typeof window === 'undefined') return;
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert(language === 'ar' ? 'التعرف على الصوت غير مدعوم. استخدم Chrome أو Edge.' : 'Speech recognition not supported. Use Chrome or Edge.');
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = language === 'ar' ? 'ar-SA' : 'en-US';
+
+        recognition.onresult = (event: any) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript + ' ';
+            }
+            if (transcript) {
+                setGoalInput(prev => prev + transcript);
+            }
+        };
+
+        recognition.onerror = (e: any) => {
+            console.warn('Speech recognition issue:', e.error);
+            if (e.error === 'network') {
+                alert(language === 'ar'
+                    ? 'تعذر الاتصال بخدمة التعرف الصوتي. تأكد من الإنترنت وحاول مرة أخرى.'
+                    : 'Unable to reach speech recognition service. Check your internet and try again.');
+            }
+            setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+            setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+        setIsRecording(true);
+    };
+
+    const stopRecording = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+            recognitionRef.current = null;
+        }
+        setIsRecording(false);
+    };
+
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
 
     if (creationMode === 'template' && selectedTemplate) {
         return (
@@ -103,72 +145,167 @@ export default function HomePage({ goals, onGoalCreated, onSelectGoal, language 
 
     return (
         <div
-            className="w-full max-w-6xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500"
+            className="w-full max-w-6xl space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
             {/* Logo */}
-            <div className="flex justify-center items-center mb-8 text-center">
-                <Image 
-                    src="/logo1.svg" 
-                    alt="METRIX Logo" 
-                    width={240} 
+            <div className="flex justify-center items-center mb-4 sm:mb-8 text-center">
+                <Image
+                    src="/logo1.svg"
+                    alt="METRIX Logo"
+                    width={240}
                     height={96}
-                    className="object-contain"
+                    className="w-[170px] sm:w-[220px] md:w-[240px] h-auto object-contain"
                     priority
                 />
             </div>
 
-            {/* Goal Creation Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                {/* AI-Powered Goal Creation */}
+            {/* Quick Goal Creation Input */}
+            <div
+                className={cn(
+                    "relative flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 transition-all duration-200",
+                    "bg-background/95 backdrop-blur-sm",
+                    "border border-border rounded-2xl sm:rounded-[20px]",
+                    "shadow-sm",
+                    "focus-within:border-primary/40 focus-within:shadow-md",
+                    isRecording && "border-red-500/30 bg-red-50/5"
+                )}
+                dir={isArabic ? 'rtl' : 'ltr'}
+            >
+                {/* Voice Button */}
                 <button
-                    onClick={() => setCreationMode('ai')}
-                    className={`group relative bg-primary/5 hover:bg-primary/10 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-primary/20 hover:border-primary/40 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${isArabic ? 'text-right' : 'text-left'}`}
+                    onClick={toggleRecording}
+                    aria-pressed={isRecording}
+                    aria-label={isRecording
+                        ? (language === 'ar' ? 'إيقاف التسجيل الصوتي' : 'Stop voice recording')
+                        : (language === 'ar' ? 'بدء التسجيل الصوتي' : 'Start voice recording')}
+                    className={cn(
+                        "relative h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-full border transition-all duration-200 flex items-center justify-center",
+                        "shadow-sm",
+                        isRecording
+                            ? "border-red-400/80 bg-red-500/15 text-red-700 hover:bg-red-500/20 ring-2 ring-red-400/30 dark:text-red-300"
+                            : "border-emerald-300/70 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:border-emerald-400 dark:text-emerald-300"
+                    )}
+                    title={isRecording ? (language === 'ar' ? 'إيقاف التسجيل' : 'Stop Recording') : (language === 'ar' ? 'إدخال صوتي' : 'Voice input')}
                 >
-                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/10/40 to-transparent opacity-40" />
-                    <div className="relative flex items-center gap-3 md:gap-4">
-                        <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
-                            <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-base md:text-lg font-bold text-foreground mb-1">
-                                {language === 'ar' ? 'إنشاء بالذكاء الاصطناعي' : 'AI-Powered Creation'}
-                            </h3>
-                            <p className="text-xs md:text-sm text-muted-foreground leading-snug">
-                                {language === 'ar' 
-                                    ? 'اكتب هدفك ودع الذكاء الاصطناعي يخطط لك المهام والجدول الزمني'
-                                    : 'Describe your goal and let AI plan your tasks and timeline'}
-                            </p>
-                        </div>
-                    </div>
+                    {isRecording && (
+                        <span className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" />
+                    )}
+                    {isRecording ? (
+                        <StopCircle className="w-4 h-4 fill-current relative z-10" />
+                    ) : (
+                        <Mic className="w-4 h-4 relative z-10" />
+                    )}
                 </button>
 
-                {/* Manual Goal Creation */}
-                <button
-                    onClick={() => setCreationMode('manual')}
-                    className={`group relative bg-card/40 hover:bg-card/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-border hover:border-primary/30 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${isArabic ? 'text-right' : 'text-left'}`}
+                {/* Input Field */}
+                    <input
+                      type="text"
+                      value={goalInput}
+                      onChange={(e) => setGoalInput(e.target.value)}
+                      onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                              handleGoalInputSubmit();
+                          }
+                      }}
+                      placeholder={isRecording ? (language === 'ar' ? 'جارِ الاستماع...' : 'Listening...') : (language === 'ar' ? 'اكتب هدفك هنا...' : 'Write your goal here...')}
+                      className={cn(
+                          "flex-1 min-w-0 min-h-[40px] sm:min-h-[44px] bg-transparent border-none outline-none",
+                          "text-sm sm:text-base font-medium text-foreground placeholder:text-muted-foreground/50",
+                          isArabic ? "text-right" : "text-left",
+                          isRecording && "placeholder:text-red-500/60",
+                          "px-1.5 sm:px-2"
+                      )}
+                      dir={isArabic ? 'rtl' : 'ltr'}
+                  />
+
+                  {/* Manual Creation Button (inside field) */}
+                  <button
+                      onClick={() => {
+                          const trimmedGoal = goalInput.trim();
+                          setManualInitialData(trimmedGoal ? { title: trimmedGoal } : undefined);
+                          setShowManualDialog(true);
+                      }}
+                      className={cn(
+                            "h-10 sm:h-11 shrink-0 rounded-xl sm:rounded-2xl border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap",
+                          "bg-background/95",
+                          "border-border text-foreground/90",
+                          "transition-all duration-200 shadow-sm",
+                          "hover:border-primary/40 hover:shadow-md hover:text-foreground"
+                      )}
+                      title={language === 'ar' ? 'إضافة الهدف يدوياً' : 'Add goal manually'}
+                  >
+                      {language === 'ar' ? 'يدويًا' : 'Manual'}
+                  </button>
+
+                  {/* AI Send Button */}
+                  <button
+                    onClick={handleGoalInputSubmit}
+                    disabled={!goalInput.trim()}
+                    aria-label={language === 'ar' ? 'إرسال الهدف للتحليل الذكي' : 'Send goal for AI planning'}
+                    className={cn(
+                        "h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-full border transition-all duration-200 flex items-center justify-center",
+                        "shadow-sm",
+                        goalInput.trim()
+                            ? "border-violet-300/70 bg-violet-500/10 text-violet-700 hover:bg-violet-500/20 hover:border-violet-400 dark:text-violet-300"
+                            : "border-border/70 bg-muted/40 text-muted-foreground/50 cursor-not-allowed"
+                    )}
+                    title={language === 'ar' ? 'إرسال للذكاء' : 'Send to AI'}
                 >
-                    <div className="relative flex items-center gap-3 md:gap-4">
-                        <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-muted flex items-center justify-center border border-border group-hover:scale-105 transition-transform">
-                            <Plus className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-base md:text-lg font-bold text-foreground mb-1">
-                                {language === 'ar' ? 'إضافة يدوية' : 'Manual Creation'}
-                            </h3>
-                            <p className="text-xs md:text-sm text-muted-foreground leading-snug">
-                                {language === 'ar'
-                                    ? 'أضف هدفك يدوياً مع تحديد المهام والمدة والتواريخ'
-                                    : 'Add your goal manually with custom tasks, duration, and dates'}
-                            </p>
-                        </div>
-                    </div>
+                    <ArrowUp className="w-4 h-4" />
                 </button>
             </div>
 
+            {/* AI Goal Creator - Shown inline when user types */}
+            {creationMode === 'ai' && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <GoalCreator
+                        onComplete={() => {
+                            onGoalCreated();
+                            setCreationMode('none');
+                            setGoalInput('');
+                        }}
+                        onCancel={() => {
+                            setCreationMode('none');
+                            setGoalInput('');
+                        }}
+                        language={language}
+                    />
+                </div>
+            )}
+
+            {/* Manual Goal Creator Dialog */}
+            <Dialog
+                open={showManualDialog}
+                onOpenChange={(open) => {
+                    setShowManualDialog(open);
+                    if (!open) {
+                        setManualInitialData(undefined);
+                    }
+                }}
+            >
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir={isArabic ? 'rtl' : 'ltr'}>
+                    <DialogTitle className="sr-only">
+                        {isArabic ? 'إضافة هدف يدوياً' : 'Create goal manually'}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {isArabic ? 'حدد تفاصيل الهدف والمهام المطلوبة' : 'Set goal details and required tasks'}
+                    </DialogDescription>
+                    <ManualGoalCreator
+                        onComplete={() => {
+                            onGoalCreated();
+                            setShowManualDialog(false);
+                        }}
+                        onCancel={() => setShowManualDialog(false)}
+                        language={language}
+                        initialData={manualInitialData}
+                    />
+                </DialogContent>
+            </Dialog>
+
             {/* Goal Templates */}
-            <div className="bg-card/30 backdrop-blur-xl p-5 rounded-[28px] border border-border shadow-lg">
-                <GoalTemplates 
+            <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[18px] sm:rounded-[24px] border border-border shadow-lg">
+                <GoalTemplates
                     onSelectTemplate={(template) => {
                         setSelectedTemplate(template);
                         setCreationMode('template');
@@ -181,7 +318,7 @@ export default function HomePage({ goals, onGoalCreated, onSelectGoal, language 
             {recentGoals.length > 0 && (
                 <div className="space-y-4">
                     <div className="flex items-end justify-between px-2">
-                        <h2 className="text-2xl font-bold text-foreground">
+                        <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                             {language === 'ar' ? 'الأهداف الأخيرة' : 'Recent Goals'}
                         </h2>
                         <span className="text-sm text-muted-foreground">
@@ -189,7 +326,7 @@ export default function HomePage({ goals, onGoalCreated, onSelectGoal, language 
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                         {recentGoals.map((goal) => {
                             const titleRTL = isRTL(goal.title);
                             const currentPoints = goal.current_points ?? 0;
@@ -203,69 +340,63 @@ export default function HomePage({ goals, onGoalCreated, onSelectGoal, language 
                             return (
                                 <div
                                     key={goal.id}
-                                    className="w-full p-3 rounded-2xl border transition-all relative group bg-card/50 border-border hover:bg-card/70 hover:border-primary/30 hover:shadow-md"
+                                    className="w-full p-4 sm:p-5 rounded-3xl border transition-all relative group bg-card/50 border-border hover:bg-card/70 hover:border-primary/30 hover:shadow-lg"
                                 >
                                     <button
                                         onClick={() => onSelectGoal(goal.id)}
-                                        className={`w-full ${cardRTL ? 'text-right' : 'text-left'}`}
-                                        dir={cardRTL ? 'rtl' : 'ltr'}
+                                        className={`w-full flex flex-col gap-3`}
                                     >
-                                        {/* Row 1: Icon, Title, Pin */}
-                                        <div className="flex items-center gap-2.5 mb-2">
-                                            <div className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border transition-colors bg-muted/50 text-muted-foreground border-border group-hover:border-primary/50 group-hover:text-primary">
-                                                <Icon className="w-4 h-4" />
+                                        {/* Header: Icon + Title + Pin */}
+                                        <div className="flex items-center gap-3 w-full" dir={cardRTL ? 'rtl' : 'ltr'}>
+                                            <div className="shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center border transition-colors bg-muted/50 text-muted-foreground border-border group-hover:border-primary/50 group-hover:text-primary shadow-sm">
+                                                <Icon className="w-5 h-5" />
                                             </div>
 
-                                            <h3 
-                                                className="text-sm font-bold flex-1 truncate text-foreground group-hover:text-primary"
-                                                dir={titleRTL ? 'rtl' : 'ltr'}
+                                            <h3
+                                                className={`text-base sm:text-lg font-bold flex-1 text-foreground group-hover:text-primary overflow-hidden whitespace-nowrap text-ellipsis ${titleRTL ? 'text-right direction-rtl' : 'text-left direction-ltr'}`}
                                             >
                                                 {goal.title}
                                             </h3>
 
                                             {goal.is_pinned && (
-                                                <Pin className="w-3 h-3 text-chart-5 rotate-45 shrink-0" />
+                                                <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-chart-5/10">
+                                                    <Pin className="w-4 h-4 text-chart-5 rotate-45" />
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* Row 2: Progress Bar with embedded percentage and points */}
-                                        <div className="mb-1.5">
-                                            <div className="relative h-6 w-full bg-muted/50 rounded-lg overflow-hidden border border-border shadow-inner">
-                                                <div
-                                                    className="h-full bg-gradient-to-r transition-all duration-1000 ease-out relative from-chart-2 via-chart-2/80 to-chart-2/60"
-                                                    style={{ width: `${Math.min(100, progress)}%` }}
-                                                >
-                                                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/waves.png')] animate-pulse"></div>
-                                                    <div className="absolute top-0 start-0 w-full h-1/2 bg-white/20"></div>
-                                                </div>
-                                                
-                                                <div className="absolute inset-0 flex items-center justify-center px-2 z-10">
-                                                    <span className="text-[10px] font-black text-foreground/80 bg-background/30 backdrop-blur-[2px] px-1.5 py-0.5 rounded border border-white/10">
-                                                        {progress}%
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="mt-1 flex items-center justify-between text-[9px] font-bold text-foreground/70 tabular-nums">
-                                                <span className="whitespace-nowrap">{currentPoints.toLocaleString()}</span>
-                                                <span className="whitespace-nowrap">{targetPoints.toLocaleString()}</span>
-                                            </div>
-                                        </div>
+                                        {/* Progress Bar Tube */}
+                                        <div className="relative h-10 sm:h-11 w-full bg-muted/40 rounded-2xl overflow-hidden border border-border/60 shadow-inner ring-1 ring-white/5 mx-auto">
+                                            {/* Tube Background Effect */}
+                                            <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none"></div>
 
-                                        {/* Row 3: Dates */}
-                                        <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="flex items-center gap-1">
-                                                <Calendar className="w-2.5 h-2.5" />
-                                                <span>{new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                            {/* Filling */}
+                                            <div
+                                                className="h-full bg-gradient-to-r from-primary/80 via-primary to-primary transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]"
+                                                style={{ width: `${Math.min(100, progress)}%` }}
+                                            >
+                                                {/* Fluid/Glass Effect on Fill */}
+                                                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
+                                                <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/waves.png')] animate-pulse"></div>
+
+                                                {/* Light Shine on right edge */}
+                                                <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
                                             </div>
-                                            {goal.estimated_completion_date && (
-                                                <>
-                                                    <span className="text-muted-foreground/50">→</span>
-                                                    <div className="flex items-center gap-1">
-                                                        <Target className="w-2.5 h-2.5" />
-                                                        <span>{new Date(goal.estimated_completion_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                                    </div>
-                                                </>
-                                            )}
+
+                                            {/* Content Inside Tube - with XP labels for clarity */}
+                                            <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-5 z-20 font-bold text-xs sm:text-sm tracking-wide">
+                                                <span className="text-foreground/70 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-1">
+                                                    {currentPoints.toLocaleString()}
+                                                    <span className="text-[9px] sm:text-[10px] opacity-70 font-medium"></span>
+                                                </span>
+                                                <span className="text-foreground/90 mix-blend-screen drop-shadow-sm font-black text-sm sm:text-base">
+                                                    {progress}%
+                                                </span>
+                                                <span className="text-muted-foreground/80 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-0.5">
+                                                    <span className="text-[9px] sm:text-[10px] opacity-60">/</span>
+                                                    {targetPoints.toLocaleString()}
+                                                </span>
+                                            </div>
                                         </div>
                                     </button>
                                 </div>

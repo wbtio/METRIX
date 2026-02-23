@@ -1,15 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Calendar, Target, Zap, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+    CheckCircle2,
+    AlertTriangle,
+    ArrowUp,
+    ArrowDown,
+    BarChart2,
+} from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsData {
     currentWeekPoints: number;
     lastWeekPoints: number;
-    weekComparison: number; // percentage change
+    weekComparison: number;
     averagePointsPerLog: number;
     totalActiveDays: number;
     mostProductiveDay: string | null;
@@ -25,183 +30,143 @@ interface AdvancedAnalyticsProps {
 }
 
 export default function AdvancedAnalytics({ goalId, language = 'en' }: AdvancedAnalyticsProps) {
-    const t = translations[language];
     const isArabic = language === 'ar';
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
+        async function fetchAnalytics() {
+            try {
+                const res = await fetch('/api/analytics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ goalId }),
+                });
+                const json = await res.json().catch(() => null);
+                if (!res.ok) {
+                    throw new Error(json?.error || json?.message || `HTTP ${res.status}`);
+                }
+                if (json.data) setData(json.data);
+            } catch {
+                // Keep analytics panel calm when API is unavailable.
+            } finally {
+                setLoading(false);
+            }
+        }
         fetchAnalytics();
     }, [goalId]);
 
-    const fetchAnalytics = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/analytics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ goalId }),
-            });
-            const result = await res.json();
-            setData(result.data);
-        } catch (error) {
-            console.error('Failed to fetch analytics:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     if (loading) {
         return (
-            <div className="bg-card/30 backdrop-blur-xl p-4 rounded-2xl border border-border animate-pulse">
-                <div className="h-16 bg-muted/20 rounded-xl"></div>
+            <div className="flex items-center justify-center py-8" dir={isArabic ? 'rtl' : 'ltr'}>
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <BarChart2 className="w-4 h-4 animate-pulse" />
+                    <span>{isArabic ? 'جاري التحليل...' : 'Loading...'}</span>
+                </div>
             </div>
         );
     }
 
     if (!data) return null;
 
-    const weekChange = data.weekComparison;
-    const isPositive = weekChange >= 0;
+    const formatDate = (date: string | null) => {
+        if (!date) return isArabic ? 'غير محدد' : 'TBD';
+        return new Date(date).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
+    };
+
+    const compUp = data.weekComparison > 0;
+    const compZero = data.weekComparison === 0;
 
     return (
-        <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-border shadow-lg overflow-hidden" dir={isArabic ? 'rtl' : 'ltr'}>
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                {/* Compact Header */}
-                <div className={cn("px-4 py-3 border-b border-border/40 bg-card/20 transition-all", isOpen && "pb-3")}>
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <div className="shrink-0 w-8 h-8 bg-chart-1/10 rounded-xl flex items-center justify-center border border-chart-1/20">
-                                <BarChart3 className="w-4 h-4 text-chart-1" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-bold text-foreground">
-                                    {isArabic ? 'تحليلات متقدمة' : 'Advanced Analytics'}
-                                </h3>
-                                {!isOpen && (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <span className={cn("font-medium", isPositive ? "text-chart-2" : "text-destructive")}>
-                                            {isPositive ? '+' : ''}{weekChange.toFixed(0)}%
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            {isArabic ? 'هذا الأسبوع' : 'this week'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <CollapsibleTrigger asChild>
-                            <button className="shrink-0 p-1.5 hover:bg-muted rounded-lg transition-colors">
-                                {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-                        </CollapsibleTrigger>
+        <div className="space-y-2" dir={isArabic ? 'rtl' : 'ltr'}>
+
+            {/* ROW 1: Status + Velocity + Avg/Log */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                {/* Status chip */}
+                <div className={cn(
+                    "flex items-center gap-1.5 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border",
+                    data.onTrack
+                        ? "bg-green-500/5 border-green-500/15 text-green-600 dark:text-green-400"
+                        : "bg-orange-500/5 border-orange-500/15 text-orange-600 dark:text-orange-400"
+                )}>
+                    {data.onTrack
+                        ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                        : <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    }
+                    <span className="text-[10px] sm:text-xs font-bold truncate">
+                        {data.onTrack ? (isArabic ? 'على المسار' : 'On Track') : (isArabic ? 'يحتاج جهد' : 'Attention')}
+                    </span>
+                </div>
+
+                {/* This week velocity */}
+                <div className="bg-muted/25 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+                        {isArabic ? 'هذا الأسبوع' : 'This Week'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                        <span className="text-base sm:text-xl font-black text-foreground">{data.currentWeekPoints}</span>
+                        {!compZero && (
+                            <span className={cn("text-[9px] sm:text-[10px] font-bold flex items-center", compUp ? "text-green-500" : "text-red-500")}>
+                                {compUp ? <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <ArrowDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                {Math.abs(data.weekComparison).toFixed(0)}%
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                <CollapsibleContent>
-                    <div className="p-4 space-y-4">
-                        {/* Week Comparison */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-muted/30 p-3 rounded-xl border border-border">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                                        {isArabic ? 'هذا الأسبوع' : 'This Week'}
-                                    </span>
-                                </div>
-                                <p className="text-xl font-black text-foreground">{data.currentWeekPoints}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    {isPositive ? (
-                                        <TrendingUp className="w-3 h-3 text-chart-2" />
-                                    ) : (
-                                        <TrendingDown className="w-3 h-3 text-destructive" />
-                                    )}
-                                    <span className={cn("text-xs font-bold", isPositive ? "text-chart-2" : "text-destructive")}>
-                                        {isPositive ? '+' : ''}{weekChange.toFixed(0)}%
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="bg-muted/20 p-3 rounded-xl border border-border">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                                        {isArabic ? 'الأسبوع الماضي' : 'Last Week'}
-                                    </span>
-                                </div>
-                                <p className="text-xl font-black text-muted-foreground">{data.lastWeekPoints}</p>
-                            </div>
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-3 gap-2">
-                            <StatItem
-                                icon={<Zap className="w-3 h-3" />}
-                                label={isArabic ? 'متوسط/تسجيل' : 'Avg/Log'}
-                                value={data.averagePointsPerLog.toFixed(1)}
-                                color="text-chart-5"
-                            />
-                            <StatItem
-                                icon={<Calendar className="w-3 h-3" />}
-                                label={isArabic ? 'أيام نشطة' : 'Active Days'}
-                                value={data.totalActiveDays}
-                                color="text-chart-3"
-                            />
-                            <StatItem
-                                icon={<Target className="w-3 h-3" />}
-                                label={isArabic ? 'الحالة' : 'Status'}
-                                value={data.onTrack ? (isArabic ? 'متقدم' : 'On Track') : (isArabic ? 'متأخر' : 'Behind')}
-                                color={data.onTrack ? "text-chart-2" : "text-destructive"}
-                            />
-                        </div>
-
-                        {/* Insights */}
-                        <div className="space-y-2">
-                            {data.mostProductiveDay && (
-                                <InsightRow
-                                    label={isArabic ? 'أفضل يوم' : 'Most Productive'}
-                                    value={new Date(data.mostProductiveDay).toLocaleDateString('en-US', { weekday: 'long' })}
-                                />
-                            )}
-                            {data.projectedCompletionDate && (
-                                <InsightRow
-                                    label={isArabic ? 'التوقع' : 'Projected End'}
-                                    value={new Date(data.projectedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                />
-                            )}
-                            {data.daysAheadOrBehind !== 0 && (
-                                <InsightRow
-                                    label={isArabic ? 'الفرق' : 'Difference'}
-                                    value={`${Math.abs(data.daysAheadOrBehind)} ${isArabic ? 'يوم' : 'days'} ${data.daysAheadOrBehind > 0 ? (isArabic ? 'متقدم' : 'ahead') : (isArabic ? 'متأخر' : 'behind')}`}
-                                    highlight={data.daysAheadOrBehind > 0}
-                                />
-                            )}
-                        </div>
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
-        </div>
-    );
-}
-
-function StatItem({ icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
-    return (
-        <div className="bg-muted/20 p-2 rounded-lg border border-border text-center">
-            <div className={cn("flex items-center justify-center gap-1 mb-0.5", color)}>
-                {icon}
-                <span className="text-[9px] font-bold uppercase opacity-80">{label}</span>
+                {/* Avg per log */}
+                <div className="bg-muted/25 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+                        {isArabic ? 'المعدل' : 'Avg/Log'}
+                    </span>
+                    <span className="text-base sm:text-xl font-black text-foreground">{data.averagePointsPerLog.toFixed(1)}</span>
+                </div>
             </div>
-            <p className={cn("text-sm font-bold", color)}>{value}</p>
-        </div>
-    );
-}
 
-function InsightRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-    return (
-        <div className="flex items-center justify-between text-xs py-1.5 px-2 bg-muted/20 rounded-lg">
-            <span className="text-muted-foreground font-medium">{label}</span>
-            <span className={cn("font-bold", highlight ? "text-chart-2" : "text-foreground")}>{value}</span>
+            {/* ROW 2: Active Days + Peak Day + Schedule */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                {/* Active days */}
+                <div className="bg-muted/25 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+                        {isArabic ? 'أيام نشطة' : 'Active'}
+                    </span>
+                    <span className="text-base sm:text-xl font-black text-foreground">
+                        {data.totalActiveDays}<span className="text-xs sm:text-sm font-medium text-muted-foreground">/7</span>
+                    </span>
+                </div>
+
+                {/* Peak day */}
+                <div className="bg-muted/25 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+                        {isArabic ? 'أفضل يوم' : 'Peak'}
+                    </span>
+                    <span className="text-sm sm:text-base font-black text-foreground truncate">
+                        {data.mostProductiveDay
+                            ? new Date(data.mostProductiveDay).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'short' })
+                            : '-'
+                        }
+                    </span>
+                </div>
+
+                {/* Schedule variance */}
+                <div className="bg-muted/25 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
+                        {isArabic ? 'الجدول' : 'Schedule'}
+                    </span>
+                    <span className={cn(
+                        "text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-md",
+                        data.daysAheadOrBehind >= 0
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
+                    )}>
+                        {data.daysAheadOrBehind === 0
+                            ? (isArabic ? 'بالموعد' : 'On time')
+                            : `${Math.abs(data.daysAheadOrBehind)}d ${data.daysAheadOrBehind > 0 ? '▲' : '▼'}`
+                        }
+                    </span>
+                </div>
+            </div>
+
         </div>
     );
 }

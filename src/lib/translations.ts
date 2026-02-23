@@ -10,12 +10,18 @@ export const translations = {
     english: 'English',
     arabic: 'العربية',
     notifications: 'Notifications',
-    notificationsDesc: 'Daily reminders via email (Coming Soon)',
+    notificationsDesc: 'Get notified when your streaks are at risk',
+    notificationsEnabled: 'Enabled',
+    notificationsDisabled: 'Disabled',
+    notificationsBlocked: 'Blocked by browser',
+    notificationsUnsupported: 'Not supported in this browser',
     account: 'Account',
     status: 'Status',
     active: 'Active',
+    signOut: 'Sign Out',
+    signingOut: 'Signing out...',
     goalsCreated: 'Goals Created',
-    
+
     // Dashboard
     currentMission: 'Current Mission',
     myGoals: 'My Goals',
@@ -43,17 +49,17 @@ export const translations = {
     noActivityYet: 'No activity yet. Start logging your progress!',
     pointsToMastery: 'Points to Mastery',
     points: 'Points',
-    
+
     // Orbit Dock
     yourMissions: 'Your Missions',
     noGoalsYet: 'No goals yet.',
-    
+
     // Loading
     loadingOrbit: 'LOADING ORBIT',
-    
+
     // Chart
     noDataYet: 'No activity data yet. Start logging to see your growth!',
-    
+
     // Chart Controls
     thisWeek: 'Week',
     thisMonth: 'Month',
@@ -62,10 +68,10 @@ export const translations = {
     barChart: 'Bar',
     lineChart: 'Line',
     areaChart: 'Area',
-    
+
     // StreakFlame
     dayStreak: 'Day Streak',
-    
+
     // DailyLogModal
     logProgress: 'Log Progress',
     describeWhatYouDid: 'Describe what you did today',
@@ -78,7 +84,7 @@ export const translations = {
     continueJourney: 'Continue Journey',
     generalProgress: 'General Progress',
     bonus: 'Bonus',
-    
+
     // GoalCreator
     createNewGoal: 'Create New Goal',
     whatDoYouWant: 'What do you want to achieve?',
@@ -121,6 +127,65 @@ export const translations = {
     saveChanges: 'Save Changes',
     selectIcon: 'Select Icon',
     goalTitle: 'Goal Title',
+    // Settings - new
+    general: 'General',
+    preferences: 'Preferences',
+    dataPrivacy: 'Data & Privacy',
+    about: 'About',
+    dailyReminder: 'Daily Reminder',
+    dailyReminderDesc: 'Get reminded to log your daily progress',
+    reminderTime: 'Reminder Time',
+    defaultChartType: 'Default Chart',
+    defaultChartTypeDesc: 'Choose your preferred chart visualization',
+    exportData: 'Export Data',
+    exportDataDesc: 'Download all your goals and logs as JSON',
+    clearCache: 'Clear Cache',
+    clearCacheDesc: 'Clear cached analytics and summaries',
+    clearCacheConfirm: 'Cache cleared successfully',
+    appVersion: 'App Version',
+    builtWith: 'Built with',
+    totalLogsRecorded: 'Total Logs',
+    comingSoon: 'Coming Soon',
+    // Settings - additional
+    darkMode: 'Dark Mode',
+    lightMode: 'Light Mode',
+    systemDefault: 'System',
+    resetAllData: 'Reset All Data',
+    resetAllDataDesc: 'Permanently delete all goals, logs, and settings',
+    resetAllDataConfirm: 'Are you sure? This will permanently delete ALL your data. This action cannot be undone.',
+    dataResetSuccess: 'All data has been reset successfully',
+    goalsSummary: 'Goals Summary',
+    completedGoals: 'Completed',
+    inProgressGoals: 'In Progress',
+    totalPointsEarned: 'Total Points Earned',
+    memberSince: 'Member Since',
+    soundEffects: 'Sound Effects',
+    soundEffectsDesc: 'Play sounds on achievements and actions',
+    animationsEnabled: 'Animations',
+    animationsEnabledDesc: 'Enable smooth transitions and animations',
+    compactMode: 'Compact Mode',
+    compactModeDesc: 'Reduce spacing for more content on screen',
+    weekStartDay: 'Week Starts On',
+    weekStartDayDesc: 'Choose the first day of your week',
+    saturday: 'Saturday',
+    sunday: 'Sunday',
+    monday: 'Monday',
+    pointsFormat: 'Points Display',
+    pointsFormatDesc: 'How to display point numbers',
+    pointsFormatFull: 'Full (1,000)',
+    pointsFormatShort: 'Short (1K)',
+    madeWithLove: 'Made with ❤️ for productivity',
+    feedbackSupport: 'Feedback & Support',
+    feedbackSupportDesc: 'Report bugs or suggest features',
+    version: 'Version',
+    settingsReset: 'Reset Settings',
+    settingsResetDesc: 'Reset all preferences to default values',
+    settingsResetConfirm: 'Settings have been reset to defaults',
+    deleteAllGoals: 'Delete All Goals',
+    deleteAllGoalsDesc: 'Remove all goals and their associated data',
+    deleteAllGoalsConfirm: 'Are you sure? This will delete ALL goals and logs permanently.',
+    goalsDeleted: 'All goals have been deleted',
+    dangerZone: 'Danger Zone',
   },
   ar: {
     // Settings Page
@@ -133,12 +198,18 @@ export const translations = {
     english: 'English',
     arabic: 'العربية',
     notifications: 'الإشعارات',
-    notificationsDesc: 'تذكيرات يومية عبر البريد الإلكتروني (قريباً)',
+    notificationsDesc: 'تنبيهات عند تعرّض سلاسلك للخطر',
+    notificationsEnabled: 'مفعّلة',
+    notificationsDisabled: 'معطّلة',
+    notificationsBlocked: 'محظورة من المتصفح',
+    notificationsUnsupported: 'غير مدعومة في هذا المتصفح',
     account: 'الحساب',
     status: 'الحالة',
     active: 'نشط',
+    signOut: 'تسجيل الخروج',
+    signingOut: 'جارٍ الخروج...',
     goalsCreated: 'الأهداف المنشأة',
-    
+
     // Dashboard
     currentMission: 'المهمة الحالية',
     myGoals: 'أهدافي',
@@ -166,17 +237,17 @@ export const translations = {
     noActivityYet: 'لا يوجد نشاط بعد. ابدأ بتسجيل تقدمك!',
     pointsToMastery: 'نقاط للإتقان',
     points: 'نقاط',
-    
+
     // Orbit Dock
     yourMissions: 'مهامك',
     noGoalsYet: 'لا توجد أهداف بعد.',
-    
+
     // Loading
     loadingOrbit: 'جاري التحميل',
-    
+
     // Chart
     noDataYet: 'لا توجد بيانات نشاط بعد. ابدأ بالتسجيل لرؤية نموك!',
-    
+
     // Chart Controls
     thisWeek: 'أسبوع',
     thisMonth: 'شهر',
@@ -185,10 +256,10 @@ export const translations = {
     barChart: 'أعمدة',
     lineChart: 'خطوط',
     areaChart: 'مساحة',
-    
+
     // StreakFlame
     dayStreak: 'سلسلة الأيام',
-    
+
     // DailyLogModal
     logProgress: 'تسجيل التقدم',
     describeWhatYouDid: 'صف ما قمت به اليوم',
@@ -201,7 +272,7 @@ export const translations = {
     continueJourney: 'متابعة الرحلة',
     generalProgress: 'تقدم عام',
     bonus: 'مكافأة',
-    
+
     // GoalCreator
     createNewGoal: 'إنشاء هدف جديد',
     whatDoYouWant: 'ماذا تريد أن تحقق؟',
@@ -244,6 +315,65 @@ export const translations = {
     saveChanges: 'حفظ التغييرات',
     selectIcon: 'اختر أيقونة',
     goalTitle: 'عنوان الهدف',
+    // Settings - new
+    general: 'عام',
+    preferences: 'التفضيلات',
+    dataPrivacy: 'البيانات والخصوصية',
+    about: 'حول التطبيق',
+    dailyReminder: 'التذكير اليومي',
+    dailyReminderDesc: 'تذكير بتسجيل تقدمك اليومي',
+    reminderTime: 'وقت التذكير',
+    defaultChartType: 'المخطط الافتراضي',
+    defaultChartTypeDesc: 'اختر نوع المخطط المفضل لديك',
+    exportData: 'تصدير البيانات',
+    exportDataDesc: 'تحميل جميع أهدافك وسجلاتك كملف JSON',
+    clearCache: 'مسح الذاكرة المؤقتة',
+    clearCacheDesc: 'مسح التحليلات والملخصات المخزنة مؤقتاً',
+    clearCacheConfirm: 'تم مسح الذاكرة المؤقتة بنجاح',
+    appVersion: 'إصدار التطبيق',
+    builtWith: 'مبني بـ',
+    totalLogsRecorded: 'إجمالي السجلات',
+    comingSoon: 'قريباً',
+    // Settings - additional
+    darkMode: 'الوضع الداكن',
+    lightMode: 'الوضع الفاتح',
+    systemDefault: 'النظام',
+    resetAllData: 'إعادة تعيين جميع البيانات',
+    resetAllDataDesc: 'حذف جميع الأهداف والسجلات والإعدادات نهائياً',
+    resetAllDataConfirm: 'هل أنت متأكد؟ سيتم حذف جميع بياناتك نهائياً. لا يمكن التراجع عن هذا الإجراء.',
+    dataResetSuccess: 'تم إعادة تعيين جميع البيانات بنجاح',
+    goalsSummary: 'ملخص الأهداف',
+    completedGoals: 'مكتملة',
+    inProgressGoals: 'قيد التنفيذ',
+    totalPointsEarned: 'إجمالي النقاط المكتسبة',
+    memberSince: 'عضو منذ',
+    soundEffects: 'المؤثرات الصوتية',
+    soundEffectsDesc: 'تشغيل أصوات عند الإنجازات والإجراءات',
+    animationsEnabled: 'الحركات',
+    animationsEnabledDesc: 'تفعيل الانتقالات والحركات السلسة',
+    compactMode: 'الوضع المضغوط',
+    compactModeDesc: 'تقليل المسافات لعرض محتوى أكثر',
+    weekStartDay: 'بداية الأسبوع',
+    weekStartDayDesc: 'اختر أول يوم في أسبوعك',
+    saturday: 'السبت',
+    sunday: 'الأحد',
+    monday: 'الاثنين',
+    pointsFormat: 'عرض النقاط',
+    pointsFormatDesc: 'كيفية عرض أرقام النقاط',
+    pointsFormatFull: 'كامل (١٬٠٠٠)',
+    pointsFormatShort: 'مختصر (١ك)',
+    madeWithLove: 'صُنع بـ ❤️ من أجل الإنتاجية',
+    feedbackSupport: 'الملاحظات والدعم',
+    feedbackSupportDesc: 'الإبلاغ عن مشاكل أو اقتراح ميزات',
+    version: 'الإصدار',
+    settingsReset: 'إعادة تعيين الإعدادات',
+    settingsResetDesc: 'إعادة جميع التفضيلات إلى القيم الافتراضية',
+    settingsResetConfirm: 'تم إعادة تعيين الإعدادات إلى الافتراضية',
+    deleteAllGoals: 'حذف جميع الأهداف',
+    deleteAllGoalsDesc: 'إزالة جميع الأهداف وبياناتها المرتبطة',
+    deleteAllGoalsConfirm: 'هل أنت متأكد؟ سيتم حذف جميع الأهداف والسجلات نهائياً.',
+    goalsDeleted: 'تم حذف جميع الأهداف',
+    dangerZone: 'منطقة الخطر',
   }
 };
 

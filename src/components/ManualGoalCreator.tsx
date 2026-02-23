@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calendar, Target, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Plus, Trash2, Calendar, Target, Loader2 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar as ShadcnCalendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface ManualGoalCreatorProps {
     onComplete: () => void;
@@ -81,13 +86,19 @@ export default function ManualGoalCreator({ onComplete, onCancel, language = 'en
             const start = new Date(startDate);
             const end = new Date(endDate);
             const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+            if (userError || !user?.id) {
+                throw new Error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first');
+            }
 
             // Create goal
             const { data: goal, error: goalError } = await supabase
                 .from('goals')
                 .insert({
+                    user_id: user.id,
                     title: goalTitle,
-                    target_points: parseInt(targetPoints),
+                    target_points: parseInt(targetPoints, 10),
                     current_points: 0,
                     status: 'active',
                     created_at: start.toISOString(),
@@ -134,20 +145,15 @@ export default function ManualGoalCreator({ onComplete, onCancel, language = 'en
     };
 
     return (
-        <div className="bg-card/30 backdrop-blur-xl p-8 rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl space-y-6">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-black text-foreground mb-2">
-                        {language === 'ar' ? 'إضافة هدف يدوياً' : 'Manual Goal Creation'}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                        {language === 'ar' ? 'حدد تفاصيل هدفك والمهام المطلوبة' : 'Define your goal details and required tasks'}
-                    </p>
-                </div>
-                <button onClick={onCancel} className="p-2 hover:bg-muted rounded-full transition-colors">
-                    <X className="w-6 h-6 text-muted-foreground" />
-                </button>
+            <div>
+                <h2 className="text-3xl font-black text-foreground mb-2">
+                    {language === 'ar' ? 'إضافة هدف يدوياً' : 'Manual Goal Creation'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    {language === 'ar' ? 'حدد تفاصيل هدفك والمهام المطلوبة' : 'Define your goal details and required tasks'}
+                </p>
             </div>
 
             {/* Goal Title */}
@@ -172,12 +178,29 @@ export default function ManualGoalCreator({ onComplete, onCancel, language = 'en
                         <Calendar className="w-4 h-4" />
                         {language === 'ar' ? 'تاريخ البدء' : 'Start Date'}
                     </label>
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all"
-                    />
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                  variant="outline"
+                                  className={`w-full h-auto p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all justify-start font-normal ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                  dir={language === 'ar' ? 'rtl' : 'ltr'}
+                              >
+                                  <Calendar className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                                  {startDate
+                                      ? format(new Date(startDate), 'PPP')
+                                      : (language === 'ar' ? 'اختر تاريخ البدء' : 'Pick a start date')}
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align={language === 'ar' ? 'end' : 'start'}>
+                              <ShadcnCalendar
+                                  mode="single"
+                                  dir={language === 'ar' ? 'rtl' : 'ltr'}
+                                  selected={startDate ? new Date(startDate) : undefined}
+                                  onSelect={(date) => setStartDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                                  initialFocus
+                              />
+                          </PopoverContent>
+                      </Popover>
                 </div>
 
                 <div className="space-y-2">
@@ -185,24 +208,41 @@ export default function ManualGoalCreator({ onComplete, onCancel, language = 'en
                         <Target className="w-4 h-4" />
                         {language === 'ar' ? 'تاريخ الانتهاء' : 'End Date'}
                     </label>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all"
-                    />
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                  variant="outline"
+                                  className={`w-full h-auto p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all justify-start font-normal ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                  dir={language === 'ar' ? 'rtl' : 'ltr'}
+                              >
+                                  <Calendar className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                                  {endDate
+                                      ? format(new Date(endDate), 'PPP')
+                                      : (language === 'ar' ? 'اختر تاريخ الانتهاء' : 'Pick an end date')}
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align={language === 'ar' ? 'end' : 'start'}>
+                              <ShadcnCalendar
+                                  mode="single"
+                                  dir={language === 'ar' ? 'rtl' : 'ltr'}
+                                  selected={endDate ? new Date(endDate) : undefined}
+                                  onSelect={(date) => setEndDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                                  initialFocus
+                              />
+                          </PopoverContent>
+                      </Popover>
                 </div>
 
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-foreground">
                         {language === 'ar' ? 'النقاط المستهدفة' : 'Target Points'}
                     </label>
-                    <input
-                        type="number"
-                        value={targetPoints}
-                        onChange={(e) => setTargetPoints(e.target.value)}
-                        className="w-full p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all"
-                    />
+                  <Input
+                      type="number"
+                      value={targetPoints}
+                      onChange={(e) => setTargetPoints(e.target.value)}
+                      className="w-full h-auto p-3 rounded-xl border-2 border-border focus:border-primary bg-muted/30 text-foreground transition-all"
+                  />
                 </div>
             </div>
 

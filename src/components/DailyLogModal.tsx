@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { X, Loader2, Send, Mic, MicOff, Trophy, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
 
 interface DailyLogModalProps {
-    goal: { id: string; title: string };
+    goal: { id: string; title: string; ai_summary?: string; created_at?: string; current_points?: number; target_points?: number };
     tasks: any[];
     onClose: () => void;
     onSuccess: () => void;
@@ -22,6 +22,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
     const [isRecording, setIsRecording] = useState(false);
     const [notification, setNotification] = useState<{ type: 'error' | 'warning', message: string } | null>(null);
     const recognitionRef = useRef<any>(null);
+    const submittedRef = useRef(false);
 
     const startRecording = () => {
         if (typeof window === 'undefined') return;
@@ -77,8 +78,9 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
         }
     };
 
-    const handleSubmit = async () => {
-        if (!logText.trim()) return;
+    const handleSubmit = useCallback(async () => {
+        if (!logText.trim() || submittedRef.current) return;
+        submittedRef.current = true;
         setLoading(true);
         try {
             // 1. Fetch previous logs for context
@@ -89,19 +91,53 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                 .order('created_at', { ascending: false })
                 .limit(5);
 
-            // 2. Get score from AI Judge API with previous logs context
+            // 1b. Fetch journey stats for full context
+            const { count: totalLogCount } = await supabase
+                .from('daily_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('goal_id', goal.id);
+
+            const daysSinceStart = goal.created_at
+                ? Math.ceil((Date.now() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
+                : 0;
+
+            // 2. Get score from AI Judge API with full journey context
             const res = await fetch('/api/goal/evaluate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     tasks, 
                     log: logText,
-                    previousLogs: previousLogs || []
+                    previousLogs: previousLogs || [],
+                    goalContext: {
+                        title: goal.title,
+                        ai_summary: goal.ai_summary || '',
+                        current_points: goal.current_points || 0,
+                        target_points: goal.target_points || 0,
+                        total_logs: totalLogCount || 0,
+                        days_since_start: daysSinceStart,
+                    }
                 }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                if (data?.error === 'quota_exceeded') {
+                    submittedRef.current = false;
+                    setNotification({ type: 'warning', message: language === 'ar' ? data.message_ar : data.message_en });
+                    return;
+                }
+                throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+            }
+
+            if (data.error === 'quota_exceeded') {
+                submittedRef.current = false;
+                setNotification({ type: 'warning', message: language === 'ar' ? data.message_ar : data.message_en });
+                return;
+            }
 
             if (data.status === 'refused') {
+                submittedRef.current = false;
                 setNotification({ type: 'error', message: data.safe_redirection?.message || 'لا يمكن معالجة هذا الطلب.' });
                 return;
             }
@@ -121,24 +157,23 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
 
             if (logError) throw logError;
 
-            // 4. Update goal points
-            const { data: currentGoal } = await supabase
-                .from('goals')
-                .select('current_points')
-                .eq('id', goal.id)
-                .single();
-
-            const newPoints = (currentGoal?.current_points || 0) + data.total_points_awarded;
-
-            const { error: updateError } = await supabase
-                .from('goals')
-                .update({ current_points: newPoints })
-                .eq('id', goal.id);
+            // 4. Atomic points increment — prevents race conditions
+            const { error: updateError } = await supabase.rpc('increment_goal_points', {
+                goal_uuid: goal.id,
+                points_to_add: data.total_points_awarded
+            });
 
             if (updateError) throw updateError;
 
+            // 5. Invalidate analytics cache so dashboard shows fresh data
+            await supabase
+                .from('analytics_cache')
+                .delete()
+                .eq('goal_id', goal.id);
+
         } catch (e: any) {
             console.error(e);
+            submittedRef.current = false;
             const errorMsg = language === 'ar' 
                 ? `فشل في تقييم السجل: ${e.message}`
                 : `Failed to evaluate log: ${e.message}`;
@@ -146,7 +181,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
         } finally {
             setLoading(false);
         }
-    };
+    }, [logText, goal.id, tasks, language, supabase, t]);
 
     if (evaluation) {
         return (

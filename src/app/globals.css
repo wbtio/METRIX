@@ -124,10 +124,10 @@
     @apply bg-background text-foreground;
   }
 
-  /* Custom Scrollbar Styles */
+  /* Custom Scrollbar Styles (ultra-thin + reveal on interaction) */
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -135,17 +135,30 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: transparent;
     border-radius: 9999px;
+    transition: background-color 160ms ease;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb,
+  .scrollbar-thin:focus-visible::-webkit-scrollbar-thumb,
+  .scrollbar-thin:active::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.35);
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
   /* Firefox scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-thin:hover,
+  .scrollbar-thin:focus-visible,
+  .scrollbar-thin:active {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
   }
 }

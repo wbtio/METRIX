@@ -30,6 +30,7 @@ interface GrowthChartProps {
     language?: Language;
     className?: string;
     fillHeight?: boolean;
+    embedded?: boolean;
 }
 
 const chartConfig = {
@@ -39,8 +40,9 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export default function GrowthChart({ data, language = 'en', className, fillHeight = false }: GrowthChartProps) {
+export default function GrowthChart({ data, language = 'en', className, fillHeight = false, embedded = false }: GrowthChartProps) {
     const t = translations[language];
+    const isArabic = language === 'ar';
     const [timeRange, setTimeRange] = useState<TimeRange>('month');
     const [chartType, setChartType] = useState<ChartType>('bar');
 
@@ -72,16 +74,32 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
     const chartData = useMemo(() => {
         if (filteredData.length === 0) return [];
 
-        // Group by date and sum points
+        const gregorianDayLabel = new Intl.DateTimeFormat('en-US', {
+            calendar: 'gregory',
+            month: 'short',
+            day: 'numeric',
+        });
+
+        const gregorianWeekLabel = new Intl.DateTimeFormat('en-US', {
+            calendar: 'gregory',
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+
+        // Group by day and sum points.
         const dailyPoints = filteredData.reduce((acc, curr) => {
-            const dateStr = new Date(curr.date).toLocaleDateString('en-US');
-            if (!acc[dateStr]) {
-                acc[dateStr] = {
+            const dateObj = new Date(curr.date);
+            const dayKey = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`;
+
+            if (!acc[dayKey]) {
+                acc[dayKey] = {
                     date: curr.date,
                     points: 0,
                 };
             }
-            acc[dateStr].points += curr.points;
+
+            acc[dayKey].points += curr.points;
             return acc;
         }, {} as Record<string, { date: string; points: number }>);
 
@@ -90,15 +108,9 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .map(d => {
                 const dateObj = new Date(d.date);
-                let formattedDate: string;
-
-                if (timeRange === 'year') {
-                    formattedDate = dateObj.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' });
-                } else if (timeRange === 'week') {
-                    formattedDate = dateObj.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'short', day: 'numeric' });
-                } else {
-                    formattedDate = dateObj.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' });
-                }
+                const formattedDate = timeRange === 'week'
+                    ? gregorianWeekLabel.format(dateObj)
+                    : gregorianDayLabel.format(dateObj);
 
                 return {
                     date: formattedDate,
@@ -106,10 +118,12 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
                     fullDate: d.date,
                 };
             });
-    }, [filteredData, timeRange, language]);
+    }, [filteredData, timeRange]);
 
     const containerClass = cn(
-        "bg-card/30 backdrop-blur-xl p-6 rounded-[32px] shadow-2xl border border-border relative overflow-hidden ring-1 ring-border/5 hover:bg-card/40 transition-all",
+        embedded
+            ? "p-0 rounded-none border-0 shadow-none bg-transparent hover:bg-transparent ring-0"
+            : "bg-card/30 backdrop-blur-xl p-4 rounded-[24px] shadow-2xl border border-border relative overflow-hidden ring-1 ring-border/5 hover:bg-card/40 transition-all",
         fillHeight && "flex flex-col h-full",
         className
     );
@@ -131,36 +145,34 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
         return (
             <div className={containerClass}>
                 {/* Header */}
-                <div className="mb-4">
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                        <BarChart2 className="w-5 h-5 text-chart-1" />
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" dir={isArabic ? 'rtl' : 'ltr'}>
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        <BarChart2 className="w-4 h-4 text-chart-1" />
                         {t.growthTrajectory}
                     </h3>
-                </div>
-
-                {/* Controls even when empty */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <div className="flex items-center bg-muted/40 rounded-xl p-1 gap-0.5">
-                        {timeRangeOptions.map(opt => (
-                            <button
-                                key={opt.key}
-                                onClick={() => setTimeRange(opt.key)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    timeRange === opt.key
-                                        ? "bg-primary text-primary-foreground shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                                )}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
+                    <div className="max-w-full overflow-x-auto">
+                        <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 w-max">
+                            {timeRangeOptions.map(opt => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => setTimeRange(opt.key)}
+                                    className={cn(
+                                        "px-2 py-1 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
+                                        timeRange === opt.key
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 <div className={cn(
-                    "flex items-center justify-center bg-muted/20 rounded-2xl border border-dashed border-border text-muted-foreground text-sm font-medium",
-                    fillHeight ? "flex-1 min-h-[220px]" : "h-48"
+                    "flex items-center justify-center bg-muted/20 rounded-xl border border-dashed border-border text-muted-foreground text-sm font-medium",
+                    fillHeight ? "flex-1 min-h-[160px]" : "h-36"
                 )}>
                     {t.noDataYet}
                 </div>
@@ -175,7 +187,11 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
             tickLine: false,
             axisLine: false,
             tickMargin: 10,
-            minTickGap: 32,
+            minTickGap: 0,
+            interval: 0 as const,
+            height: 54,
+            angle: -30,
+            textAnchor: 'end' as const,
             className: "text-xs fill-muted-foreground",
         },
     };
@@ -266,36 +282,24 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
         }
     };
 
-    // Calculate summary stats for the selected range
-    const totalPointsInRange = chartData.reduce((sum, d) => sum + d.points, 0);
-    const avgPointsPerDay = chartData.length > 0 ? Math.round(totalPointsInRange / chartData.length) : 0;
-
     return (
         <div className={containerClass}>
-            {/* Unified Header (Title + Controls) */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                        <BarChart2 className="w-5 h-5 text-chart-1" />
-                        {t.growthTrajectory}
-                    </h3>
+            {/* Compact Header (Title + Avg + Controls) */}
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" dir={isArabic ? 'rtl' : 'ltr'}>
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                    <BarChart2 className="w-4 h-4 text-chart-1" />
+                    {t.growthTrajectory}
+                </h3>
 
-                    {/* Avg/Day Stat */}
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-chart-1/10 rounded-full border border-chart-1/20">
-                        <span className="text-[10px] font-bold text-chart-1 uppercase">{language === 'ar' ? 'المعدل' : 'Avg'}:</span>
-                        <span className="text-xs font-black text-chart-1 tabular-nums">{avgPointsPerDay}</span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex flex-wrap items-center gap-1.5">
                     {/* Time Range Selector */}
-                    <div className="flex items-center bg-muted/40 rounded-xl p-1 gap-0.5">
+                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 w-max">
                         {timeRangeOptions.map(opt => (
                             <button
                                 key={opt.key}
                                 onClick={() => setTimeRange(opt.key)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                    "px-2 py-1 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
                                     timeRange === opt.key
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -307,13 +311,13 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
                     </div>
 
                     {/* Chart Type Selector */}
-                    <div className="flex items-center bg-muted/40 rounded-xl p-1 gap-0.5">
+                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 w-max">
                         {chartTypeOptions.map(opt => (
                             <button
                                 key={opt.key}
                                 onClick={() => setChartType(opt.key)}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                    "flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
                                     chartType === opt.key
                                         ? "bg-chart-1 text-white shadow-sm"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -327,8 +331,12 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
                 </div>
             </div>
 
-            {/* Chart */}
-            <ChartContainer config={chartConfig} className={cn(fillHeight ? "flex-1 min-h-[260px] w-full" : "h-[300px] w-full")}>
+            {/* Chart - reduced height */}
+            <ChartContainer
+                config={chartConfig}
+                className={cn(fillHeight ? "flex-1 min-h-[150px] sm:min-h-[180px] w-full" : "h-[180px] sm:h-[220px] w-full")}
+                dir="ltr"
+            >
                 {renderChart()}
             </ChartContainer>
         </div>

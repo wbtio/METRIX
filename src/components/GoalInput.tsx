@@ -15,6 +15,7 @@ interface GoalInputProps {
     className?: string;
     maxLength?: number;
     placeholder?: string;
+    language?: 'ar' | 'en';
 }
 
 export default function GoalInput({
@@ -26,7 +27,8 @@ export default function GoalInput({
     isLoading,
     className,
     maxLength = 1000,
-    placeholder = "ما هو هدفك القادم؟..."
+    placeholder = "ما هو هدفك القادم؟...",
+    language = 'ar'
 }: GoalInputProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -44,38 +46,36 @@ export default function GoalInput({
         adjustHeight();
     }, [value]);
 
+    const isArabic = language === 'ar';
+
     return (
-        <div className={cn("w-full max-w-3xl mx-auto px-2 sm:px-4", className)}>
+        <div className={cn("w-full max-w-3xl mx-auto", className)}>
             <div
                 className={cn(
-                    "relative flex items-end gap-2 p-2 pl-3 transition-all duration-300 ease-out",
-                    // Background & Blur
-                    "bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40",
-                    // Border & Shape
-                    "border border-muted-foreground/10 rounded-[28px]",
-                    // Shadow - Soft & Deep
-                    "shadow-[0_8px_32px_-8px_rgba(0,0,0,0.08)]",
-                    // Focus State - Glow Effect
-                    "focus-within:shadow-[0_8px_32px_-8px_rgba(var(--primary),0.15)] focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10",
-                    // Recording State
-                    isRecording && "border-red-500/30 ring-4 ring-red-500/5 bg-red-500/5"
+                    "relative flex items-center gap-2.5 p-2.5 transition-all duration-200",
+                    "bg-background/95 backdrop-blur-sm",
+                    "border border-border rounded-[20px]",
+                    "shadow-sm",
+                    "focus-within:border-primary/40 focus-within:shadow-md",
+                    isRecording && "border-red-500/30 bg-red-50/5"
                 )}
-                dir="auto"
+                dir={isArabic ? 'rtl' : 'ltr'}
             >
                 <textarea
                     ref={textareaRef}
                     dir="auto"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder={isRecording ? "جارِ الاستماع..." : placeholder}
+                    placeholder={isRecording ? (isArabic ? "جارِ الاستماع..." : "Listening...") : placeholder}
                     maxLength={maxLength}
                     rows={1}
                     disabled={isLoading}
                     className={cn(
-                        "flex-1 min-h-[52px] max-h-[200px] py-3.5 bg-transparent border-none outline-none resize-none",
-                        "text-base sm:text-lg leading-relaxed text-foreground placeholder:text-muted-foreground/50",
+                        "flex-1 min-h-[44px] max-h-[200px] py-2.5 bg-transparent border-none outline-none resize-none",
+                        "text-sm sm:text-base font-medium leading-relaxed text-foreground placeholder:text-muted-foreground/50",
                         "scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent",
-                        isRecording && "placeholder:text-red-500/70 animate-pulse"
+                        isRecording && "placeholder:text-red-500/60",
+                        "px-3"
                     )}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -86,57 +86,65 @@ export default function GoalInput({
                 />
 
                 {/* Actions Container */}
-                <div className="flex items-center gap-2 pb-1.5 pr-1 shrink-0">
-                    
-                    {/* Recording Button */}
-                    <div className="relative">
-                        {isRecording && (
-                            <span className="absolute inset-0 rounded-full animate-ping bg-red-500/20 duration-1000" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Voice Recording Button with subtle animation */}
+                    <button
+                        onClick={onToggleRecording}
+                        disabled={isLoading}
+                        className={cn(
+                            "relative px-3 h-9 rounded-full transition-all duration-200 flex items-center justify-center gap-1.5",
+                            "text-xs font-medium",
+                            isRecording 
+                                ? "bg-red-50 text-red-600 hover:bg-red-100" 
+                                : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground",
+                            isLoading && "opacity-50 cursor-not-allowed"
                         )}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onToggleRecording}
-                            className={cn(
-                                "h-10 w-10 rounded-full transition-all duration-300 relative z-10",
-                                isRecording 
-                                    ? "bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                            title={isRecording ? "إيقاف التسجيل" : "تحدث"}
-                        >
-                            {isRecording ? (
-                                <StopCircle className="w-5 h-5 fill-current" />
-                            ) : (
-                                <Mic className="w-5 h-5" />
-                            )}
-                        </Button>
-                    </div>
+                        title={isRecording ? (isArabic ? "إيقاف التسجيل" : "Stop Recording") : (isArabic ? "تحدث" : "Speak")}
+                    >
+                        {isRecording && (
+                            <span className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" />
+                        )}
+                        {isRecording ? (
+                            <StopCircle className="w-3.5 h-3.5 fill-current relative z-10" />
+                        ) : (
+                            <Mic className="w-3.5 h-3.5 relative z-10" />
+                        )}
+                        <span className="relative z-10 hidden sm:inline">
+                            {isRecording 
+                                ? (isArabic ? "إيقاف" : "Stop") 
+                                : (isArabic ? "صوت" : "Voice")}
+                        </span>
+                    </button>
 
                     {/* Submit Button */}
-                    <Button
-                        size="icon"
+                    <button
                         onClick={onSubmit}
                         disabled={!value.trim() || isLoading}
                         className={cn(
-                            "h-10 w-10 rounded-full transition-all duration-300 shadow-sm",
+                            "px-3 h-9 rounded-full transition-all duration-200 flex items-center justify-center gap-1.5",
+                            "text-xs font-medium",
                             value.trim() && !isLoading
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-[0_0_15px_rgba(var(--primary),0.3)]"
-                                : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed scale-95"
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                : "bg-muted/40 text-muted-foreground/40 cursor-not-allowed"
                         )}
+                        title={isArabic ? "إنشاء" : "Submit"}
                     >
                         {isLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                            <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                            <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />
                         )}
-                    </Button>
+                        <span className="hidden sm:inline">
+                            {isArabic ? "إنشاء" : "Submit"}
+                        </span>
+                    </button>
                 </div>
             </div>
 
             {/* Character Counter (Optional - visible only when typing) */}
             <div className={cn(
-                "px-4 mt-2 flex justify-end text-[10px] font-medium text-muted-foreground transition-opacity duration-300",
+                "px-4 mt-2 flex text-[10px] font-medium text-muted-foreground transition-opacity duration-300",
+                isArabic ? "justify-start" : "justify-end",
                 value.length > 0 ? "opacity-100" : "opacity-0"
             )}>
                 <span>{value.length} / {maxLength}</span>

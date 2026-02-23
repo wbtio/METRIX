@@ -131,10 +131,9 @@ interface GoalTemplatesProps {
 export default function GoalTemplates({ onSelectTemplate, language = 'en' }: GoalTemplatesProps) {
     const isArabic = language === 'ar';
     const direction = isArabic ? 'rtl' : 'ltr';
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedCategory, setSelectedCategory] = useState<string>('fitness');
 
     const categories = [
-        { id: 'all', labelEn: 'All', labelAr: 'الكل', icon: Sparkles },
         { id: 'fitness', labelEn: 'Fitness', labelAr: 'اللياقة', icon: Dumbbell },
         { id: 'education', labelEn: 'Education', labelAr: 'التعليم', icon: Book },
         { id: 'career', labelEn: 'Career', labelAr: 'المهنة', icon: Briefcase },
@@ -142,14 +141,12 @@ export default function GoalTemplates({ onSelectTemplate, language = 'en' }: Goa
         { id: 'hobby', labelEn: 'Hobbies', labelAr: 'الهوايات', icon: Palette },
     ];
 
-    const filteredTemplates = selectedCategory === 'all' 
-        ? TEMPLATES 
-        : TEMPLATES.filter(t => t.category === selectedCategory);
+    const filteredTemplates = TEMPLATES.filter(t => t.category === selectedCategory);
 
     return (
-        <div className="space-y-4" dir={direction}>
+        <div className="space-y-3" dir={direction}>
             {/* Category Filter - Scrollable with clear indication */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
                 {categories.map((cat) => {
                     const Icon = cat.icon;
                     const isActive = selectedCategory === cat.id;
@@ -158,9 +155,9 @@ export default function GoalTemplates({ onSelectTemplate, language = 'en' }: Goa
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all whitespace-nowrap border",
-                                isActive 
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm font-medium" 
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-all whitespace-nowrap border",
+                                isActive
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm font-medium"
                                     : "bg-card/50 text-muted-foreground border-border hover:bg-card hover:text-foreground",
                                 isArabic && "font-medium" // Slightly bolder for Arabic readability
                             )}
@@ -172,70 +169,69 @@ export default function GoalTemplates({ onSelectTemplate, language = 'en' }: Goa
                 })}
             </div>
 
-            {/* Templates Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredTemplates.map((template) => {
-                    const Icon = template.icon;
-                    return (
-                        <button
-                            key={template.id}
-                            onClick={() => onSelectTemplate(template)}
-                            className={cn(
-                                "group relative flex flex-col justify-between bg-card hover:bg-card/80 border border-border hover:border-primary/50 rounded-2xl p-4 transition-all hover:shadow-lg text-start h-full",
-                            )}
-                        >
-                            <div className="w-full">
-                                {/* Header: Icon + Title */}
-                                <div className="flex items-start gap-3 mb-3">
-                                    <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    
-                                    <div className="flex-1 min-w-0 pt-0.5">
-                                        <h3 className={cn(
-                                            "font-bold text-foreground group-hover:text-primary transition-colors leading-tight mb-1",
-                                            isArabic ? "text-base font-bold" : "text-sm" // Increased size for Arabic
-                                        )}>
-                                            {isArabic ? template.titleAr : template.titleEn}
-                                        </h3>
-                                        <p className={cn(
-                                            "text-muted-foreground line-clamp-2",
-                                            isArabic ? "text-sm leading-relaxed" : "text-xs" // Better line height for Arabic
-                                        )}>
-                                            {isArabic ? template.descriptionAr : template.descriptionEn}
-                                        </p>
-                                    </div>
+              {/* Templates Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {filteredTemplates.map((template) => {
+                      const Icon = template.icon;
+                      return (
+                          <button
+                              key={template.id}
+                              onClick={() => onSelectTemplate(template)}
+                              className={cn(
+                                  "group relative flex flex-col justify-start bg-card hover:bg-card/80 border border-border hover:border-primary/50 rounded-lg p-2 transition-all hover:shadow-md text-start h-full",
+                              )}
+                          >
+                              <div className="w-full">
+                                  {/* Header: Icon + Title + Chevron in one row */}
+                                  <div className="flex items-start gap-2">
+                                      <div className="shrink-0 w-7 h-7 rounded-md bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
+                                          <Icon className="w-3.5 h-3.5" />
+                                      </div>
 
-                                    {/* Arrow Icon - Automatically mirrors in RTL if we don't rotate it, 
-                                        BUT commonly ChevronRight points 'forward'. 
-                                        In RTL 'forward' is Left. ChevronRight points Right. 
-                                        So we rotate 180 in RTL. */}
-                                    <ChevronRight className={cn(
-                                        "w-5 h-5 text-muted-foreground/50 group-hover:text-primary transition-all shrink-0 mt-1",
-                                        isArabic && "rotate-180"
-                                    )} />
-                                </div>
-                            </div>
+                                      <div className="flex-1 min-w-0">
+                                          <div className="flex justify-between items-start gap-2">
+                                              <h3 className={cn(
+                                                  "font-semibold text-foreground group-hover:text-primary transition-colors leading-tight mb-0.5 line-clamp-1",
+                                                  isArabic ? "text-[13px]" : "text-[12px]"
+                                              )}>
+                                                  {isArabic ? template.titleAr : template.titleEn}
+                                              </h3>
 
-                            {/* Footer Stats */}
-                            <div className="flex items-center gap-2 mt-2 pt-3 border-t border-border/50 w-full">
-                                <span className={cn(
-                                    "bg-muted px-2.5 py-1 rounded-md text-muted-foreground font-medium",
-                                    isArabic ? "text-xs" : "text-[10px]"
-                                )}>
-                                    {template.estimatedDays} {isArabic ? 'يوم' : 'days'}
-                                </span>
-                                <span className={cn(
-                                    "bg-muted px-2.5 py-1 rounded-md text-muted-foreground font-medium",
-                                    isArabic ? "text-xs" : "text-[10px]"
-                                )}>
-                                    {template.tasks.length} {isArabic ? 'مهام' : 'tasks'}
-                                </span>
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+                                              <ChevronRight className={cn(
+                                                  "w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-all shrink-0",
+                                                  isArabic && "rotate-180"
+                                              )} />
+                                          </div>
+
+                                          <p className={cn(
+                                              "text-muted-foreground line-clamp-1 mb-1 leading-tight",
+                                              isArabic ? "text-[10px]" : "text-[9px]"
+                                          )}>
+                                              {isArabic ? template.descriptionAr : template.descriptionEn}
+                                          </p>
+
+                                          {/* Stats Inline */}
+                                          <div className="flex items-center gap-1.5">
+                                              <span className={cn(
+                                                  "bg-muted/50 px-1.5 py-0.5 rounded text-muted-foreground font-medium border border-border/50 leading-none",
+                                                  isArabic ? "text-[10px]" : "text-[9px]"
+                                              )}>
+                                                  {template.estimatedDays} {isArabic ? 'يوم' : 'days'}
+                                              </span>
+                                              <span className={cn(
+                                                  "bg-muted/50 px-1.5 py-0.5 rounded text-muted-foreground font-medium border border-border/50 leading-none",
+                                                  isArabic ? "text-[10px]" : "text-[9px]"
+                                              )}>
+                                                  {template.tasks.length} {isArabic ? 'مهام' : 'tasks'}
+                                              </span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </button>
+                      );
+                  })}
+              </div>
 
             {/* Empty State */}
             {filteredTemplates.length === 0 && (

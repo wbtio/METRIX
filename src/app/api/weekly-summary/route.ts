@@ -42,13 +42,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Server configuration error: Missing Mistral API key" }, { status: 500 });
     }
 
-    const supabase = getSupabaseAdmin();
-    const { goalId, forceRefresh = false } = await req.json();
-    console.log("Received request for goalId:", goalId, "forceRefresh:", forceRefresh);
+      const { goalId, forceRefresh = false } = await req.json();
+      console.log("Received request for goalId:", goalId, "forceRefresh:", forceRefresh);
 
-    if (!goalId) {
-      return NextResponse.json({ error: "goalId is required" }, { status: 400 });
-    }
+      if (!goalId) {
+        return NextResponse.json({ error: "goalId is required" }, { status: 400 });
+      }
+
+      const supabase = getSupabaseAdmin();
 
     const { start, end } = getWeekRange();
     const weekStart = start.toISOString().slice(0, 10);
@@ -255,7 +256,7 @@ Rules:
     console.error("API Error:", error);
     console.error("Error stack:", error?.stack);
     return NextResponse.json(
-      { error: "Internal server error", message: error?.message || String(error), stack: error?.stack },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
