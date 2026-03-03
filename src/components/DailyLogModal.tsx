@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { X, Loader2, Send, Mic, MicOff, Trophy, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { X, Loader2, Send, Trophy, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
+import VoiceRecorder from './VoiceRecorder';
 
 interface DailyLogModalProps {
     goal: { id: string; title: string; ai_summary?: string; created_at?: string; current_points?: number; target_points?: number };
@@ -19,64 +20,12 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
     const [logText, setLogText] = useState('');
     const [loading, setLoading] = useState(false);
     const [evaluation, setEvaluation] = useState<any>(null);
-    const [isRecording, setIsRecording] = useState(false);
     const [notification, setNotification] = useState<{ type: 'error' | 'warning', message: string } | null>(null);
-    const recognitionRef = useRef<any>(null);
     const submittedRef = useRef(false);
 
-    const startRecording = () => {
-        if (typeof window === 'undefined') return;
-
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setNotification({ type: 'error', message: 'التعرف على الصوت غير مدعوم. استخدم Chrome أو Edge.' });
-            return;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = 'ar-SA';
-
-        recognition.onresult = (event: any) => {
-            let transcript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript + ' ';
-            }
-            if (transcript) {
-                setLogText(prev => prev + transcript);
-            }
-        };
-
-        recognition.onerror = (e: any) => {
-            console.error('Speech error:', e.error);
-            setIsRecording(false);
-        };
-
-        recognition.onend = () => {
-            setIsRecording(false);
-        };
-
-        recognitionRef.current = recognition;
-        recognition.start();
-        setIsRecording(true);
-    };
-
-    const stopRecording = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            recognitionRef.current = null;
-        }
-        setIsRecording(false);
-    };
-
-    const toggleRecording = () => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-    };
+    const handleVoiceTranscript = useCallback((transcript: string) => {
+        setLogText(prev => prev ? prev + ' ' + transcript : transcript);
+    }, []);
 
     const handleSubmit = useCallback(async () => {
         if (!logText.trim() || submittedRef.current) return;
@@ -171,6 +120,15 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                 .delete()
                 .eq('goal_id', goal.id);
 
+            // Notify challenge tab listeners to refresh immediately.
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                    new CustomEvent('challenge-log-updated', {
+                        detail: { goalId: goal.id, createdAt: new Date().toISOString() },
+                    })
+                );
+            }
+
         } catch (e: any) {
             console.error(e);
             submittedRef.current = false;
@@ -201,16 +159,47 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                         </div>
 
                         <div className="space-y-3">
-                            {evaluation.task_breakdown?.map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center text-sm py-2 border-b border-border last:border-0">
-                                    <span className="text-foreground/80 font-medium truncate flex-1 text-start">
-                                        {tasks.find(t => t.id === item.task_id)?.task_description || t.generalProgress}
-                                    </span>
-                                    <span className={`font-bold ms-4 ${item.points > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
-                                        +{item.points}
-                                    </span>
-                                </div>
-                            ))}
+                            {Array.isArray(evaluation.main_breakdown) && evaluation.main_breakdown.length > 0 ? (
+                                evaluation.main_breakdown.map((mb: any, mbIdx: number) => (
+                                    <div key={mbIdx} className="space-y-1">
+                                        <div className="flex justify-between items-center text-sm py-1.5">
+                                            <span className="font-bold text-foreground/90 truncate flex-1 text-start flex items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full shrink-0 ${mb.status === 'done' ? 'bg-chart-2' : mb.status === 'partial' ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
+                                                {mb.main_task}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground ms-3 shrink-0">
+                                                {mb.completed_subtasks}/{mb.total_subtasks} &middot; +{mb.total_points}
+                                            </span>
+                                        </div>
+                                        {(evaluation.subtask_breakdown || evaluation.task_breakdown || [])
+                                            .filter((item: any) => {
+                                                const taskRow = tasks.find((tk: any) => tk.id === item.task_id);
+                                                return taskRow?.parent_task_id === mb.main_task_id;
+                                            })
+                                            .map((item: any, idx: number) => (
+                                                <div key={idx} className="flex justify-between items-center text-xs py-1 ps-4 border-s-2 border-border/40">
+                                                    <span className="text-foreground/70 truncate flex-1 text-start">
+                                                        {tasks.find((tk: any) => tk.id === item.task_id)?.task_description || t.generalProgress}
+                                                    </span>
+                                                    <span className={`font-bold ms-3 ${item.points > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
+                                                        +{item.points}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                    </div>
+                                ))
+                            ) : (
+                                (evaluation.subtask_breakdown || evaluation.task_breakdown || []).map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm py-2 border-b border-border last:border-0">
+                                        <span className="text-foreground/80 font-medium truncate flex-1 text-start">
+                                            {tasks.find((tk: any) => tk.id === item.task_id)?.task_description || t.generalProgress}
+                                        </span>
+                                        <span className={`font-bold ms-4 ${item.points > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
+                                            +{item.points}
+                                        </span>
+                                    </div>
+                                ))
+                            )}
                             {evaluation.bonus?.points > 0 && (
                                 <div className="flex justify-between items-center text-sm py-2 border-t border-dashed border-border">
                                     <span className="text-chart-1 font-bold flex-1 text-start flex items-center gap-1">
@@ -266,18 +255,15 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                                 value={logText}
                                 onChange={(e) => setLogText(e.target.value)}
                                 placeholder={t.progressPlaceholder}
-                                className={`w-full h-48 p-4 border-2 rounded-2xl resize-none transition-all placeholder:text-muted-foreground bg-muted/30 text-foreground ${isRecording ? 'bg-destructive/10 border-destructive/40' : 'border-transparent focus:border-primary'}`}
+                                className="w-full h-48 p-4 border-2 rounded-2xl resize-none transition-all placeholder:text-muted-foreground bg-muted/30 text-foreground border-transparent focus:border-primary"
                                 dir={language === 'ar' ? 'rtl' : 'ltr'}
                             />
-                            {isRecording && (
-                                <div className="absolute top-2 left-4 text-xs text-destructive font-medium animate-pulse">{t.listening}</div>
-                            )}
-                            <button
-                                onClick={toggleRecording}
-                                className={`absolute bottom-4 end-4 p-3 shadow-sm border rounded-full transition-all ${isRecording ? 'bg-destructive border-destructive text-destructive-foreground animate-pulse' : 'bg-background border-border text-muted-foreground hover:text-primary'}`}
-                            >
-                                {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                            </button>
+                            <div className="absolute bottom-4 end-4">
+                                <VoiceRecorder 
+                                    onTranscript={handleVoiceTranscript}
+                                    language={language === 'ar' ? 'ar' : 'en'}
+                                />
+                            </div>
                         </div>
                     </div>
 

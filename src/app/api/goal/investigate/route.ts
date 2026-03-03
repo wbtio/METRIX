@@ -3,9 +3,9 @@ import { GeminiService, GeminiQuotaError } from '@/lib/gemini';
 
 export async function POST(req: Request) {
     try {
-        const { goal, context } = await req.json();
-        console.log("API investigate called with:", { goal, context });
-        const result = await GeminiService.investigateGoal(goal, context);
+        const { goal, context, structured_input } = await req.json();
+        console.log("API investigate called with:", { goal, context, has_structured_input: Boolean(structured_input) });
+        const result = await GeminiService.investigateGoal(goal, context, structured_input);
         return NextResponse.json(result);
     } catch (error: any) {
         console.error("API investigate error:", error);

@@ -3,8 +3,14 @@ import { GeminiService, GeminiQuotaError } from '@/lib/gemini';
 
 export async function POST(req: Request) {
     try {
-        const { tasks, log, previousLogs = [], goalContext = {} } = await req.json();
-        const result = await GeminiService.evaluateDailyLog(tasks, log, previousLogs, goalContext);
+        const {
+            tasks,
+            mainTasks = [],
+            log,
+            previousLogs = [],
+            goalContext = {}
+        } = await req.json();
+        const result = await GeminiService.evaluateDailyLog(tasks, log, previousLogs, goalContext, mainTasks);
         return NextResponse.json(result);
     } catch (error: any) {
         if (error instanceof GeminiQuotaError) {

@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Target } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,21 +49,24 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <div className="w-full max-w-md">
         <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* Logo and Title */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-chart-4 flex items-center justify-center shadow-lg">
-                <Target className="w-10 h-10 text-primary-foreground" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">
-                Metrix - Goal Orbit
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                تتبع أهدافك بذكاء اصطناعي
-              </p>
-            </div>
+          {/* Logo */}
+          <div className="flex justify-center">
+            <Image
+              src="/logo1.svg"
+              alt="Metrix Logo"
+              width={180}
+              height={180}
+              priority
+              className="h-auto w-48 sm:w-52 dark:hidden"
+            />
+            <Image
+              src="/logo2.svg"
+              alt="Metrix Logo Dark"
+              width={180}
+              height={180}
+              priority
+              className="hidden h-auto w-48 sm:w-52 dark:block"
+            />
           </div>
 
           {/* Login Button */}

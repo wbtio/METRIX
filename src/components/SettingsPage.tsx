@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-    Sun, Moon, Globe, Check, Target, Sparkles, BarChart2, LogOut, Bell, BellOff
+    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2
 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
 import { isNotificationsEnabled, setNotificationsEnabled, getNotificationPermission } from '@/hooks/useStreakReminder';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Goal {
     id: string;
@@ -19,22 +20,35 @@ interface Goal {
 }
 
 interface SettingsPageProps {
+    user: SupabaseUser | null;
     language: Language;
     setLanguage: (lang: Language) => void;
     goals: Goal[];
+    onProfileUpdated?: () => void | Promise<void>;
     onGoalsDeleted?: () => void;
 }
 
-export default function SettingsPage({ language, setLanguage, goals }: SettingsPageProps) {
+type SettingsTab = 'general' | 'profile';
+
+export default function SettingsPage({ user, language, setLanguage, goals, onProfileUpdated }: SettingsPageProps) {
     const t = translations[language];
     const isArabic = language === 'ar';
     const supabase = createClient();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const [totalLogs, setTotalLogs] = useState(0);
+    const [maxStreak, setMaxStreak] = useState(0);
     const [signingOut, setSigningOut] = useState(false);
     const [notifEnabled, setNotifEnabled] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
+
+    // Profile state
+    const [displayName, setDisplayName] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [updatingProfile, setUpdatingProfile] = useState(false);
+    const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -42,23 +56,61 @@ export default function SettingsPage({ language, setLanguage, goals }: SettingsP
         if (savedTheme) setTheme(savedTheme);
         setNotifEnabled(isNotificationsEnabled());
         setNotifPermission(getNotificationPermission());
-        fetchTotalLogs();
+        fetchStats();
     }, []);
 
-    const fetchTotalLogs = async () => {
+    useEffect(() => {
+        if (user) {
+            setDisplayName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
+            setAvatarUrl(user.user_metadata?.avatar_url || null);
+        }
+    }, [user]);
+
+    const fetchStats = async () => {
         try {
-            const { count, error } = await supabase
+            const { count: logsCount } = await supabase
                 .from('daily_logs')
                 .select('id', { count: 'exact' });
+            setTotalLogs(logsCount ?? 0);
 
-            if (error) {
-                setTotalLogs(0);
-                return;
+            const { data: allLogs } = await supabase
+                .from('daily_logs')
+                .select('created_at, goal_id')
+                .order('created_at', { ascending: true });
+
+            if (allLogs && allLogs.length > 0) {
+                const logsByGoal = allLogs.reduce((acc: Record<string, string[]>, log) => {
+                    if (!acc[log.goal_id]) acc[log.goal_id] = [];
+                    acc[log.goal_id].push(log.created_at);
+                    return acc;
+                }, {});
+
+                let absoluteMaxStreak = 0;
+                Object.values(logsByGoal).forEach(dates => {
+                    const toLocalDateStr = (isoStr: string) => {
+                        const d = new Date(isoStr);
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    };
+                    const uniqueDates = Array.from(new Set(dates.map(toLocalDateStr))).sort();
+                    if (uniqueDates.length === 0) return;
+                    let currentStreak = 1;
+                    let localMaxStreak = 1;
+                    for (let i = 1; i < uniqueDates.length; i++) {
+                        const prevDate = new Date(uniqueDates[i - 1]);
+                        prevDate.setDate(prevDate.getDate() + 1);
+                        if (toLocalDateStr(prevDate.toISOString()) === uniqueDates[i]) {
+                            currentStreak++;
+                            localMaxStreak = Math.max(localMaxStreak, currentStreak);
+                        } else {
+                            currentStreak = 1;
+                        }
+                    }
+                    absoluteMaxStreak = Math.max(absoluteMaxStreak, localMaxStreak);
+                });
+                setMaxStreak(absoluteMaxStreak);
             }
-
-            setTotalLogs(count ?? 0);
-        } catch {
-            setTotalLogs(0);
+        } catch (error) {
+            console.error('Error fetching stats:', error);
         }
     };
 
@@ -87,244 +139,400 @@ export default function SettingsPage({ language, setLanguage, goals }: SettingsP
 
     const handleToggleNotifications = async () => {
         if (notifEnabled) {
-            // Disable
             await setNotificationsEnabled(false);
             setNotifEnabled(false);
         } else {
-            // Enable (will request permission if needed)
             const granted = await setNotificationsEnabled(true);
             setNotifEnabled(granted);
             setNotifPermission(getNotificationPermission());
         }
     };
 
-    // Stats
+    const handleDisplayNameSave = async () => {
+        if (!user) return;
+        setUpdatingProfile(true);
+        setProfileMessage(null);
+        const { error } = await supabase.auth.updateUser({ data: { full_name: displayName.trim() || null } });
+        setUpdatingProfile(false);
+        if (error) {
+            setProfileMessage({ type: 'error', text: error.message });
+        } else {
+            setProfileMessage({ type: 'success', text: isArabic ? 'تم حفظ الاسم' : 'Name saved' });
+            setTimeout(() => setProfileMessage(null), 2500);
+            await onProfileUpdated?.();
+        }
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user) return;
+        if (!file.type.startsWith('image/')) {
+            setProfileMessage({ type: 'error', text: isArabic ? 'يرجى اختيار صورة' : 'Please select an image' });
+            return;
+        }
+        setUpdatingProfile(true);
+        setProfileMessage(null);
+        try {
+            let urlToUse: string;
+            const ext = file.name.split('.').pop() || 'jpg';
+            const path = `${user.id}/avatar.${ext}`;
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+            if (uploadError) {
+                urlToUse = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+                urlToUse = data.publicUrl;
+            }
+            const { error: updateError } = await supabase.auth.updateUser({ data: { avatar_url: urlToUse } });
+            if (updateError) {
+                setProfileMessage({ type: 'error', text: updateError.message });
+            } else {
+                setAvatarUrl(urlToUse);
+                setProfileMessage({ type: 'success', text: isArabic ? 'تم رفع الصورة' : 'Photo updated' });
+                setTimeout(() => setProfileMessage(null), 2500);
+                await onProfileUpdated?.();
+            }
+        } catch (err) {
+            setProfileMessage({ type: 'error', text: (err as Error).message });
+        } finally {
+            setUpdatingProfile(false);
+        }
+        e.target.value = '';
+    };
+
+    const handleRemovePhoto = async () => {
+        if (!user) return;
+        setUpdatingProfile(true);
+        setProfileMessage(null);
+        const { error } = await supabase.auth.updateUser({ data: { avatar_url: null } });
+        setUpdatingProfile(false);
+        if (error) {
+            setProfileMessage({ type: 'error', text: error.message });
+        } else {
+            setAvatarUrl(null);
+            setProfileMessage({ type: 'success', text: isArabic ? 'تم حذف الصورة' : 'Photo removed' });
+            setTimeout(() => setProfileMessage(null), 2500);
+            await onProfileUpdated?.();
+        }
+    };
+
     const completedGoals = goals.filter(g => g.current_points >= g.target_points).length;
     const totalPointsEarned = goals.reduce((sum, g) => sum + (g.current_points || 0), 0);
 
     return (
         <div
-            className="w-full max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-500"
+            className="w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
-            <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 lg:p-8 rounded-[20px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl space-y-4 sm:space-y-6">
-                {/* Header */}
-                <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-1">{t.settings}</h2>
-                    <p className="text-sm text-muted-foreground">{t.settingsSubtitle}</p>
+            <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl">
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 border-b border-border/50 pb-4">
+                    <button
+                        onClick={() => setActiveTab('general')}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                            activeTab === 'general'
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                    >
+                        <Globe className="w-4 h-4" />
+                        {t.generalSettings}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('profile')}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                            activeTab === 'profile'
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                    >
+                        <User className="w-4 h-4" />
+                        {t.profileSettings}
+                    </button>
                 </div>
 
-                <div className="space-y-4">
-                    {/* ── Appearance ── */}
-                    <div className="p-4 sm:p-5 bg-card/40 rounded-2xl border border-border hover:border-primary/20 transition-all">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                {activeTab === 'general' ? (
+                    <div className="bg-card/40 rounded-2xl border border-border overflow-hidden">
+                        <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-indigo-500/10 flex items-center justify-center">
-                                    {theme === 'dark' ? (
-                                        <Moon className="w-5 h-5 text-indigo-500" />
-                                    ) : (
-                                        <Sun className="w-5 h-5 text-amber-500" />
-                                    )}
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-indigo-500/10 flex items-center justify-center">
+                                    {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.appearance}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t.appearanceDesc}</p>
+                                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">{t.appearanceDesc}</p>
                                 </div>
                             </div>
-
-                            <div className="flex gap-1.5 shrink-0 self-end sm:self-auto">
+                            <div className="flex gap-1.5 shrink-0 bg-muted/30 p-1 rounded-xl">
                                 <button
                                     onClick={() => handleThemeChange('light')}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
-                                        theme === 'light'
-                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/30"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        theme === 'light' ? "bg-background text-amber-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
+                                    title={t.lightMode}
                                 >
-                                    <Sun className="w-3.5 h-3.5" />
-                                    {t.lightMode}
+                                    <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5 sm:mr-1.5 rtl:sm:ml-1.5 rtl:sm:mr-0" />
+                                    <span className="hidden sm:inline">{t.lightMode}</span>
                                 </button>
                                 <button
                                     onClick={() => handleThemeChange('dark')}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
-                                        theme === 'dark'
-                                            ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/30"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        theme === 'dark' ? "bg-background text-indigo-500 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
+                                    title={t.darkMode}
                                 >
-                                    <Moon className="w-3.5 h-3.5" />
-                                    {t.darkMode}
+                                    <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5 sm:mr-1.5 rtl:sm:ml-1.5 rtl:sm:mr-0" />
+                                    <span className="hidden sm:inline">{t.darkMode}</span>
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* ── Language ── */}
-                    <div className="p-4 sm:p-5 bg-card/40 rounded-2xl border border-border hover:border-primary/20 transition-all">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                                    <Globe className="w-5 h-5 text-blue-500" />
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                    <Globe className="w-4 h-4 text-blue-500" />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.language}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t.languageDesc}</p>
+                                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">{t.languageDesc}</p>
                                 </div>
                             </div>
-
-                            <div className="flex gap-1.5 shrink-0 self-end sm:self-auto">
+                            <div className="flex gap-1.5 shrink-0 bg-muted/30 p-1 rounded-xl">
                                 <button
                                     onClick={() => handleLanguageChange('en')}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
-                                        language === 'en'
-                                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        language === 'en' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
+                                    title={t.english}
                                 >
-                                    {language === 'en' && <Check className="w-3 h-3" />}
-                                    {t.english}
+                                    <span className="sm:hidden font-bold">EN</span>
+                                    <span className="hidden sm:inline">{t.english}</span>
                                 </button>
                                 <button
                                     onClick={() => handleLanguageChange('ar')}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
-                                        language === 'ar'
-                                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        language === 'ar' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
+                                    title={t.arabic}
                                 >
-                                    {language === 'ar' && <Check className="w-3 h-3" />}
-                                    {t.arabic}
+                                    <span className="sm:hidden font-bold">AR</span>
+                                    <span className="hidden sm:inline">{t.arabic}</span>
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* ── Notifications ── */}
-                    <div className="p-4 sm:p-5 bg-card/40 rounded-2xl border border-border hover:border-primary/20 transition-all">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className={cn(
-                                    "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
-                                    notifEnabled
-                                        ? "bg-orange-500/10"
-                                        : "bg-muted/50"
-                                )}>
-                                    {notifEnabled ? (
-                                        <Bell className="w-5 h-5 text-orange-500" />
-                                    ) : (
-                                        <BellOff className="w-5 h-5 text-muted-foreground" />
-                                    )}
+                                <div className={cn("shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors", notifEnabled ? "bg-orange-500/10" : "bg-muted/50")}>
+                                    {notifEnabled ? <Bell className="w-4 h-4 text-orange-500" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.notifications}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t.notificationsDesc}</p>
+                                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">{t.notificationsDesc}</p>
                                 </div>
                             </div>
-
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                            <div className="flex items-center gap-2 shrink-0">
                                 {notifPermission === 'unsupported' ? (
-                                    <span className="text-xs text-muted-foreground/60 font-medium">
-                                        {t.notificationsUnsupported}
-                                    </span>
+                                    <span className="text-[10px] sm:text-xs text-muted-foreground/60 font-medium bg-muted/30 px-2 py-1 rounded-md">{t.notificationsUnsupported}</span>
                                 ) : notifPermission === 'denied' ? (
-                                    <span className="text-xs text-destructive/70 font-medium">
-                                        {t.notificationsBlocked}
-                                    </span>
+                                    <span className="text-[10px] sm:text-xs text-destructive/70 font-medium bg-destructive/10 px-2 py-1 rounded-md">{t.notificationsBlocked}</span>
                                 ) : (
-                                    <>
-                                        <button
-                                            onClick={handleToggleNotifications}
-                                            className={cn(
-                                                "relative w-12 h-7 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30",
-                                                notifEnabled
-                                                    ? "bg-orange-500"
-                                                    : "bg-muted"
-                                            )}
-                                            role="switch"
-                                            aria-checked={notifEnabled}
-                                            title={notifEnabled ? t.notificationsEnabled : t.notificationsDisabled}
-                                        >
-                                            <span
-                                                className={cn(
-                                                    "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300",
-                                                    notifEnabled
-                                                        ? "translate-x-[22px]"
-                                                        : "translate-x-0.5"
-                                                )}
-                                            />
-                                        </button>
+                                    <button
+                                        onClick={handleToggleNotifications}
+                                        className={cn(
+                                            "relative w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30",
+                                            notifEnabled ? "bg-orange-500" : "bg-muted-foreground/40"
+                                        )}
+                                        role="switch"
+                                        aria-checked={notifEnabled}
+                                        title={notifEnabled ? t.notificationsEnabled : t.notificationsDisabled}
+                                    >
                                         <span className={cn(
-                                            "text-xs font-semibold",
-                                            notifEnabled ? "text-orange-500" : "text-muted-foreground"
-                                        )}>
-                                            {notifEnabled ? t.notificationsEnabled : t.notificationsDisabled}
-                                        </span>
-                                    </>
+                                            "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300",
+                                            notifEnabled ? "ltr:left-[calc(100%-22px)] rtl:right-[calc(100%-22px)]" : "ltr:left-0.5 rtl:right-0.5"
+                                        )} />
+                                    </button>
                                 )}
                             </div>
                         </div>
                     </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Profile section */}
+                        <div className="bg-card/40 rounded-2xl border border-border p-4 sm:p-6 space-y-6">
+                            {profileMessage && (
+                                <div className={cn(
+                                    "text-sm font-medium px-4 py-2 rounded-xl",
+                                    profileMessage.type === 'success' ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"
+                                )}>
+                                    {profileMessage.text}
+                                </div>
+                            )}
 
-                    {/* ── Account Info ── */}
-                    <div className="p-4 sm:p-5 bg-card/40 rounded-2xl border border-border">
-                        <p className="font-bold text-foreground mb-3 sm:mb-4 text-sm">{t.account}</p>
+                            {/* Profile Picture */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                <div className="relative group shrink-0">
+                                    <div className="w-24 h-24 rounded-full overflow-hidden bg-muted/50 border-2 border-border flex items-center justify-center">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-3xl font-black text-muted-foreground">
+                                                {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handlePhotoUpload}
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={updatingProfile}
+                                            className="p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+                                            title={t.changePhoto}
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                        </button>
+                                        {avatarUrl && (
+                                            <button
+                                                onClick={handleRemovePhoto}
+                                                disabled={updatingProfile}
+                                                className="p-2 rounded-full bg-destructive/80 hover:bg-destructive text-white transition-colors"
+                                                title={t.removePhoto}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-foreground text-sm">{t.profilePicture}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{t.profilePictureDesc}</p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={updatingProfile}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                        >
+                                            {updatingProfile ? '...' : t.changePhoto}
+                                        </button>
+                                        {avatarUrl && (
+                                            <button
+                                                onClick={handleRemovePhoto}
+                                                disabled={updatingProfile}
+                                                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                            >
+                                                {t.removePhoto}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="bg-primary/5 dark:bg-primary/10 rounded-xl p-3 text-center border border-primary/10">
-                                <Target className="w-5 h-5 text-primary mx-auto mb-1.5" />
-                                <p className="text-2xl font-black text-foreground">{goals.length}</p>
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.goalsCreated}</p>
+                            {/* Display Name */}
+                            <div>
+                                <label className="block font-bold text-foreground text-sm mb-1">{t.displayName}</label>
+                                <p className="text-xs text-muted-foreground mb-2">{t.displayNameDesc}</p>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                        type="text"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        placeholder={user?.email?.split('@')[0] || ''}
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    />
+                                    <button
+                                        onClick={handleDisplayNameSave}
+                                        disabled={updatingProfile}
+                                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    >
+                                        {updatingProfile ? '...' : t.saveChanges}
+                                    </button>
+                                </div>
                             </div>
-                            <div className="bg-emerald-500/5 dark:bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-500/10">
-                                <Check className="w-5 h-5 text-emerald-500 mx-auto mb-1.5" />
-                                <p className="text-2xl font-black text-foreground">{completedGoals}</p>
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.completedGoals}</p>
+
+                            {/* Email (read-only) */}
+                            <div>
+                                <label className="block font-bold text-foreground text-sm mb-1">{t.emailAddress}</label>
+                                <p className="text-xs text-muted-foreground mb-2">{t.emailDesc}</p>
+                                <div className="px-4 py-2.5 rounded-xl border border-border bg-muted/20 text-muted-foreground text-sm">
+                                    {user?.email || '—'}
+                                </div>
                             </div>
-                            <div className="bg-blue-500/5 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-500/10">
-                                <Sparkles className="w-5 h-5 text-blue-500 mx-auto mb-1.5" />
-                                <p className="text-2xl font-black text-foreground">{totalPointsEarned.toLocaleString()}</p>
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.totalPointsEarned}</p>
-                            </div>
-                            <div className="bg-purple-500/5 dark:bg-purple-500/10 rounded-xl p-3 text-center border border-purple-500/10">
-                                <BarChart2 className="w-5 h-5 text-purple-500 mx-auto mb-1.5" />
-                                <p className="text-2xl font-black text-foreground">{totalLogs}</p>
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.totalLogsRecorded}</p>
+
+                            {/* Account Stats */}
+                            <div className="pt-4 border-t border-border">
+                                <p className="font-bold text-foreground text-sm mb-3 flex items-center gap-2">
+                                    <Target className="w-4 h-4 text-primary" />
+                                    {t.account}
+                                </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                    <div className="bg-muted/30 rounded-xl p-3 text-center border border-border/50">
+                                        <p className="text-lg sm:text-xl font-black text-foreground">{goals.length}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.goalsCreated}</p>
+                                    </div>
+                                    <div className="bg-muted/30 rounded-xl p-3 text-center border border-border/50">
+                                        <p className="text-lg sm:text-xl font-black text-foreground">{completedGoals}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.completedGoals}</p>
+                                    </div>
+                                    <div className="bg-muted/30 rounded-xl p-3 text-center border border-border/50">
+                                        <p className="text-lg sm:text-xl font-black text-foreground">{totalPointsEarned >= 1000 ? (totalPointsEarned / 1000).toFixed(1) + 'k' : totalPointsEarned}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalPointsEarned}</p>
+                                    </div>
+                                    <div className="bg-muted/30 rounded-xl p-3 text-center border border-border/50">
+                                        <p className="text-lg sm:text-xl font-black text-foreground">{totalLogs}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalLogsRecorded}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-1.5 mt-3">
+                                    {maxStreak >= 7 && (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg ring-2 ring-background" title={isArabic ? "شعلة المواظبة: 7 أيام" : "Consistency Flame: 7 Days"}>
+                                            <Flame className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
+                                    {maxStreak >= 30 && (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 flex items-center justify-center shadow-lg ring-2 ring-background" title={isArabic ? "تاج الالتزام: 30 يوماً" : "Crown of Commitment: 30 Days"}>
+                                            <Crown className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Status Row */}
-                        <div className="mt-4 flex items-center justify-between text-sm px-1">
-                            <span className="text-muted-foreground">{t.status}</span>
-                            <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                {t.active}
-                            </span>
-                        </div>
+                        {/* Sign Out */}
+                        <button
+                            onClick={handleSignOut}
+                            disabled={signingOut}
+                            className={cn(
+                                "w-full flex items-center justify-center gap-2 p-3.5 rounded-2xl border transition-all duration-200 font-bold text-sm shrink-0",
+                                signingOut
+                                    ? "bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
+                                    : "bg-destructive/5 border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+                            )}
+                        >
+                            {signingOut ? (
+                                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <LogOut className="w-4 h-4" />
+                            )}
+                            {signingOut ? t.signingOut : t.signOut}
+                        </button>
                     </div>
-
-                    {/* ── Sign Out ── */}
-                    <button
-                        onClick={handleSignOut}
-                        disabled={signingOut}
-                        className={cn(
-                            "w-full flex items-center justify-center gap-2.5 p-4 rounded-2xl border transition-all duration-200 font-semibold text-sm group",
-                            signingOut
-                                ? "bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
-                                : "bg-card/40 border-border text-muted-foreground hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive"
-                        )}
-                    >
-                        <LogOut className={cn(
-                            "w-4 h-4 transition-transform duration-200",
-                            !signingOut && "group-hover:-translate-x-0.5"
-                        )} />
-                        {signingOut ? t.signingOut : t.signOut}
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );

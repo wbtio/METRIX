@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Home, History, Settings, Plus, LayoutDashboard, Target, ChevronUp } from 'lucide-react';
+import { Home, History, Settings, User, Plus, LayoutDashboard, Target, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getIconComponent } from './IconPicker';
 import {
@@ -71,10 +71,9 @@ export default function OrbitDock({
     };
 
     return (
-          <div className="fixed bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 sm:gap-4 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]">
-              {/* DOCK BAR */}
-              <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 bg-background/80 backdrop-blur-xl border border-border rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-border/10 max-w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2 lg:left-6 lg:-translate-x-0 rtl:lg:left-auto rtl:lg:right-6 rtl:lg:translate-x-0 z-50 w-full max-w-[calc(100vw-2rem)] sm:max-w-max lg:w-auto lg:max-w-none flex justify-center pointer-events-none transition-all duration-500">
+            {/* DOCK BAR */}
+            <div className="flex lg:flex-col items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-3 py-2.5 sm:py-3 lg:py-4 bg-background/85 backdrop-blur-2xl border border-border/60 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pointer-events-auto max-w-full lg:max-h-[calc(100vh-4rem)] transition-all duration-500">
                 <DockItem
                     icon={Home}
                     label={language === 'ar' ? 'الرئيسية' : 'Home'}
@@ -89,31 +88,33 @@ export default function OrbitDock({
                     onClick={() => handleTabChange('goals')}
                 />
 
-                <div className="w-px h-6 sm:h-8 bg-border mx-0.5 sm:mx-1" />
+                <div className="w-px h-6 sm:h-8 lg:w-8 lg:h-px bg-border/60 mx-0.5 sm:mx-1 lg:mx-0 lg:my-1 shrink-0" />
 
                 {/* PINNED GOALS */}
-                {goals.filter(g => g.is_pinned).slice(0, 4).map(goal => {
-                    const GoalIcon = getIconComponent(goal.icon || 'Target');
-                    return (
-                        <DockItem
-                            key={goal.id}
-                            icon={GoalIcon}
-                            label={goal.title}
-                            isActive={activeTab === 'dashboard' && selectedGoalId === goal.id}
-                            onClick={() => {
-                                if (onSelectGoal) onSelectGoal(goal.id);
-                                handleTabChange('dashboard');
-                            }}
-                        />
-                    );
-                })}
+                <div className="flex lg:flex-col items-center gap-2 sm:gap-3 shrink-0">
+                    {goals.filter(g => g.is_pinned).slice(0, 3).map(goal => {
+                        const GoalIcon = getIconComponent(goal.icon || 'Target');
+                        return (
+                            <DockItem
+                                key={goal.id}
+                                icon={GoalIcon}
+                                label={goal.title}
+                                isActive={activeTab === 'dashboard' && selectedGoalId === goal.id}
+                                onClick={() => {
+                                    if (onSelectGoal) onSelectGoal(goal.id);
+                                    handleTabChange('dashboard');
+                                }}
+                            />
+                        );
+                    })}
+                </div>
 
                 {goals.some(g => g.is_pinned) && (
-                    <div className="w-px h-6 sm:h-8 bg-border mx-0.5 sm:mx-1" />
+                    <div className="w-px h-6 sm:h-8 lg:w-8 lg:h-px bg-border/60 mx-0.5 sm:mx-1 lg:mx-0 lg:my-1 shrink-0" />
                 )}
 
                 <DockItem
-                    icon={Settings}
+                    icon={User}
                     label={t.orbitSettings}
                     isActive={activeTab === 'settings'}
                     onClick={() => handleTabChange('settings')}

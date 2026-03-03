@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
     Target,
     Zap,
@@ -16,6 +17,7 @@ import {
     Code,
     Coffee,
     Gamepad,
+    Gamepad2,
     Lightbulb,
     Smile,
     Star,
@@ -39,6 +41,9 @@ import {
     Mountain,
     Waves,
     Cloud,
+    CloudLightning,
+    CloudRain,
+    CloudSnow,
     Moon,
     Sparkles,
     Flame,
@@ -99,7 +104,14 @@ import {
     Calendar,
     CalendarDays,
     AlarmClock,
-    Hourglass
+    Hourglass,
+    Umbrella,
+    Key,
+    Bell,
+    Bookmark,
+    Clipboard,
+    Crosshair,
+    Feather
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -121,6 +133,7 @@ export const ICONS = {
     Code,
     Coffee,
     Gamepad,
+    Gamepad2,
     Lightbulb,
     Smile,
     Star,
@@ -144,6 +157,9 @@ export const ICONS = {
     Mountain,
     Waves,
     Cloud,
+    CloudLightning,
+    CloudRain,
+    CloudSnow,
     Moon,
     Sparkles,
     Flame,
@@ -204,7 +220,14 @@ export const ICONS = {
     Calendar,
     CalendarDays,
     AlarmClock,
-    Hourglass
+    Hourglass,
+    Umbrella,
+    Key,
+    Bell,
+    Bookmark,
+    Clipboard,
+    Crosshair,
+    Feather
 };
 
 export type IconName = keyof typeof ICONS;
@@ -251,4 +274,48 @@ export function IconPicker({ selectedIcon, onSelectIcon, className }: IconPicker
 
 export function getIconComponent(iconName: string) {
     return ICONS[iconName as IconName] || Target;
+}
+
+export function getGoalIcon(iconName: string | undefined | null) {
+    const IconComponent = (iconName && ICONS[iconName as IconName]) || Target;
+    return <IconComponent className="w-full h-full" />;
+}
+
+interface GoalIconPickerProps {
+    currentIconName: string;
+    onSelect: (iconName: string) => void;
+    children: React.ReactNode;
+}
+
+export function GoalIconPicker({ currentIconName, onSelect, children }: GoalIconPickerProps) {
+    const [open, setOpen] = React.useState(false);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                {children}
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-3" align="start">
+                <div className="grid grid-cols-6 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                    {Object.entries(ICONS).map(([name, Icon]) => (
+                        <button
+                            key={name}
+                            onClick={() => {
+                                onSelect(name);
+                                setOpen(false);
+                            }}
+                            className={cn(
+                                "h-10 w-10 p-2 rounded-xl flex items-center justify-center transition-all",
+                                currentIconName === name 
+                                    ? 'bg-primary/20 text-primary scale-110 shadow-sm' 
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95'
+                            )}
+                        >
+                            <Icon className="w-5 h-5" />
+                        </button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
 }

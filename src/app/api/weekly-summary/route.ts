@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const mistralApiKey = process.env.MISTRAL_API_KEY!;
-
-// Create admin client that bypasses RLS
-const getSupabaseAdmin = () => {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-};
 
 function getWeekRange(date = new Date()) {
   // Week starts on Monday
@@ -30,26 +18,29 @@ function getWeekRange(date = new Date()) {
   return { start, end };
 }
 
+function isArabicText(text: string) {
+  return /[\u0600-\u06ff]/.test(text);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 export async function POST(req: Request) {
   try {
-    // Check environment variables
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase credentials");
-      return NextResponse.json({ error: "Server configuration error: Missing Supabase credentials" }, { status: 500 });
-    }
     if (!mistralApiKey) {
       console.error("Missing Mistral API key");
       return NextResponse.json({ error: "Server configuration error: Missing Mistral API key" }, { status: 500 });
     }
 
-      const { goalId, forceRefresh = false } = await req.json();
-      console.log("Received request for goalId:", goalId, "forceRefresh:", forceRefresh);
+    const { goalId, forceRefresh = false } = await req.json();
 
-      if (!goalId) {
-        return NextResponse.json({ error: "goalId is required" }, { status: 400 });
-      }
+    if (!goalId) {
+      return NextResponse.json({ error: "goalId is required" }, { status: 400 });
+    }
 
-      const supabase = getSupabaseAdmin();
+    const supabase = await createClient();
 
     const { start, end } = getWeekRange();
     const weekStart = start.toISOString().slice(0, 10);
@@ -111,31 +102,93 @@ export async function POST(req: Request) {
       console.error("Error fetching sub_layers:", subLayersError);
     }
 
-    // If no logs, return empty summary
-    if (!logs || logs.length === 0) {
-      const emptySummary = {
-        completed_count: 0,
+    const normalizedLogs = (logs || []).map((log) => ({
+      created_at: log.created_at,
+      user_input: log.user_input || "",
+      ai_score: Number.isFinite(Number(log.ai_score)) ? Number(log.ai_score) : 0,
+      ai_feedback: log.ai_feedback || "",
+      breakdown: log.breakdown,
+    }));
+
+    // Require at least 7 unique days of logs for a weekly summary.
+    const uniqueDays = new Set(normalizedLogs.map((log) => log.created_at?.split("T")[0]).filter(Boolean));
+    if (uniqueDays.size < 7) {
+      return NextResponse.json(
+        {
+          code: "INSUFFICIENT_DAYS",
+          error: "At least 7 days of logs are required to generate a weekly summary",
+          daysLogged: uniqueDays.size,
+        },
+        { status: 400 },
+      );
+    }
+
+    const totalScoredPoints = normalizedLogs.reduce((sum, log) => sum + log.ai_score, 0);
+
+    // If logs exist but all scores are null/zero, return deterministic zero-point summary.
+    if (totalScoredPoints <= 0) {
+      const dayCounts = new Map<string, number>();
+      for (const log of normalizedLogs) {
+        const date = log.created_at?.split("T")[0];
+        if (!date) continue;
+        dayCounts.set(date, (dayCounts.get(date) || 0) + 1);
+      }
+
+      let bestDay: string | null = null;
+      let bestCount = -1;
+      for (const [day, count] of dayCounts.entries()) {
+        if (count > bestCount) {
+          bestCount = count;
+          bestDay = day;
+        }
+      }
+
+      const mostlyArabic = normalizedLogs.filter((log) => isArabicText(log.user_input)).length >= Math.ceil(normalizedLogs.length / 2);
+      const bestActivity = normalizedLogs.find((log) => log.user_input.trim().length > 0)?.user_input?.slice(0, 140) || null;
+
+      const zeroPointSummary = {
+        completed_count: normalizedLogs.length,
         total_points: 0,
-        best_day: null,
-        best_activity: null,
-        patterns: ["لم يُسجل أي نشاط هذا الأسبوع"],
-        improvements: ["حاول تسجيل نشاط يومي حتى لو كان صغيراً"],
+        best_day: bestDay,
+        best_activity: bestActivity,
+        patterns: mostlyArabic
+          ? [
+              "تم تسجيل الأنشطة خلال الأسبوع لكن التقييم بالنقاط كان صفراً.",
+              "الاستمرارية موجودة، وتحتاج فقط لتحسين جودة الإنجاز لكل نشاط.",
+            ]
+          : [
+              "You logged activities this week, but all scores were zero.",
+              "Consistency is present; focus on improving execution quality for each activity.",
+            ],
+        improvements: mostlyArabic
+          ? [
+              "أضف تفاصيل أكثر لكل سجل يومي لتمكين تقييم أدق.",
+              "نفّذ خطوة واضحة قابلة للقياس في كل نشاط يومي.",
+            ]
+          : [
+              "Add more detail to each daily log so scoring can be more accurate.",
+              "Execute one clear, measurable step in each daily activity.",
+            ],
         next_week_plan: subLayers?.slice(0, 3).map((sl) => ({
           task: sl.task_description,
           frequency: sl.frequency,
         })) || [],
-        coach_message: "ابدأ هذا الأسبوع بخطوة صغيرة—الاستمرار أهم من الكمال.",
+        coach_message: mostlyArabic
+          ? "استمر، أنت على الطريق الصحيح. ركّز على خطوة أقوى كل يوم."
+          : "Keep going, you are on track. Focus on one stronger step each day.",
       };
 
-      // Store empty summary
-      await supabase.from("weekly_summaries").upsert({
-        goal_id: goalId,
-        week_start: weekStart,
-        week_end: weekEnd,
-        summary_json: emptySummary,
-      }, { onConflict: "goal_id,week_start" });
+      await supabase.from("weekly_summaries").upsert(
+        {
+          goal_id: goalId,
+          week_start: weekStart,
+          week_end: weekEnd,
+          summary_json: zeroPointSummary,
+        },
+        { onConflict: "goal_id,week_start" },
+      );
 
-      return NextResponse.json({ cached: false, data: emptySummary });
+      return NextResponse.json({ cached: false, data: zeroPointSummary });
     }
 
     // 5) AI Prompt for summary generation
@@ -170,8 +223,8 @@ Rules:
       goalProgress: `${goal.current_points}/${goal.target_points}`,
       weekStart,
       weekEnd,
-      logsCount: logs.length,
-      logs: logs.map((log) => ({
+      logsCount: normalizedLogs.length,
+      logs: normalizedLogs.map((log) => ({
         date: log.created_at,
         input: log.user_input?.slice(0, 200), // Truncate long inputs
         score: log.ai_score,
@@ -213,11 +266,11 @@ Rules:
       const mistralData = await mistralResponse.json();
       raw = mistralData.choices?.[0]?.message?.content ?? "";
       console.log("Mistral API response received");
-    } catch (aiError: any) {
+    } catch (aiError: unknown) {
       console.error("Mistral API error:", aiError);
       return NextResponse.json({ 
         error: "AI generation failed", 
-        message: aiError?.message,
+        message: getErrorMessage(aiError),
         details: aiError 
       }, { status: 500 });
     }
@@ -252,9 +305,11 @@ Rules:
 
     return NextResponse.json({ cached: false, data: summaryJson });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error:", error);
-    console.error("Error stack:", error?.stack);
+    if (error instanceof Error) {
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

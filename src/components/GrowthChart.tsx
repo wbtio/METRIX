@@ -284,22 +284,18 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
 
     return (
         <div className={containerClass}>
-            {/* Compact Header (Title + Avg + Controls) */}
-            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" dir={isArabic ? 'rtl' : 'ltr'}>
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                    <BarChart2 className="w-4 h-4 text-chart-1" />
-                    {t.growthTrajectory}
-                </h3>
-
-                <div className="flex flex-wrap items-center gap-1.5">
+            {/* Header: Title and Filters */}
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3" dir={isArabic ? 'rtl' : 'ltr'}>
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     {/* Time Range Selector */}
-                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 w-max">
+                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 flex-1 sm:flex-none">
                         {timeRangeOptions.map(opt => (
                             <button
                                 key={opt.key}
                                 onClick={() => setTimeRange(opt.key)}
                                 className={cn(
-                                    "px-2 py-1 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
+                                    "flex-1 sm:flex-none px-2 sm:px-3 py-1.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap",
                                     timeRange === opt.key
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -311,18 +307,19 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
                     </div>
 
                     {/* Chart Type Selector */}
-                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5 w-max">
+                    <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5">
                         {chartTypeOptions.map(opt => (
                             <button
                                 key={opt.key}
                                 onClick={() => setChartType(opt.key)}
                                 className={cn(
-                                    "flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
+                                    "flex items-center justify-center p-1.5 sm:p-2 rounded-md transition-all",
                                     chartType === opt.key
                                         ? "bg-chart-1 text-white shadow-sm"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                                 )}
                                 title={opt.label}
+                                aria-label={opt.label}
                             >
                                 {opt.icon}
                             </button>
@@ -331,10 +328,10 @@ export default function GrowthChart({ data, language = 'en', className, fillHeig
                 </div>
             </div>
 
-            {/* Chart - reduced height */}
+            {/* Chart */}
             <ChartContainer
                 config={chartConfig}
-                className={cn(fillHeight ? "flex-1 min-h-[150px] sm:min-h-[180px] w-full" : "h-[180px] sm:h-[220px] w-full")}
+                className={cn(fillHeight ? "flex-1 min-h-[180px] sm:min-h-[200px] w-full" : "h-[200px] sm:h-[240px] w-full")}
                 dir="ltr"
             >
                 {renderChart()}

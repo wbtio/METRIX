@@ -23,45 +23,44 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         months: "relative flex flex-col sm:flex-row gap-2",
-        month: "flex flex-col gap-4",
+        month: "flex flex-col gap-3",
         caption: "flex justify-center pt-1 relative items-center w-full",
-        caption_label: "text-sm font-medium",
+        caption_label: "text-sm font-bold",
         nav: "flex items-center gap-1",
         button_previous: cn(
-          buttonVariants({ variant: "outline" }),
-          `size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute ${isRtl ? "right-1" : "left-1"}`
+          "inline-flex items-center justify-center size-7 rounded-xl bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all",
+          `absolute ${isRtl ? "right-1" : "left-1"}`
         ),
         button_next: cn(
-          buttonVariants({ variant: "outline" }),
-          `size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute ${isRtl ? "left-1" : "right-1"}`
+          "inline-flex items-center justify-center size-7 rounded-xl bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all",
+          `absolute ${isRtl ? "left-1" : "right-1"}`
         ),
-        month_grid: "w-full border-collapse space-y-1",
-        weekdays: "flex",
-        weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        week: "flex w-full mt-2",
-        day: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-range-start)]:rounded-l-md [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        month_grid: "w-full border-collapse",
+        weekdays: "flex mb-1",
+        weekday: "text-muted-foreground/60 rounded-md w-9 font-medium text-[0.7rem] text-center uppercase tracking-wide",
+        week: "flex w-full mt-1",
+        day: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-range-start)]:rounded-l-xl [&:has([aria-selected])]:bg-primary/10 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
         day_button: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+          "h-9 w-9 p-0 font-medium rounded-xl text-sm transition-all hover:bg-muted aria-selected:opacity-100"
         ),
         range_start: "day-range-start",
         range_end: "day-range-end",
         selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        today: "bg-accent text-accent-foreground",
-        outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        disabled: "text-muted-foreground opacity-50",
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-xl shadow-sm",
+        today: "bg-primary/10 text-primary font-bold rounded-xl",
+        outside: "day-outside text-muted-foreground/30 aria-selected:bg-primary/5 aria-selected:text-muted-foreground aria-selected:opacity-30",
+        disabled: "text-muted-foreground/30",
         range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "aria-selected:bg-primary/10 aria-selected:text-foreground",
         hidden: "invisible",
         ...classNames,
       }}
       components={{
         Chevron: ({ orientation, className, ...props }) =>
           orientation === "left" ? (
-            <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+            <ChevronLeft className={cn("h-3.5 w-3.5", className)} {...props} />
           ) : (
-            <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+            <ChevronRight className={cn("h-3.5 w-3.5", className)} {...props} />
           ),
       }}
       {...props}

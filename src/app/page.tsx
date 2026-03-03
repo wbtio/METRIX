@@ -64,6 +64,11 @@ export default function Home() {
     }
   }, []);
 
+  const refetchUser = async () => {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    setUser(u);
+  };
+
   const fetchGoals = async (userId?: string) => {
     let currentUserId = userId;
     if (!currentUserId) {
@@ -102,8 +107,10 @@ export default function Home() {
   return (
     <OrbitShell user={user}>
       <div
-        className={`flex-1 flex flex-col items-center p-3 sm:p-6 lg:p-12 w-full max-w-7xl mx-auto ${currentView === 'home'
-          ? 'justify-start pt-4 sm:pt-8 lg:pt-10 pb-36 sm:pb-48'
+        className={`flex-1 flex flex-col items-center p-3 sm:p-6 lg:p-12 w-full max-w-7xl mx-auto transition-all duration-300
+          lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
+          ${currentView === 'home'
+          ? 'justify-center pb-36 sm:pb-48'
           : 'justify-center pb-20 sm:pb-40'
           }`}
       >
@@ -150,10 +157,11 @@ export default function Home() {
             language={language}
           />
         ) : currentView === 'settings' ? (
-          <SettingsPage
+          <SettingsPage user={user}
             language={language}
             setLanguage={setLanguage}
             goals={goals}
+            onProfileUpdated={refetchUser}
             onGoalsDeleted={() => {
               fetchGoals();
               setSelectedGoalId(null);
