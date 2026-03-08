@@ -20,7 +20,17 @@ import {
   History,
   PieChart,
   MoreVertical,
+  Pin,
+  PinOff,
+  Info,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
@@ -35,6 +45,7 @@ import AdvancedAnalytics from './AdvancedAnalytics';
 import ConfirmModal from './ConfirmModal';
 import FullEmojiPicker from './FullEmojiPicker';
 import { getGoalIcon, GoalIconPicker } from './IconPicker';
+import TaskInsights from './TaskInsights';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -114,7 +125,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void}>({
     isOpen: false, title: '', message: '', onConfirm: () => {}
   });
-  const [showDetailsFor, setShowDetailsFor] = useState<string | null>(null);
+  const [showGoalDetails, setShowGoalDetails] = useState(false);
 
   // --- Derived ---
   const hierarchy: MainTask[] = useMemo(() => buildTaskHierarchy(tasks), [tasks]);
@@ -381,6 +392,26 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
     if (onGoalUpdated) onGoalUpdated();
   };
 
+  const handleDeleteGoal = async () => {
+    const confirmMessage = isArabic
+      ? `هل أنت متأكد من حذف الهدف "${goal.title}"؟ سيتم حذف جميع المهام والسجلات المرتبطة به.`
+      : `Are you sure you want to delete "${goal.title}"? All associated tasks and logs will be deleted.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      const { error } = await supabase.from('goals').delete().eq('id', goal.id);
+      if (error) throw error;
+      
+      // Navigate back to home or goals list
+      if (onGoalUpdated) onGoalUpdated();
+      window.location.href = '/';
+    } catch (error: any) {
+      console.error('Error deleting goal:', error);
+      alert((isArabic ? 'فشل حذف الهدف: ' : 'Failed to delete goal: ') + (error?.message || ''));
+    }
+  };
+
   const handleUpdateIcon = async (newIcon: string) => {
     await supabase.from('goals').update({ icon: newIcon }).eq('id', goal.id);
     if (onGoalUpdated) onGoalUpdated();
@@ -426,15 +457,25 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
       {/* ===== Header Card ===== */}
       <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0" dir={isArabic ? 'rtl' : 'ltr'}>
             <GoalIconPicker currentIconName={goal.icon || 'Target'} onSelect={handleUpdateIcon}>
-              <button className="h-10 w-10 p-2.5 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-colors rounded-xl flex items-center justify-center cursor-pointer border border-primary/10">
+              <button className="h-11 w-11 sm:h-12 sm:w-12 p-2.5 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-colors rounded-xl sm:rounded-2xl flex items-center justify-center cursor-pointer border border-primary/20 shadow-sm hover:shadow-md">
                 {getGoalIcon(goal.icon)}
               </button>
             </GoalIconPicker>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-lg font-black text-foreground truncate">{goal.title}</h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <h1 className={cn(
+                "text-base sm:text-lg font-black text-foreground line-clamp-2",
+                isArabic ? 'text-right' : 'text-left'
+              )}>
+                {goal.title}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                {goal.is_pinned && (
+                  <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Pin className="w-3 h-3" /> {isArabic ? 'مثبت' : 'Pinned'}
+                  </span>
+                )}
                 {streak > 0 && (
                   <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-chart-5/10 text-chart-5 dark:bg-chart-3/10 dark:text-chart-3">
                     <Flame className="w-3 h-3" /> {streak}
@@ -448,20 +489,86 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
           </div>
           
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={handleTogglePin}
-              className={cn(
-                "p-2 rounded-xl transition-all border",
-                goal.is_pinned 
-                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20" 
-                  : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
-              )}
-              title={isArabic ? 'تثبيت / إلغاء التثبيت' : 'Pin / Unpin'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={goal.is_pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-2 sm:p-2.5 rounded-xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-transparent hover:border-border/60"
+                  title={isArabic ? 'خيارات الهدف' : 'Goal Options'}
+                >
+                  <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={isArabic ? 'start' : 'end'} className="w-52">
+                <DropdownMenuItem
+                  onClick={handleTogglePin}
+                  className="cursor-pointer"
+                >
+                  {goal.is_pinned ? (
+                    <>
+                      <PinOff className="w-4 h-4" />
+                      <span>{isArabic ? 'إلغاء التثبيت' : 'Unpin Goal'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="w-4 h-4" />
+                      <span>{isArabic ? 'تثبيت الهدف' : 'Pin Goal'}</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowGoalDetails(!showGoalDetails)}
+                  className="cursor-pointer"
+                >
+                  <Info className="w-4 h-4" />
+                  <span>{showGoalDetails ? (isArabic ? 'إخفاء التفاصيل' : 'Hide Details') : (isArabic ? 'عرض التفاصيل' : 'Show Details')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDeleteGoal}
+                  variant="destructive"
+                  className="cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isArabic ? 'حذف الهدف' : 'Delete Goal'}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        {/* Goal Details (collapsible) */}
+        {showGoalDetails && (
+          <div className="pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-2 duration-200" dir={isArabic ? 'rtl' : 'ltr'}>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-muted/30 rounded-xl p-2.5">
+                <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">{isArabic ? 'تاريخ الإنشاء' : 'Created'}</p>
+                <p className="text-xs font-bold text-foreground">
+                  {new Date(goal.created_at).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <div className="bg-muted/30 rounded-xl p-2.5">
+                <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">{isArabic ? 'الإنجاز المتوقع' : 'Est. Completion'}</p>
+                <p className="text-xs font-bold text-foreground">
+                  {new Date(goal.estimated_completion_date).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <div className="bg-muted/30 rounded-xl p-2.5">
+                <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">{isArabic ? 'إجمالي الأيام' : 'Total Days'}</p>
+                <p className="text-xs font-bold text-foreground">{goal.total_days} {isArabic ? 'يوم' : 'days'}</p>
+              </div>
+              <div className="bg-muted/30 rounded-xl p-2.5">
+                <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">{isArabic ? 'الحالة' : 'Status'}</p>
+                <p className="text-xs font-bold text-foreground capitalize">{goal.status}</p>
+              </div>
+            </div>
+            {goal.ai_summary && (
+              <div className="mt-2 bg-primary/5 rounded-xl p-2.5 border border-primary/10">
+                <p className="text-[10px] text-primary/70 font-semibold mb-1">{isArabic ? 'ملخص الذكاء الاصطناعي' : 'AI Summary'}</p>
+                <p className="text-xs text-foreground/80 leading-relaxed">{goal.ai_summary}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tube Progress Bar */}
         <div className="relative h-10 w-full bg-muted/30 rounded-2xl overflow-hidden border border-border/70">
@@ -680,13 +787,41 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
 
                     {/* More Button - Mobile */}
                     {editingTaskId !== main.id && (
-                      <button
-                        onClick={() => setShowDetailsFor(showDetailsFor === main.id ? null : main.id)}
-                        className="md:hidden p-2 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground active:bg-muted transition-colors shrink-0"
-                        title={isArabic ? 'المزيد' : 'More'}
-                      >
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="md:hidden p-2 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground active:bg-muted transition-colors shrink-0"
+                            title={isArabic ? 'المزيد' : 'More'}
+                          >
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isArabic ? 'start' : 'end'} className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => { setAddingSubFor(main.id); setNewSubText(''); setNewSubWeight(3); setNewSubFreq('daily'); }}
+                            className="cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>{isArabic ? 'إضافة مهمة فرعية' : 'Add Subtask'}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setEditingTaskId(main.id); setEditingText(main.task_description); }}
+                            className="cursor-pointer"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            <span>{isArabic ? 'تعديل' : 'Edit'}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteTask(main.id)}
+                            variant="destructive"
+                            className="cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>{isArabic ? 'حذف' : 'Delete'}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
 
@@ -924,8 +1059,13 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
       )}
 
       {activeTab === 'chart' && (
-        <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4">
-          <GrowthChart data={chartData} language={language} />
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4">
+            <GrowthChart data={chartData} language={language} />
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4">
+            <TaskInsights goalId={goal.id} tasks={tasks} language={language} />
+          </div>
         </div>
       )}
 
@@ -989,81 +1129,6 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
         language={language}
       />
 
-      {/* ===== Task Details Popover - Mobile Only ===== */}
-      {showDetailsFor && (
-        <>
-          {/* Invisible backdrop for closing */}
-          <div 
-            className="md:hidden fixed inset-0 z-40"
-            onClick={() => setShowDetailsFor(null)}
-          />
-          
-          {/* Popover */}
-          <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-50 pointer-events-none">
-            <div className="relative w-full h-full">
-              {(() => {
-                const taskData = hierarchy.find(m => m.id === showDetailsFor);
-                if (!taskData) return null;
-                
-                return (
-                  <div 
-                    className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[90%] max-w-sm pointer-events-auto animate-in zoom-in-95 fade-in duration-200"
-                    dir={isArabic ? 'rtl' : 'ltr'}
-                  >
-                    <div className="bg-white dark:bg-card rounded-xl shadow-xl border border-border/80 p-2.5 space-y-2">
-                      {/* Task Info */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex-1 flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30">
-                          <span className="text-[10px] text-muted-foreground font-semibold">{isArabic ? 'التكرار' : 'Frequency'}</span>
-                          <span className={cn(
-                            'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
-                            taskData.frequency === 'daily'
-                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                              : 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-                          )}>
-                            {taskData.frequency === 'daily' ? (isArabic ? 'يومي' : 'Daily') : (isArabic ? 'أسبوعي' : 'Weekly')}
-                          </span>
-                        </div>
-                        <div className="flex-1 flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/30">
-                          <span className="text-[10px] text-muted-foreground font-semibold">{isArabic ? 'الوزن' : 'Weight'}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-0.5">
-                            <Weight className="w-2.5 h-2.5" /> {taskData.impact_weight}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          onClick={() => { setAddingSubFor(taskData.id); setNewSubText(''); setNewSubWeight(3); setNewSubFreq('daily'); setShowDetailsFor(null); }}
-                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 active:bg-primary/30 text-primary transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span className="text-[9px] font-bold leading-tight">{isArabic ? 'إضافة فرعية' : 'Add Sub'}</span>
-                        </button>
-                        <button
-                          onClick={() => { setEditingTaskId(taskData.id); setEditingText(taskData.task_description); setShowDetailsFor(null); }}
-                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50 hover:bg-muted active:bg-muted/80 text-foreground transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          <span className="text-[9px] font-bold leading-tight">{isArabic ? 'تعديل' : 'Edit'}</span>
-                        </button>
-                        <button
-                          onClick={() => { handleDeleteTask(taskData.id); setShowDetailsFor(null); }}
-                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 active:bg-destructive/30 text-destructive transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="text-[9px] font-bold leading-tight">{isArabic ? 'حذف' : 'Delete'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* ===== Toast Notification ===== */}
       {showToast && (

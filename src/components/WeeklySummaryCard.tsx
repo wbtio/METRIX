@@ -144,7 +144,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
       {/* ROW 1: Points + Activities + Best Day */}
       <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {/* Points */}
-        <div className="bg-primary/8 border border-primary/20 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+        <div className="bg-primary/12 dark:bg-primary/8 border border-primary/25 dark:border-primary/20 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
           <span className="text-[9px] sm:text-[10px] font-bold text-primary uppercase">
             {isArabic ? 'نقاط' : 'Points'}
           </span>
@@ -152,7 +152,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
         </div>
 
         {/* Activities */}
-        <div className="bg-white dark:bg-muted/25 border border-border/60 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+        <div className="bg-gray-50/80 dark:bg-muted/25 border border-border/70 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
           <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
             {isArabic ? 'أنشطة' : 'Activities'}
           </span>
@@ -160,7 +160,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
         </div>
 
         {/* Best Day */}
-        <div className="bg-white dark:bg-muted/25 border border-border/60 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+        <div className="bg-gray-50/80 dark:bg-muted/25 border border-border/70 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
           <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">
             {isArabic ? 'أفضل يوم' : 'Best Day'}
           </span>
@@ -174,7 +174,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
 
       {/* ROW 2: Best Activity */}
       {data.best_activity && (
-        <div className="bg-white dark:bg-card/40 border border-border/70 rounded-xl p-3 sm:p-4">
+        <div className="bg-gray-50/80 dark:bg-card/40 border border-border/70 rounded-xl p-3 sm:p-4">
           <h4 className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase mb-1">
             {isArabic ? 'أفضل نشاط هذا الأسبوع' : 'Best Activity'}
           </h4>
@@ -187,7 +187,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
       {/* ROW 3: Patterns & Improvements Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         {data.patterns && data.patterns.length > 0 && (
-          <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl p-3 sm:p-4">
+          <div className="bg-blue-50 dark:bg-blue-500/8 border border-blue-200 dark:border-blue-500/20 rounded-xl p-3 sm:p-4">
             <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5" />
               {isArabic ? 'ملاحظات الأداء' : 'Observations'}
@@ -204,8 +204,8 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
         )}
 
         {data.improvements && data.improvements.length > 0 && (
-          <div className="bg-orange-500/8 border border-orange-500/20 rounded-xl p-3 sm:p-4">
-            <h4 className="text-xs font-bold text-orange-600 dark:text-orange-400 mb-2 flex items-center gap-1.5">
+          <div className="bg-amber-50 dark:bg-orange-500/8 border border-amber-200 dark:border-orange-500/20 rounded-xl p-3 sm:p-4">
+            <h4 className="text-xs font-bold text-amber-700 dark:text-orange-400 mb-2 flex items-center gap-1.5">
               <RefreshCw className="w-3.5 h-3.5" />
               {isArabic ? 'فرص التحسين' : 'Improvements'}
             </h4>
@@ -224,7 +224,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
       {/* ROW 4: Coach Message + Refresh */}
       <div className="flex items-stretch gap-2">
         {/* Coach message */}
-        <div className="flex items-center gap-2 px-3 py-2.5 sm:py-3 bg-primary/12 rounded-xl border border-primary/25 flex-1 min-w-0">
+        <div className="flex items-center gap-2 px-3 py-2.5 sm:py-3 bg-primary/15 dark:bg-primary/12 rounded-xl border border-primary/25 flex-1 min-w-0">
           <Quote className="w-4 h-4 text-primary shrink-0" />
           <p className="text-xs sm:text-sm font-semibold text-primary leading-snug">
             {data.coach_message || (isArabic ? 'استمر في التقدم!' : 'Keep pushing forward!')}
@@ -235,7 +235,7 @@ export default function WeeklySummaryCard({ goalId, language = 'en' }: WeeklySum
         <button
           onClick={() => loadSummary(true)}
           disabled={loading}
-          className="shrink-0 px-3 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-muted/20 border border-border/60 text-muted-foreground hover:text-primary transition-colors hover:bg-muted/30"
+          className="shrink-0 px-3 py-2.5 sm:py-3 rounded-xl bg-gray-50 dark:bg-muted/20 border border-border/70 text-muted-foreground hover:text-primary transition-colors hover:bg-gray-100 dark:hover:bg-muted/30"
           title={isArabic ? 'تحديث الملخص' : 'Refresh Summary'}
         >
           <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />

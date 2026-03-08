@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // Components
 import Dashboard from "../components/Dashboard";
 import GoalsList from "@/components/GoalsList";
 import HomePage from "@/components/HomePage";
+import GoalCreatorPage from "@/components/GoalCreatorPage";
+import ManualGoalCreator from "@/components/ManualGoalCreator";
 import OrbitShell from '@/components/OrbitShell';
 import OrbitDock from '@/components/OrbitDock';
 import SettingsPage from '@/components/SettingsPage';
@@ -30,49 +32,23 @@ interface Goal {
 
 export default function Home() {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'settings' | 'goals'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'settings' | 'goals' | 'create-goal'>('home');
+  const [createGoalMode, setCreateGoalMode] = useState<'ai' | 'manual'>('ai');
+  const [createGoalText, setCreateGoalText] = useState('');
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [resetKey, setResetKey] = useState(0);
   const [language, setLanguage] = useState<Language>('en');
   const [user, setUser] = useState<User | null>(null);
+  const [supabase] = useState(() => createClient());
 
   const t = translations[language];
-
-  const supabase = createClient();
 
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
 
-  useEffect(() => {
-    const initData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        fetchGoals(user.id);
-      }
-    };
-
-    initData();
-
-    // Load language preference
-    const savedLang = localStorage.getItem('language') as 'en' | 'ar' | null;
-    if (savedLang) {
-      setLanguage(savedLang);
-      document.documentElement.setAttribute('dir', savedLang === 'ar' ? 'rtl' : 'ltr');
-      document.documentElement.setAttribute('lang', savedLang);
-    }
-  }, []);
-
-  const refetchUser = async () => {
-    const { data: { user: u } } = await supabase.auth.getUser();
-    setUser(u);
-  };
-
-  const fetchGoals = async (userId?: string) => {
+  const fetchGoals = useCallback(async (userId?: string) => {
     let currentUserId = userId;
     if (!currentUserId) {
-      // If no ID passed, try getting from state or auth
       if (user) {
         currentUserId = user.id;
       } else {
@@ -94,12 +70,40 @@ export default function Home() {
       console.error(error);
     } else {
       setGoals(data || []);
-      // Auto-select the most recent goal if exists
-      if (data && data.length > 0 && !selectedGoalId) {
-        setSelectedGoalId(data[0].id);
-      }
+      setSelectedGoalId((currentGoalId) => currentGoalId ?? (data && data.length > 0 ? data[0].id : null));
     }
+
     setLoading(false);
+  }, [supabase, user]);
+
+  useEffect(() => {
+    const initData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        fetchGoals(user.id);
+      }
+    };
+
+    initData();
+  }, [fetchGoals, supabase]);
+
+  // Load persisted language from localStorage after hydration
+  useEffect(() => {
+    const savedLang = localStorage.getItem('language');
+    if (savedLang === 'ar' || savedLang === 'en') {
+      setLanguage(savedLang);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', language);
+  }, [language]);
+
+  const refetchUser = async () => {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    setUser(u);
   };
 
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
@@ -123,22 +127,69 @@ export default function Home() {
         ) : currentView === 'home' ? (
           <HomePage
             goals={goals}
-            onGoalCreated={() => {
-              fetchGoals();
-              setTimeout(async () => {
-                const { data } = await supabase.from('goals').select('*').order('created_at', { ascending: false }).limit(1);
-                if (data && data[0]) {
-                  setSelectedGoalId(data[0].id);
-                  setCurrentView('dashboard');
-                }
-              }, 500);
-            }}
             onSelectGoal={(id) => {
               setSelectedGoalId(id);
               setCurrentView('dashboard');
             }}
+            onNavigateToCreate={(goalText, mode) => {
+              setCreateGoalText(goalText);
+              setCreateGoalMode(mode);
+              setCurrentView('create-goal');
+            }}
             language={language}
           />
+        ) : currentView === 'create-goal' ? (
+          <div className={`w-full ${createGoalMode === 'manual' ? 'max-w-4xl' : 'max-w-2xl'} mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500`}>
+            {createGoalMode === 'manual' ? (
+              <ManualGoalCreator
+                initialData={{ title: createGoalText }}
+                language={language}
+                onComplete={() => {
+                  fetchGoals();
+                  setCreateGoalText('');
+                  setCreateGoalMode('ai');
+                  setTimeout(async () => {
+                    const { data } = await supabase.from('goals').select('*').order('created_at', { ascending: false }).limit(1);
+                    if (data && data[0]) {
+                      setSelectedGoalId(data[0].id);
+                      setCurrentView('dashboard');
+                    } else {
+                      setCurrentView('home');
+                    }
+                  }, 500);
+                }}
+                onCancel={() => {
+                  setCreateGoalText('');
+                  setCreateGoalMode('ai');
+                  setCurrentView('home');
+                }}
+              />
+            ) : (
+              <GoalCreatorPage
+                initialGoalText={createGoalText}
+                language={language}
+                onComplete={() => {
+                  fetchGoals();
+                  setCreateGoalText('');
+                  setCreateGoalMode('ai');
+                  setTimeout(async () => {
+                    const { data } = await supabase.from('goals').select('*').order('created_at', { ascending: false }).limit(1);
+                    if (data && data[0]) {
+                      setSelectedGoalId(data[0].id);
+                      setCurrentView('dashboard');
+                    } else {
+                      setCurrentView('home');
+                    }
+                  }, 500);
+                }}
+                onCancel={() => {
+                  setCreateGoalText('');
+                  setCreateGoalMode('ai');
+                  setCurrentView('home');
+                }}
+              />
+            )}
+          </div>
         ) : currentView === 'goals' ? (
           <GoalsList
             goals={goals}
@@ -188,7 +239,7 @@ export default function Home() {
           setCurrentView('dashboard');
         }}
         activeTab={currentView}
-        onTabChange={(tab) => setCurrentView(tab as 'home' | 'dashboard' | 'settings' | 'goals')}
+        onTabChange={(tab) => setCurrentView(tab as 'home' | 'dashboard' | 'settings' | 'goals' | 'create-goal')}
         language={language}
       />
     </OrbitShell>

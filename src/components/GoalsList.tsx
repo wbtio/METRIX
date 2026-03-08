@@ -44,6 +44,7 @@ interface GoalsListProps {
 
 export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalChanged, language = 'en' }: GoalsListProps) {
     const t = translations[language];
+    const isArabic = language === 'ar';
     const supabase = createClient();
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -144,7 +145,7 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
     return (
         <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-500">
             <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 lg:p-8 rounded-[20px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl space-y-4 sm:space-y-6">
-                <div>
+                <div className={isArabic ? 'text-right' : 'text-left'}>
                     <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-2">{t.myGoals}</h2>
                     <p className="text-sm text-muted-foreground">
                         {goals.length} {goals.length === 1 ? (language === 'ar' ? 'هدف' : 'Goal') : (language === 'ar' ? 'أهداف' : 'Goals')}
@@ -154,7 +155,7 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
                 <div className="space-y-3">
                     {goals.map((goal) => {
                         const isSelected = selectedGoalId === goal.id;
-                        const titleRTL = isRTL(goal.title);
+                        const titleRTL = isArabic || isRTL(goal.title);
                         const currentPoints = goal.current_points ?? 0;
                         const targetPoints = goal.target_points ?? 0;
                         const progress = targetPoints > 0
@@ -165,9 +166,9 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
                         return (
                             <div
                                 key={goal.id}
-                                className={`w-full p-4 rounded-3xl border transition-all relative group ${isSelected
-                                        ? 'bg-primary/5 border-primary shadow-lg ring-1 ring-primary/20'
-                                        : 'bg-card/50 border-border hover:bg-card/70 hover:border-primary/30 hover:shadow-lg'
+                                className={`w-full rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4 transition-all relative group ${isSelected
+                                        ? 'ring-1 ring-primary/20 border-primary bg-primary/5 shadow-md'
+                                        : 'hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
                                     } ${deletingId === goal.id ? 'opacity-50 pointer-events-none' : ''}`}
                             >
                                 <div
@@ -259,31 +260,21 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
                                     </div>
 
                                     {/* Progress Bar Tube */}
-                                    <div className="relative h-10 w-full bg-muted/40 rounded-2xl overflow-hidden border border-border/60 shadow-inner ring-1 ring-white/5 mx-auto">
-                                        {/* Tube Background Effect */}
-                                        <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none"></div>
-
-                                        {/* Filling */}
+                                    <div className="relative h-10 w-full bg-muted/30 rounded-2xl overflow-hidden border border-border/70 mx-auto">
+                                        <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none" />
                                         <div
-                                            className={`h-full bg-gradient-to-r transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)] ${isSelected ? 'from-primary via-primary to-primary' : 'from-primary/80 via-primary to-primary'
-                                                }`}
+                                            className="h-full bg-gradient-to-r from-primary/80 via-primary to-primary transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]"
                                             style={{ width: `${Math.min(100, progress)}%` }}
                                         >
-                                            {/* Fluid/Glass Effect on Fill */}
-                                            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
-                                            <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/waves.png')] animate-pulse"></div>
-
-                                            {/* Light Shine on right edge */}
-                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
+                                            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
+                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
                                         </div>
-
-                                        {/* Content Inside Tube - with XP labels for clarity */}
-                                        <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-5 z-20 font-bold text-xs sm:text-sm tracking-wide" dir="ltr">
+                                        <div className="absolute inset-0 flex items-center justify-between px-2 sm:px-5 z-20 font-bold text-[10px] sm:text-sm tracking-wide" dir="ltr">
                                             <span className="text-foreground/70 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-1">
                                                 {currentPoints.toLocaleString()}
                                                 <span className="text-[9px] sm:text-[10px] opacity-70 font-medium">XP</span>
                                             </span>
-                                            <span className="text-foreground/90 mix-blend-screen drop-shadow-sm font-black text-sm sm:text-base">
+                                            <span className="text-foreground/90 mix-blend-screen drop-shadow-sm font-black text-xs sm:text-base">
                                                 {progress}%
                                             </span>
                                             <span className="text-muted-foreground/80 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-0.5">

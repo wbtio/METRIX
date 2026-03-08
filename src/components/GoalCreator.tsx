@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Loader2,
     CheckCircle,
@@ -8,13 +8,28 @@ import {
     X,
     Plus,
     Trash2,
-    ChevronDown,
-    ChevronUp,
+    Clock,
+    Target,
+    ListChecks,
+    ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
 import GoalInput from './GoalInput';
 import { createClient } from '@/utils/supabase/client';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface GoalCreatorProps {
     onComplete: () => void;
@@ -98,7 +113,10 @@ export default function GoalCreator({
     const [notification, setNotification] = useState<{ type: 'error' | 'warning' | 'info', message: string } | null>(null);
 
     const [isRecording, setIsRecording] = useState(false);
-    const recognitionRef = useRef<any>(null);
+    const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const streamRef = useRef<MediaStream | null>(null);
 
     const addMainTask = () => {
         setStructuredInput(prev => ({
@@ -154,47 +172,77 @@ export default function GoalCreator({
         }));
     };
 
-    const startRecording = () => {
-        if (typeof window === 'undefined') return;
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setNotification({ type: 'error', message: resolvedLanguage === 'ar' ? 'المتصفح لا يدعم الإدخال الصوتي.' : 'Speech input is not supported in this browser.' });
-            return;
+    const cleanupStream = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
         }
+        mediaRecorderRef.current = null;
+        audioChunksRef.current = [];
+    }, []);
 
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = resolvedLanguage === 'ar' ? 'ar-SA' : 'en-US';
+    const startRecording = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
+            });
+            streamRef.current = stream;
+            audioChunksRef.current = [];
 
-        recognition.onresult = (event: any) => {
-            let transcript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript + ' ';
-            }
-            if (transcript) setGoalText(prev => prev + transcript);
-        };
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
+            mediaRecorderRef.current = mediaRecorder;
 
-        recognition.onerror = () => setIsRecording(false);
-        recognition.onend = () => setIsRecording(false);
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
 
-        recognitionRef.current = recognition;
-        recognition.start();
-        setIsRecording(true);
-    };
+            mediaRecorder.onstop = async () => {
+                setIsProcessingAudio(true);
+                try {
+                    const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, `recording.${mimeType.split('/')[1]}`);
+                    formData.append('language', resolvedLanguage === 'ar' ? 'ar' : 'en');
 
-    const stopRecording = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            recognitionRef.current = null;
+                    const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    console.log('Transcribe response:', response.status, data);
+
+                    if (response.ok && !data.fallback && data.text) {
+                        setGoalText(prev => prev ? prev + ' ' + data.text : data.text);
+                    } else {
+                        console.warn('Transcription failed or empty:', data);
+                    }
+                } catch (err) {
+                    console.error('Transcription error:', err);
+                } finally {
+                    setIsProcessingAudio(false);
+                    cleanupStream();
+                }
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error('Microphone access error:', err);
+            setNotification({ type: 'error', message: resolvedLanguage === 'ar' ? 'فشل الوصول إلى الميكروفون. يرجى السماح بالوصول من إعدادات المتصفح.' : 'Failed to access microphone. Please allow access in browser settings.' });
+            setIsRecording(false);
+        }
+    }, [resolvedLanguage, cleanupStream]);
+
+    const stopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
         }
         setIsRecording(false);
-    };
+    }, []);
 
-    const toggleRecording = () => {
+    const toggleRecording = useCallback(() => {
+        if (isProcessingAudio) return;
         if (isRecording) stopRecording();
         else startRecording();
-    };
+    }, [isRecording, isProcessingAudio, startRecording, stopRecording]);
 
     const structuredPayload = useMemo(() => ({
         title: structuredInput.title?.trim() || undefined,
@@ -449,18 +497,22 @@ export default function GoalCreator({
 
     const renderNotification = () => (
         notification ? (
-            <div className={cn(
-                "mb-4 p-3 rounded-xl flex items-start gap-3 border",
-                notification.type === 'error' ? 'bg-destructive/10 border-destructive/20 text-destructive' :
-                    notification.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' :
-                        'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-            )}>
-                {notification.type === 'error' ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> : <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-                <p className="text-sm flex-1">{notification.message}</p>
-                <button onClick={() => setNotification(null)} className="shrink-0">
-                    <X className="w-4 h-4" />
-                </button>
-            </div>
+            <Alert
+                variant={notification.type === 'error' ? 'destructive' : 'default'}
+                className={cn(
+                    "mb-4",
+                    notification.type === 'warning' && 'border-amber-500/30 text-amber-600 dark:text-amber-400 [&>svg]:text-amber-500',
+                    notification.type === 'info' && 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 [&>svg]:text-emerald-500',
+                )}
+            >
+                {notification.type === 'error' ? <AlertTriangle /> : <CheckCircle />}
+                <AlertDescription className="flex items-center justify-between gap-2">
+                    <span>{notification.message}</span>
+                    <Button variant="ghost" size="icon-xs" onClick={() => setNotification(null)}>
+                        <X />
+                    </Button>
+                </AlertDescription>
+            </Alert>
         ) : null
     );
 
@@ -489,162 +541,253 @@ export default function GoalCreator({
                     language={resolvedLanguage}
                 />
 
-                <div className="border border-border rounded-2xl p-4 bg-card/30">
-                    <button
-                        onClick={() => setIsStructuredOpen(v => !v)}
-                        className="w-full flex items-center justify-between text-sm font-semibold text-foreground"
-                    >
-                        <span>{resolvedLanguage === 'ar' ? 'تفاصيل منظمة (اختياري)' : 'Structured details (optional)'}</span>
-                        {isStructuredOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
+                <Collapsible open={isStructuredOpen} onOpenChange={setIsStructuredOpen}>
+                    <Card className="py-0 overflow-hidden">
+                        <CollapsibleTrigger asChild>
+                            <button className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-accent/50 transition-colors">
+                                <div className="flex items-center gap-2.5">
+                                    <ListChecks className="size-4 text-muted-foreground" />
+                                    <span className="text-sm font-semibold">
+                                        {resolvedLanguage === 'ar' ? 'تفاصيل منظمة (اختياري)' : 'Structured details (optional)'}
+                                    </span>
+                                </div>
+                                <ChevronRight className={cn("size-4 text-muted-foreground transition-transform duration-200", isStructuredOpen && "rotate-90")} />
+                            </button>
+                        </CollapsibleTrigger>
 
-                    {isStructuredOpen && (
-                        <div className="mt-4 space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <input
-                                    value={structuredInput.title}
-                                    onChange={(e) => setStructuredInput(prev => ({ ...prev, title: e.target.value }))}
-                                    className="p-3 rounded-xl border border-border bg-background"
-                                    placeholder={resolvedLanguage === 'ar' ? 'عنوان الهدف' : 'Goal title'}
-                                />
-                                <input
-                                    type="number"
-                                    value={structuredInput.target_points}
-                                    onChange={(e) => setStructuredInput(prev => ({ ...prev, target_points: Number(e.target.value) || 10000 }))}
-                                    className="p-3 rounded-xl border border-border bg-background"
-                                    placeholder={resolvedLanguage === 'ar' ? 'النقاط المستهدفة' : 'Target points'}
-                                />
-                            </div>
-
-                            <textarea
-                                value={structuredInput.description}
-                                onChange={(e) => setStructuredInput(prev => ({ ...prev, description: e.target.value }))}
-                                className="w-full p-3 rounded-xl border border-border bg-background min-h-[90px]"
-                                placeholder={resolvedLanguage === 'ar' ? 'وصف الهدف' : 'Goal description'}
-                            />
-
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="font-bold text-sm">{resolvedLanguage === 'ar' ? 'المهام الرئيسية والفرعية' : 'Main tasks and subtasks'}</h4>
-                                    <button
-                                        onClick={addMainTask}
-                                        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        {resolvedLanguage === 'ar' ? 'إضافة مهمة رئيسية' : 'Add Main Task'}
-                                    </button>
+                        <CollapsibleContent>
+                            <Separator />
+                            <CardContent className="pt-5 pb-5 space-y-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="goal-title">
+                                            <Target className="size-3.5" />
+                                            {resolvedLanguage === 'ar' ? 'عنوان الهدف' : 'Goal title'}
+                                        </Label>
+                                        <Input
+                                            id="goal-title"
+                                            value={structuredInput.title}
+                                            onChange={(e) => setStructuredInput(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder={resolvedLanguage === 'ar' ? 'عنوان الهدف' : 'Goal title'}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="target-points">
+                                            {resolvedLanguage === 'ar' ? 'النقاط المستهدفة' : 'Target points'}
+                                        </Label>
+                                        <Input
+                                            id="target-points"
+                                            type="number"
+                                            value={structuredInput.target_points}
+                                            onChange={(e) => setStructuredInput(prev => ({ ...prev, target_points: Number(e.target.value) || 10000 }))}
+                                            placeholder={resolvedLanguage === 'ar' ? 'النقاط المستهدفة' : 'Target points'}
+                                        />
+                                    </div>
                                 </div>
 
-                                {structuredInput.main_tasks.map((main) => (
-                                    <div key={main.id} className="border border-border rounded-xl p-3 bg-background/70 space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                value={main.task}
-                                                onChange={(e) => updateMainTask(main.id, { task: e.target.value })}
-                                                className="flex-1 p-2.5 rounded-lg border border-border bg-background"
-                                                placeholder={resolvedLanguage === 'ar' ? 'اسم المهمة الرئيسية' : 'Main task'}
-                                            />
-                                            <select
-                                                value={main.frequency}
-                                                onChange={(e) => updateMainTask(main.id, { frequency: e.target.value as 'daily' | 'weekly' })}
-                                                className="p-2.5 rounded-lg border border-border bg-background text-sm"
-                                            >
-                                                <option value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</option>
-                                                <option value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</option>
-                                            </select>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                max={10}
-                                                value={main.impact_weight}
-                                                onChange={(e) => updateMainTask(main.id, { impact_weight: Number(e.target.value) || 1 })}
-                                                className="w-20 p-2.5 rounded-lg border border-border bg-background"
-                                            />
-                                            <button onClick={() => removeMainTask(main.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="goal-desc">
+                                        {resolvedLanguage === 'ar' ? 'وصف الهدف' : 'Goal description'}
+                                    </Label>
+                                    <Textarea
+                                        id="goal-desc"
+                                        value={structuredInput.description}
+                                        onChange={(e) => setStructuredInput(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder={resolvedLanguage === 'ar' ? 'وصف الهدف' : 'Goal description'}
+                                        className="min-h-[80px]"
+                                    />
+                                </div>
 
-                                        <input
-                                            value={main.completion_criteria}
-                                            onChange={(e) => updateMainTask(main.id, { completion_criteria: e.target.value })}
-                                            className="w-full p-2.5 rounded-lg border border-border bg-background text-sm"
-                                            placeholder={resolvedLanguage === 'ar' ? 'معيار الإنجاز (اختياري)' : 'Completion criteria (optional)'}
-                                        />
+                                <Separator />
 
-                                        <div className="space-y-2">
-                                            {main.subtasks.map((sub) => (
-                                                <div key={sub.id} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center">
-                                                    <input
-                                                        value={sub.task}
-                                                        onChange={(e) => updateSubtask(main.id, sub.id, { task: e.target.value })}
-                                                        className="p-2.5 rounded-lg border border-border bg-background text-sm"
-                                                        placeholder={resolvedLanguage === 'ar' ? 'المهمة الفرعية' : 'Subtask'}
-                                                    />
-                                                    <select
-                                                        value={sub.frequency}
-                                                        onChange={(e) => updateSubtask(main.id, sub.id, { frequency: e.target.value as 'daily' | 'weekly' })}
-                                                        className="p-2.5 rounded-lg border border-border bg-background text-sm"
-                                                    >
-                                                        <option value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</option>
-                                                        <option value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</option>
-                                                    </select>
-                                                    <input
-                                                        type="number"
-                                                        min={1}
-                                                        max={5}
-                                                        value={sub.impact_weight}
-                                                        onChange={(e) => updateSubtask(main.id, sub.id, { impact_weight: Number(e.target.value) || 1 })}
-                                                        className="w-16 p-2.5 rounded-lg border border-border bg-background text-sm"
-                                                    />
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={sub.time_required_minutes}
-                                                        onChange={(e) => updateSubtask(main.id, sub.id, { time_required_minutes: Number(e.target.value) || 0 })}
-                                                        className="w-20 p-2.5 rounded-lg border border-border bg-background text-sm"
-                                                        placeholder="min"
-                                                    />
-                                                    <button
-                                                        onClick={() => removeSubtask(main.id, sub.id)}
-                                                        className="p-2 rounded-lg hover:bg-destructive/10 text-destructive justify-self-start"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            onClick={() => addSubtask(main.id)}
-                                            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-muted"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            {resolvedLanguage === 'ar' ? 'إضافة فرعية' : 'Add subtask'}
-                                        </button>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-sm">
+                                            <ListChecks className="size-3.5" />
+                                            {resolvedLanguage === 'ar' ? 'المهام الرئيسية والفرعية' : 'Main tasks & subtasks'}
+                                        </Label>
+                                        <Button size="sm" onClick={addMainTask}>
+                                            <Plus className="size-3.5" />
+                                            {resolvedLanguage === 'ar' ? 'إضافة مهمة رئيسية' : 'Add Main Task'}
+                                        </Button>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
+
+                                    {structuredInput.main_tasks.length === 0 && (
+                                        <div className="text-center py-6 text-muted-foreground text-sm border border-dashed rounded-lg">
+                                            {resolvedLanguage === 'ar' ? 'لا توجد مهام بعد. أضف مهمة رئيسية للبدء.' : 'No tasks yet. Add a main task to get started.'}
+                                        </div>
+                                    )}
+
+                                    <Accordion type="multiple" className="space-y-2">
+                                        {structuredInput.main_tasks.map((main, mainIdx) => (
+                                            <AccordionItem key={main.id} value={main.id} className="border rounded-lg px-3 last:border-b">
+                                                <AccordionTrigger className="py-3 hover:no-underline">
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                                            {resolvedLanguage === 'ar' ? `رئيسية ${mainIdx + 1}` : `Main ${mainIdx + 1}`}
+                                                        </Badge>
+                                                        <span className="truncate text-sm">
+                                                            {main.task || (resolvedLanguage === 'ar' ? 'مهمة جديدة' : 'New task')}
+                                                        </span>
+                                                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                                                            {main.frequency === 'daily' ? (resolvedLanguage === 'ar' ? 'يومي' : 'Daily') : (resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly')}
+                                                        </Badge>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="space-y-4 pb-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                                                        <div className="space-y-2">
+                                                            <Label>{resolvedLanguage === 'ar' ? 'اسم المهمة' : 'Task name'}</Label>
+                                                            <Input
+                                                                value={main.task}
+                                                                onChange={(e) => updateMainTask(main.id, { task: e.target.value })}
+                                                                placeholder={resolvedLanguage === 'ar' ? 'اسم المهمة الرئيسية' : 'Main task name'}
+                                                            />
+                                                        </div>
+                                                        <Button variant="destructive" size="sm" onClick={() => removeMainTask(main.id)}>
+                                                            <Trash2 className="size-3.5" />
+                                                            {resolvedLanguage === 'ar' ? 'حذف' : 'Remove'}
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div className="space-y-2">
+                                                            <Label>{resolvedLanguage === 'ar' ? 'التكرار' : 'Frequency'}</Label>
+                                                            <Select
+                                                                value={main.frequency}
+                                                                onValueChange={(val) => updateMainTask(main.id, { frequency: val as 'daily' | 'weekly' })}
+                                                            >
+                                                                <SelectTrigger className="w-full">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</SelectItem>
+                                                                    <SelectItem value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>
+                                                                {resolvedLanguage === 'ar' ? 'الوزن' : 'Impact weight'}
+                                                                <Badge variant="outline" className="text-[10px] ms-1">{main.impact_weight}</Badge>
+                                                            </Label>
+                                                            <Slider
+                                                                min={1}
+                                                                max={10}
+                                                                step={1}
+                                                                value={[main.impact_weight]}
+                                                                onValueChange={([val]) => updateMainTask(main.id, { impact_weight: val })}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label>{resolvedLanguage === 'ar' ? 'معيار الإنجاز' : 'Completion criteria'}</Label>
+                                                        <Input
+                                                            value={main.completion_criteria}
+                                                            onChange={(e) => updateMainTask(main.id, { completion_criteria: e.target.value })}
+                                                            placeholder={resolvedLanguage === 'ar' ? 'معيار الإنجاز (اختياري)' : 'Completion criteria (optional)'}
+                                                        />
+                                                    </div>
+
+                                                    <Separator />
+
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-xs text-muted-foreground">
+                                                                {resolvedLanguage === 'ar' ? 'المهام الفرعية' : 'Subtasks'}
+                                                                <Badge variant="secondary" className="text-[10px] ms-1.5">{main.subtasks.length}</Badge>
+                                                            </Label>
+                                                            <Button variant="outline" size="xs" onClick={() => addSubtask(main.id)}>
+                                                                <Plus className="size-3" />
+                                                                {resolvedLanguage === 'ar' ? 'إضافة فرعية' : 'Add subtask'}
+                                                            </Button>
+                                                        </div>
+
+                                                        {main.subtasks.map((sub) => (
+                                                            <Card key={sub.id} className="py-0 gap-0 bg-muted/30">
+                                                                <CardContent className="p-3 space-y-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Input
+                                                                            value={sub.task}
+                                                                            onChange={(e) => updateSubtask(main.id, sub.id, { task: e.target.value })}
+                                                                            placeholder={resolvedLanguage === 'ar' ? 'المهمة الفرعية' : 'Subtask name'}
+                                                                            className="flex-1 h-8 text-sm"
+                                                                        />
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon-xs"
+                                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                            onClick={() => removeSubtask(main.id, sub.id)}
+                                                                        >
+                                                                            <Trash2 />
+                                                                        </Button>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                                        <Select
+                                                                            value={sub.frequency}
+                                                                            onValueChange={(val) => updateSubtask(main.id, sub.id, { frequency: val as 'daily' | 'weekly' })}
+                                                                        >
+                                                                            <SelectTrigger className="h-8 text-xs">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</SelectItem>
+                                                                                <SelectItem value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <div className="space-y-1">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-[10px] text-muted-foreground">{resolvedLanguage === 'ar' ? 'الوزن' : 'Weight'}</span>
+                                                                                <Badge variant="outline" className="text-[10px] h-4 px-1">{sub.impact_weight}</Badge>
+                                                                            </div>
+                                                                            <Slider
+                                                                                min={1}
+                                                                                max={5}
+                                                                                step={1}
+                                                                                value={[sub.impact_weight]}
+                                                                                onValueChange={([val]) => updateSubtask(main.id, sub.id, { impact_weight: val })}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Clock className="size-3 text-muted-foreground shrink-0" />
+                                                                            <Input
+                                                                                type="number"
+                                                                                min={0}
+                                                                                value={sub.time_required_minutes}
+                                                                                onChange={(e) => updateSubtask(main.id, sub.id, { time_required_minutes: Number(e.target.value) || 0 })}
+                                                                                className="h-8 text-xs"
+                                                                                placeholder="min"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                </div>
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Card>
+                </Collapsible>
 
                 <div className="flex items-center justify-between gap-2">
                     {onCancel && (
-                        <button
-                            onClick={onCancel}
-                            className="px-4 py-2.5 rounded-xl border border-border text-sm font-semibold"
-                        >
+                        <Button variant="outline" onClick={onCancel}>
                             {t.cancel}
-                        </button>
+                        </Button>
                     )}
-                    <button
+                    <Button
+                        className="ms-auto"
                         onClick={() => handleInvestigate()}
                         disabled={!goalText.trim() || loading}
-                        className="ms-auto px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-50"
                     >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.generatePlanButton}
-                    </button>
+                        {loading ? <Loader2 className="size-4 animate-spin" /> : t.generatePlanButton}
+                    </Button>
                 </div>
             </div>
         );
@@ -655,56 +798,71 @@ export default function GoalCreator({
             <div className="space-y-5">
                 {renderNotification()}
 
-                <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 text-sm">
-                    {investigationResult.goal_understanding?.goal_summary || (resolvedLanguage === 'ar' ? 'أجب على هذه الأسئلة لإكمال التخطيط.' : 'Answer these questions to complete planning.')}
-                </div>
+                <Alert className="border-primary/20 bg-primary/5">
+                    <Target className="size-4 text-primary" />
+                    <AlertDescription className="text-sm">
+                        {investigationResult.goal_understanding?.goal_summary || (resolvedLanguage === 'ar' ? 'أجب على هذه الأسئلة لإكمال التخطيط.' : 'Answer these questions to complete planning.')}
+                    </AlertDescription>
+                </Alert>
 
-                <div className="space-y-4">
-                    {investigationResult.questions?.map((q: any) => (
-                        <div key={q.id} className="space-y-2">
-                            <label className="text-sm font-semibold">{q.question}</label>
-                            {q.type === 'single_choice' || q.type === 'choice' ? (
-                                <div className="flex flex-wrap gap-2">
-                                    {(q.options || []).map((opt: string) => (
-                                        <button
-                                            key={opt}
-                                            onClick={() => setAnswers(prev => ({ ...prev, [q.id]: opt }))}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg border text-xs",
-                                                answers[q.id] === opt ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 border-border"
-                                            )}
-                                        >
-                                            {opt}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <input
-                                    type={q.type === 'number' ? 'number' : 'text'}
-                                    value={answers[q.id] || ''}
-                                    onChange={(e) => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                                    className="w-full p-3 rounded-xl border border-border bg-background"
-                                    placeholder={t.answerPlaceholder}
-                                />
-                            )}
+                <Card className="overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-md">
+                    <CardHeader className="border-b border-border/60 bg-muted/30 px-6 py-4">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                                {resolvedLanguage === 'ar' ? 'أسئلة' : 'Questions'}
+                            </Badge>
                         </div>
-                    ))}
-                </div>
-
-                <div className="flex items-center justify-between">
-                    <button
-                        onClick={() => setStep('INPUT')}
-                        className="px-4 py-2 rounded-lg border border-border text-sm"
-                    >
-                        {resolvedLanguage === 'ar' ? 'رجوع' : 'Back'}
-                    </button>
-                    <button
-                        onClick={submitAnswers}
-                        className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold"
-                    >
-                        {t.generatePlanButton}
-                    </button>
-                </div>
+                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg mb-1">
+                            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                                <Target className="size-4" />
+                            </span>
+                            {resolvedLanguage === 'ar' ? 'أسئلة إضافية' : 'Additional questions'}
+                        </CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground">
+                            {resolvedLanguage === 'ar' ? 'أجب لنتمكن من إنشاء خطة أفضل' : 'Answer to help us build a better plan'}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        {investigationResult.questions?.map((q: any, idx: number) => (
+                            <div key={q.id} className="space-y-2.5">
+                                <Label className="text-sm">
+                                    <Badge variant="secondary" className="text-[10px] me-1.5">{idx + 1}</Badge>
+                                    {q.question}
+                                </Label>
+                                {q.type === 'single_choice' || q.type === 'choice' ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {(q.options || []).map((opt: string) => (
+                                            <Button
+                                                key={opt}
+                                                variant={answers[q.id] === opt ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                                            >
+                                                {opt}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <Input
+                                        type={q.type === 'number' ? 'number' : 'text'}
+                                        value={answers[q.id] || ''}
+                                        onChange={(e) => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                        placeholder={t.answerPlaceholder}
+                                    />
+                                )}
+                                {idx < (investigationResult.questions?.length || 0) - 1 && <Separator className="mt-3" />}
+                            </div>
+                        ))}
+                    </CardContent>
+                    <CardFooter className="justify-between">
+                        <Button variant="outline" onClick={() => setStep('INPUT')}>
+                            {resolvedLanguage === 'ar' ? 'رجوع' : 'Back'}
+                        </Button>
+                        <Button onClick={submitAnswers}>
+                            {t.generatePlanButton}
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
         );
     }
@@ -714,93 +872,164 @@ export default function GoalCreator({
         <div className="space-y-5">
             {renderNotification()}
 
-            <div className="rounded-2xl border border-border p-4 bg-card/30 space-y-2">
-                <h3 className="font-bold text-lg">{planResult?.plan?.goal_summary}</h3>
-                <p className="text-sm text-muted-foreground">{planResult?.ai_summary}</p>
-                <div className="text-xs text-muted-foreground">
-                    {resolvedLanguage === 'ar' ? 'المدة التقديرية' : 'Estimated duration'}: {planResult?.plan?.estimated_total_days || '-'} {resolvedLanguage === 'ar' ? 'يوم' : 'days'}
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                {mainTasksForReview.map((main: any, mainIdx: number) => (
-                    <div key={main.id || mainIdx} className="rounded-xl border border-border p-3 bg-background/70 space-y-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
-                            <input
-                                value={main.task}
-                                onChange={(e) => updatePlanMain(mainIdx, { task: e.target.value })}
-                                className="p-2.5 rounded-lg border border-border bg-background text-sm"
-                            />
-                            <select
-                                value={main.frequency || 'weekly'}
-                                onChange={(e) => updatePlanMain(mainIdx, { frequency: e.target.value })}
-                                className="p-2.5 rounded-lg border border-border bg-background text-sm"
-                            >
-                                <option value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</option>
-                                <option value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</option>
-                            </select>
-                            <input
-                                type="number"
-                                min={1}
-                                max={10}
-                                value={main.impact_weight || 5}
-                                onChange={(e) => updatePlanMain(mainIdx, { impact_weight: Number(e.target.value) || 1 })}
-                                className="w-20 p-2.5 rounded-lg border border-border bg-background text-sm"
-                            />
-                        </div>
-
-                        {(main.subtasks || []).map((sub: any, subIdx: number) => (
-                            <div key={sub.id || `${mainIdx}-${subIdx}`} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-2 ps-3 border-s border-border">
-                                <input
-                                    value={sub.task}
-                                    onChange={(e) => updatePlanSub(mainIdx, subIdx, { task: e.target.value })}
-                                    className="p-2 rounded-lg border border-border bg-background text-xs sm:text-sm"
-                                />
-                                <select
-                                    value={sub.frequency || 'daily'}
-                                    onChange={(e) => updatePlanSub(mainIdx, subIdx, { frequency: e.target.value })}
-                                    className="p-2 rounded-lg border border-border bg-background text-xs sm:text-sm"
-                                >
-                                    <option value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</option>
-                                    <option value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</option>
-                                </select>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={5}
-                                    value={sub.impact_weight || 1}
-                                    onChange={(e) => updatePlanSub(mainIdx, subIdx, { impact_weight: Number(e.target.value) || 1 })}
-                                    className="w-16 p-2 rounded-lg border border-border bg-background text-xs sm:text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    min={0}
-                                    value={sub.time_required_minutes || 0}
-                                    onChange={(e) => updatePlanSub(mainIdx, subIdx, { time_required_minutes: Number(e.target.value) || 0 })}
-                                    className="w-20 p-2 rounded-lg border border-border bg-background text-xs sm:text-sm"
-                                />
-                            </div>
-                        ))}
+            <Card className="overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-md">
+                <CardHeader className="border-b border-border/60 bg-muted/30 px-6 py-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                            {resolvedLanguage === 'ar' ? 'ملخص' : 'Summary'}
+                        </Badge>
                     </div>
+                    <CardTitle className="text-base sm:text-lg mb-1">
+                        {planResult?.plan?.goal_summary}
+                    </CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">
+                        {planResult?.ai_summary}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-2">
+                        <Clock className="size-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                            {resolvedLanguage === 'ar' ? 'المدة التقديرية' : 'Estimated duration'}:
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                            {planResult?.plan?.estimated_total_days || '-'} {resolvedLanguage === 'ar' ? 'يوم' : 'days'}
+                        </Badge>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Accordion type="multiple" defaultValue={mainTasksForReview.map((_: any, i: number) => `review-${i}`)} className="space-y-2">
+                {mainTasksForReview.map((main: any, mainIdx: number) => (
+                    <AccordionItem key={main.id || mainIdx} value={`review-${mainIdx}`} className="border rounded-lg px-3 last:border-b">
+                        <AccordionTrigger className="py-3 hover:no-underline">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                    {resolvedLanguage === 'ar' ? `رئيسية ${mainIdx + 1}` : `Main ${mainIdx + 1}`}
+                                </Badge>
+                                <span className="truncate text-sm">{main.task || '...'}</span>
+                                <Badge variant="outline" className="shrink-0 text-[10px]">
+                                    {(main.frequency || 'weekly') === 'daily' ? (resolvedLanguage === 'ar' ? 'يومي' : 'Daily') : (resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly')}
+                                </Badge>
+                                {(main.subtasks || []).length > 0 && (
+                                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                                        {(main.subtasks || []).length} {resolvedLanguage === 'ar' ? 'فرعية' : 'sub'}
+                                    </Badge>
+                                )}
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4 pb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3 items-end">
+                                <div className="space-y-2">
+                                    <Label>{resolvedLanguage === 'ar' ? 'اسم المهمة' : 'Task name'}</Label>
+                                    <Input
+                                        value={main.task}
+                                        onChange={(e) => updatePlanMain(mainIdx, { task: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{resolvedLanguage === 'ar' ? 'التكرار' : 'Frequency'}</Label>
+                                    <Select
+                                        value={main.frequency || 'weekly'}
+                                        onValueChange={(val) => updatePlanMain(mainIdx, { frequency: val })}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</SelectItem>
+                                            <SelectItem value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>
+                                        {resolvedLanguage === 'ar' ? 'الوزن' : 'Weight'}
+                                        <Badge variant="outline" className="text-[10px] ms-1">{main.impact_weight || 5}</Badge>
+                                    </Label>
+                                    <Slider
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        value={[main.impact_weight || 5]}
+                                        onValueChange={([val]) => updatePlanMain(mainIdx, { impact_weight: val })}
+                                        className="w-24"
+                                    />
+                                </div>
+                            </div>
+
+                            {(main.subtasks || []).length > 0 && (
+                                <>
+                                    <Separator />
+                                    <Label className="text-xs text-muted-foreground">
+                                        {resolvedLanguage === 'ar' ? 'المهام الفرعية' : 'Subtasks'}
+                                    </Label>
+                                    <div className="space-y-2">
+                                        {(main.subtasks || []).map((sub: any, subIdx: number) => (
+                                            <Card key={sub.id || `${mainIdx}-${subIdx}`} className="py-0 gap-0 bg-muted/30">
+                                                <CardContent className="p-3 space-y-3">
+                                                    <Input
+                                                        value={sub.task}
+                                                        onChange={(e) => updatePlanSub(mainIdx, subIdx, { task: e.target.value })}
+                                                        className="h-8 text-sm"
+                                                    />
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                        <Select
+                                                            value={sub.frequency || 'daily'}
+                                                            onValueChange={(val) => updatePlanSub(mainIdx, subIdx, { frequency: val })}
+                                                        >
+                                                            <SelectTrigger className="h-8 text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="daily">{resolvedLanguage === 'ar' ? 'يومي' : 'Daily'}</SelectItem>
+                                                                <SelectItem value="weekly">{resolvedLanguage === 'ar' ? 'أسبوعي' : 'Weekly'}</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] text-muted-foreground">{resolvedLanguage === 'ar' ? 'الوزن' : 'Weight'}</span>
+                                                                <Badge variant="outline" className="text-[10px] h-4 px-1">{sub.impact_weight || 1}</Badge>
+                                                            </div>
+                                                            <Slider
+                                                                min={1}
+                                                                max={5}
+                                                                step={1}
+                                                                value={[sub.impact_weight || 1]}
+                                                                onValueChange={([val]) => updatePlanSub(mainIdx, subIdx, { impact_weight: val })}
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Clock className="size-3 text-muted-foreground shrink-0" />
+                                                            <Input
+                                                                type="number"
+                                                                min={0}
+                                                                value={sub.time_required_minutes || 0}
+                                                                onChange={(e) => updatePlanSub(mainIdx, subIdx, { time_required_minutes: Number(e.target.value) || 0 })}
+                                                                className="h-8 text-xs"
+                                                                placeholder="min"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
                 ))}
-            </div>
+            </Accordion>
 
             <div className="flex items-center justify-between gap-2">
-                <button
-                    onClick={() => setStep('INPUT')}
-                    className="px-4 py-2 rounded-lg border border-border text-sm"
-                    disabled={saving}
-                >
+                <Button variant="outline" onClick={() => setStep('INPUT')} disabled={saving}>
                     {resolvedLanguage === 'ar' ? 'تعديل الإدخال' : 'Edit Input'}
-                </button>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-bold disabled:opacity-60 flex items-center gap-2"
-                >
-                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                    {saving && <Loader2 className="size-4 animate-spin" />}
                     {t.acceptStartJourney}
-                </button>
+                </Button>
             </div>
         </div>
     );

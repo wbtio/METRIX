@@ -1,13 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Mic, ArrowUp, StopCircle, Pin, Target } from 'lucide-react';
+import { useRef, useState, useCallback } from 'react';
+import { Mic, StopCircle, Loader2, Pin, Target, PenLine, Sparkles } from 'lucide-react';
 import { type Language } from '@/lib/translations';
-import GoalCreator from './GoalCreator';
-import ManualGoalCreator from './ManualGoalCreator';
 import Image from 'next/image';
 import { getIconComponent } from './IconPicker';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 interface Goal {
@@ -24,48 +23,25 @@ interface Goal {
 
 interface HomePageProps {
     goals: Goal[];
-    onGoalCreated: () => void;
     onSelectGoal: (id: string) => void;
+    onNavigateToCreate?: (goalText: string, mode: 'ai' | 'manual') => void;
     language?: Language;
     recentGoalsLimit?: number;
 }
 
-interface SpeechRecognitionEventLike {
-    resultIndex: number;
-    results: ArrayLike<ArrayLike<{ transcript: string }>>;
-}
-
-interface SpeechRecognitionLike {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-    onerror: (() => void) | null;
-    onend: (() => void) | null;
-    start: () => void;
-    stop: () => void;
-}
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-interface WindowWithSpeechRecognition extends Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-}
-
 export default function HomePage({
     goals,
-    onGoalCreated,
     onSelectGoal,
+    onNavigateToCreate,
     language = 'en',
     recentGoalsLimit = 4,
 }: HomePageProps) {
     const [goalInput, setGoalInput] = useState('');
-    const [showAIGoalDialog, setShowAIGoalDialog] = useState(false);
-    const [showManualDialog, setShowManualDialog] = useState(false);
-    const [manualInitialData, setManualInitialData] = useState<{ title?: string } | undefined>(undefined);
     const [isRecording, setIsRecording] = useState(false);
-    const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const streamRef = useRef<MediaStream | null>(null);
 
     const isArabic = language === 'ar';
     const safeRecentGoalsLimit = Math.max(1, recentGoalsLimit);
@@ -81,53 +57,111 @@ export default function HomePage({
         return isArabic;
     };
 
-    const handleGoalInputSubmit = () => {
+    const handleAICreate = () => {
         if (goalInput.trim()) {
-            setShowAIGoalDialog(true);
+            onNavigateToCreate?.(goalInput.trim(), 'ai');
         }
     };
 
-    const startRecording = () => {
-        if (typeof window === 'undefined') return;
-        const speechWindow = window as WindowWithSpeechRecognition;
-        const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert(language === 'ar' ? 'التعرف على الصوت غير مدعوم. استخدم Chrome أو Edge.' : 'Speech recognition not supported. Use Chrome or Edge.');
-            return;
+    const handleManualCreate = () => {
+        if (goalInput.trim()) {
+            onNavigateToCreate?.(goalInput.trim(), 'manual');
         }
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = language === 'ar' ? 'ar-SA' : 'en-US';
-
-        recognition.onresult = (event: SpeechRecognitionEventLike) => {
-            let transcript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript + ' ';
-            }
-            if (transcript) setGoalInput(prev => prev + transcript);
-        };
-
-        recognition.onerror = () => setIsRecording(false);
-        recognition.onend = () => setIsRecording(false);
-
-        recognitionRef.current = recognition;
-        recognition.start();
-        setIsRecording(true);
     };
 
-    const stopRecording = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            recognitionRef.current = null;
+    const cleanupStream = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        mediaRecorderRef.current = null;
+        audioChunksRef.current = [];
+    }, []);
+
+    const startRecording = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
+            });
+            streamRef.current = stream;
+            audioChunksRef.current = [];
+
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                setIsProcessing(true);
+                try {
+                    const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, `recording.${mimeType.split('/')[1]}`);
+                    formData.append('language', language === 'ar' ? 'ar' : 'en');
+
+                    const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    console.log('Transcribe response:', response.status, data);
+
+                    if (response.ok && !data.fallback && data.text) {
+                        setGoalInput(prev => prev ? prev + ' ' + data.text : data.text);
+                    } else {
+                        console.warn('Transcription failed or empty:', data);
+                    }
+                } catch (err) {
+                    console.error('Transcription error:', err);
+                } finally {
+                    setIsProcessing(false);
+                    cleanupStream();
+                }
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error('Microphone access error:', err);
+            alert(language === 'ar' ? 'فشل الوصول إلى الميكروفون. يرجى السماح بالوصول من إعدادات المتصفح.' : 'Failed to access microphone. Please allow access in browser settings.');
+            setIsRecording(false);
+        }
+    }, [language, cleanupStream]);
+
+    const stopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
         }
         setIsRecording(false);
-    };
+    }, []);
 
-    const toggleRecording = () => {
+    const toggleRecording = useCallback(() => {
+        if (isProcessing) return;
         if (isRecording) stopRecording();
         else startRecording();
+    }, [isRecording, isProcessing, startRecording, stopRecording]);
+
+    const hasGoalInput = goalInput.trim().length > 0;
+    const goalInputPlaceholder = isProcessing
+        ? (isArabic ? 'جارِ المعالجة...' : 'Processing...')
+        : isRecording
+            ? (isArabic ? 'جارِ الاستماع...' : 'Listening...')
+            : (isArabic ? 'اكتب هدفك هنا...' : 'Write your goal here...');
+
+    const resizeGoalTextarea = (textarea: HTMLTextAreaElement) => {
+        textarea.style.height = '0px';
+
+        const computedStyle = window.getComputedStyle(textarea);
+        const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 28;
+        const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+        const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
+
+        const minHeight = lineHeight + paddingTop + paddingBottom;
+        const maxHeight = lineHeight * 4 + paddingTop + paddingBottom;
+        const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+
+        textarea.style.height = `${nextHeight}px`;
+        textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
     };
 
     return (
@@ -156,81 +190,132 @@ export default function HomePage({
 
             <div
                 className={cn(
-                    "relative flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 transition-all duration-200",
-                    "bg-background/95 backdrop-blur-sm",
-                    "border border-border rounded-2xl sm:rounded-[20px]",
-                    "shadow-sm",
-                    "focus-within:border-primary/40 focus-within:shadow-md",
-                    isRecording && "border-red-500/30 bg-red-50/5"
+                    "relative overflow-hidden rounded-[24px] border bg-background/92 backdrop-blur-xl",
+                    "shadow-lg shadow-black/5 transition-all duration-300 dark:shadow-black/20",
+                    "focus-within:border-primary/35 focus-within:shadow-xl focus-within:shadow-black/5",
+                    isRecording
+                        ? "border-red-400/40 bg-red-500/[0.03]"
+                        : isProcessing
+                            ? "border-amber-300/50 bg-amber-500/[0.03]"
+                            : "border-border/70"
                 )}
                 dir={isArabic ? 'rtl' : 'ltr'}
             >
-                <button
-                    onClick={toggleRecording}
-                    aria-pressed={isRecording}
-                    aria-label={isRecording
-                        ? (language === 'ar' ? 'إيقاف التسجيل الصوتي' : 'Stop voice recording')
-                        : (language === 'ar' ? 'بدء التسجيل الصوتي' : 'Start voice recording')}
+                <div
                     className={cn(
-                        "relative h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-full border transition-all duration-200 flex items-center justify-center",
-                        "shadow-sm",
+                        "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
                         isRecording
-                            ? "border-red-400/80 bg-red-500/15 text-red-700 hover:bg-red-500/20 ring-2 ring-red-400/30 dark:text-red-300"
-                            : "border-emerald-300/70 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:border-emerald-400 dark:text-emerald-300"
+                            ? "from-red-500/[0.08] via-red-500/[0.03]"
+                            : isProcessing
+                                ? "from-amber-500/[0.08] via-amber-500/[0.03]"
+                                : "from-primary/[0.07] via-primary/[0.02]"
                     )}
-                >
-                    {isRecording && <span className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" />}
-                    {isRecording ? <StopCircle className="w-4 h-4 fill-current relative z-10" /> : <Mic className="w-4 h-4 relative z-10" />}
-                </button>
-
-                <input
-                    type="text"
-                    value={goalInput}
-                    onChange={(e) => setGoalInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleGoalInputSubmit();
-                    }}
-                    placeholder={isRecording ? (language === 'ar' ? 'جارِ الاستماع...' : 'Listening...') : (language === 'ar' ? 'اكتب هدفك هنا...' : 'Write your goal here...')}
-                    className={cn(
-                        "flex-1 min-w-0 min-h-[40px] sm:min-h-[44px] bg-transparent border-none outline-none",
-                        "text-sm sm:text-base font-medium text-foreground placeholder:text-muted-foreground/50",
-                        isArabic ? "text-right" : "text-left",
-                        isRecording && "placeholder:text-red-500/60",
-                        "px-1.5 sm:px-2"
-                    )}
-                    dir={isArabic ? 'rtl' : 'ltr'}
                 />
 
-                <button
-                    onClick={() => {
-                        const trimmedGoal = goalInput.trim();
-                        setManualInitialData(trimmedGoal ? { title: trimmedGoal } : undefined);
-                        setShowManualDialog(true);
-                    }}
-                    className={cn(
-                        "h-10 sm:h-11 shrink-0 rounded-xl sm:rounded-2xl border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap",
-                        "bg-background/95",
-                        "border-border text-foreground/90",
-                        "transition-all duration-200 shadow-sm",
-                        "hover:border-primary/40 hover:shadow-md hover:text-foreground"
-                    )}
-                >
-                    {language === 'ar' ? 'يدويًا' : 'Manual'}
-                </button>
+                <div className="relative px-2 pt-1 pb-1 sm:px-3 sm:pt-2 sm:pb-2">
+                    <Textarea
+                        rows={1}
+                        value={goalInput}
+                        onChange={(e) => {
+                            setGoalInput(e.target.value);
+                            resizeGoalTextarea(e.currentTarget);
+                        }}
+                        onInput={(e) => resizeGoalTextarea(e.currentTarget)}
+                        placeholder={goalInputPlaceholder}
+                        className={cn(
+                            "min-h-[44px] max-h-[140px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none",
+                            "scrollbar-thin",
+                            "text-sm font-medium leading-7 text-foreground sm:text-base md:text-base",
+                            "placeholder:text-muted-foreground/50",
+                            "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                            "dark:bg-transparent",
+                            isArabic ? "text-right" : "text-left",
+                            isRecording && "placeholder:text-red-500/60 caret-red-500"
+                        )}
+                        dir="auto"
+                    />
+                </div>
 
-                <button
-                    onClick={handleGoalInputSubmit}
-                    disabled={!goalInput.trim()}
+                <div
                     className={cn(
-                        "h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-full border transition-all duration-200 flex items-center justify-center",
-                        "shadow-sm",
-                        goalInput.trim()
-                            ? "border-violet-300/70 bg-violet-500/10 text-violet-700 hover:bg-violet-500/20 hover:border-violet-400 dark:text-violet-300"
-                            : "border-border/70 bg-muted/40 text-muted-foreground/50 cursor-not-allowed"
+                        "flex flex-col gap-2 px-2 pb-2 pt-0 sm:px-3 sm:pb-3 sm:pt-0",
+                        isArabic ? "sm:flex-row-reverse sm:items-center sm:justify-between" : "sm:flex-row sm:items-center sm:justify-between"
                     )}
                 >
-                    <ArrowUp className="w-4 h-4" />
-                </button>
+                    <div className={cn("flex items-center gap-2", isArabic ? "flex-row-reverse" : "flex-row")}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleRecording}
+                            disabled={isProcessing}
+                            aria-pressed={isRecording}
+                            aria-label={isProcessing
+                                ? (isArabic ? 'جارِ معالجة التسجيل الصوتي' : 'Processing voice recording')
+                                : isRecording
+                                    ? (isArabic ? 'إيقاف التسجيل الصوتي' : 'Stop voice recording')
+                                    : (isArabic ? 'بدء التسجيل الصوتي' : 'Start voice recording')
+                            }
+                            className={cn(
+                                "h-9 rounded-full px-3.5 text-sm shadow-none",
+                                isProcessing
+                                    ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                                    : isRecording
+                                        ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
+                                        : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                            )}
+                        >
+                            {isProcessing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : isRecording ? (
+                                <StopCircle className="size-4" />
+                            ) : (
+                                <Mic className="size-4" />
+                            )}
+                            <span>
+                                {isProcessing
+                                    ? (isArabic ? 'معالجة' : 'Processing')
+                                    : isRecording
+                                        ? (isArabic ? 'إيقاف' : 'Stop')
+                                        : (isArabic ? 'صوت' : 'Voice')}
+                            </span>
+                        </Button>
+                    </div>
+
+                    <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[280px]">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleManualCreate}
+                            disabled={!hasGoalInput}
+                            className={cn(
+                                "h-10 rounded-full px-4 text-sm font-semibold shadow-none",
+                                hasGoalInput
+                                    ? "border-border/70 bg-background/70 text-foreground hover:bg-muted/60"
+                                    : "border border-border/70 bg-muted/40 text-muted-foreground"
+                            )}
+                        >
+                            <PenLine className="size-4 shrink-0" />
+                            <span>{isArabic ? 'يدوي' : 'Manual'}</span>
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleAICreate}
+                            disabled={!hasGoalInput}
+                            className={cn(
+                                "h-10 rounded-full px-4 text-sm font-semibold shadow-none",
+                                hasGoalInput
+                                    ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                                    : "border border-border/70 bg-muted/40 text-muted-foreground"
+                            )}
+                        >
+                            <Sparkles className="size-4 shrink-0" />
+                            <span>{isArabic ? 'ذكاء اصطناعي' : 'AI Plan'}</span>
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             {recentGoals.length > 0 ? (
@@ -329,55 +414,6 @@ export default function HomePage({
                 </div>
             )}
 
-            <Dialog
-                open={showAIGoalDialog}
-                onOpenChange={setShowAIGoalDialog}
-            >
-                <DialogContent className="max-w-2xl sm:max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6" dir={isArabic ? 'rtl' : 'ltr'}>
-                    <DialogTitle className="sr-only">
-                        {isArabic ? 'إنشاء هدف بالذكاء الاصطناعي' : 'Create goal with AI'}
-                    </DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {isArabic ? 'اكتب الهدف وراجع الخطة قبل الحفظ' : 'Write your goal and review the generated plan before saving'}
-                    </DialogDescription>
-                    <GoalCreator
-                        onComplete={() => {
-                            onGoalCreated();
-                            setShowAIGoalDialog(false);
-                            setGoalInput('');
-                        }}
-                        onCancel={() => setShowAIGoalDialog(false)}
-                        language={language}
-                        initialGoalText={goalInput}
-                    />
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={showManualDialog}
-                onOpenChange={(open) => {
-                    setShowManualDialog(open);
-                    if (!open) setManualInitialData(undefined);
-                }}
-            >
-                <DialogContent className="max-w-2xl sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6" dir={isArabic ? 'rtl' : 'ltr'}>
-                    <DialogTitle className="sr-only">
-                        {isArabic ? 'إضافة هدف يدوي' : 'Create goal manually'}
-                    </DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {isArabic ? 'حدد تفاصيل الهدف والمهام' : 'Define goal details and tasks'}
-                    </DialogDescription>
-                    <ManualGoalCreator
-                        onComplete={() => {
-                            onGoalCreated();
-                            setShowManualDialog(false);
-                        }}
-                        onCancel={() => setShowManualDialog(false)}
-                        language={language}
-                        initialData={manualInitialData}
-                    />
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

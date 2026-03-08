@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-ibm-arabic",
   subsets: ["arabic", "latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-latin",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -22,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
-        className={`${ibmPlexArabic.variable} font-sans antialiased bg-background text-foreground selection:bg-blue-500/30`}
+        className={`${ibmPlexArabic.variable} ${plusJakartaSans.variable} font-sans antialiased bg-background text-foreground selection:bg-blue-500/30`}
       >
         <script
           dangerouslySetInnerHTML={{

@@ -68,21 +68,19 @@ export default function VoiceRecorder({ onTranscript, language = 'ar', className
           });
 
           const data = await response.json();
+          console.log('Transcribe API response:', response.status, data);
 
-          if (data.fallback) {
-            // Fallback to Web Speech API
-            setError('استخدام التعرف الصوتي للمتصفح');
-            startWebSpeechRecognition();
+          if (!response.ok || data.fallback) {
+            console.warn('Mistral transcription failed:', data);
+            setError(language === 'ar' ? 'فشل التعرف على الصوت. حاول مرة أخرى.' : 'Transcription failed. Try again.');
           } else if (data.text) {
             onTranscript(data.text);
           } else {
-            setError('فشل التعرف على الصوت');
+            setError(language === 'ar' ? 'لم يتم التعرف على كلام.' : 'No speech detected.');
           }
         } catch (err: any) {
           console.error('Transcription error:', err);
-          setError('خطأ في معالجة الصوت');
-          // Fallback to Web Speech API
-          startWebSpeechRecognition();
+          setError(language === 'ar' ? 'خطأ في معالجة الصوت.' : 'Audio processing error.');
         } finally {
           setIsProcessing(false);
           cleanup();
@@ -113,38 +111,6 @@ export default function VoiceRecorder({ onTranscript, language = 'ar', className
     mediaRecorderRef.current = null;
     audioChunksRef.current = [];
   }, []);
-
-  const startWebSpeechRecognition = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setError('التعرف على الصوت غير مدعوم');
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = language === 'ar' ? 'ar-SA' : 'en-US';
-
-    recognition.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript + ' ';
-      }
-      if (transcript.trim()) {
-        onTranscript(transcript.trim());
-      }
-    };
-
-    recognition.onerror = (e: any) => {
-      console.error('Speech recognition error:', e.error);
-      setError('فشل التعرف على الصوت');
-    };
-
-    recognition.start();
-  }, [language, onTranscript]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {

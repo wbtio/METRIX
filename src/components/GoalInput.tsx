@@ -141,14 +141,6 @@ export default function GoalInput({
                 </div>
             </div>
 
-            {/* Character Counter (Optional - visible only when typing) */}
-            <div className={cn(
-                "px-4 mt-2 flex text-[10px] font-medium text-muted-foreground transition-opacity duration-300",
-                isArabic ? "justify-start" : "justify-end",
-                value.length > 0 ? "opacity-100" : "opacity-0"
-            )}>
-                <span>{value.length} / {maxLength}</span>
-            </div>
         </div>
     );
 }

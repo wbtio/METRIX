@@ -25,18 +25,19 @@ export async function POST(request: NextRequest) {
     const audioBuffer = Buffer.from(arrayBuffer);
 
     // Call Mistral Voxtral API for transcription
+    const language = formData.get('language') as string || 'ar';
+    const mistralFormData = new FormData();
+    const fileName = audioFile.name || 'recording.webm';
+    mistralFormData.append('file', new Blob([audioBuffer], { type: audioFile.type }), fileName);
+    mistralFormData.append('model', 'voxtral-mini-latest');
+    mistralFormData.append('language', language);
+
     const mistralResponse = await fetch('https://api.mistral.ai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
       },
-      body: (() => {
-        const formData = new FormData();
-        formData.append('file', new Blob([audioBuffer], { type: audioFile.type }), audioFile.name);
-        formData.append('model', 'voxtral-mini-transcribe-v2');
-        formData.append('language', 'ar'); // Arabic language
-        return formData;
-      })(),
+      body: mistralFormData,
     });
 
     if (!mistralResponse.ok) {
