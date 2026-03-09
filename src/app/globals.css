@@ -116,6 +116,11 @@
 }
 
 @layer base {
+  html,
+  body {
+    min-height: 100dvh;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -123,6 +128,7 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    overscroll-behavior-y: none;
   }
 
   /* Plus Jakarta Sans refinements for Latin/English text */

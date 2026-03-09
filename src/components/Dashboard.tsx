@@ -453,7 +453,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
   const taskCount = tasks.filter((tk) => tk.task_type === 'sub').length || tasks.length;
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-3" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 pb-2 sm:pb-4" dir={isArabic ? 'rtl' : 'ltr'}>
       {/* ===== Header Card ===== */}
       <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -625,7 +625,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
 
       {/* ===== Tab Content ===== */}
       {activeTab === 'focus' && (
-        <div className="space-y-2 pb-4">
+        <div className="space-y-2 pb-2 sm:pb-4">
           {/* Filter & Controls Bar */}
           {!loadingTasks && hierarchy.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -695,7 +695,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
           ) : (
             <div
               className={cn(
-                "max-h-[52vh] overflow-y-auto space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted/50 transition-colors",
+                "max-h-[clamp(16rem,calc(100dvh-25rem),30rem)] overflow-y-auto space-y-2 overscroll-contain sm:max-h-[clamp(18rem,52dvh,34rem)] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted/50 transition-colors",
                 isArabic ? 'pl-1' : 'pr-1',
               )}
             >

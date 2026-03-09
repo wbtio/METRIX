@@ -8,6 +8,7 @@ import { getIconComponent } from './IconPicker';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Goal {
     id: string;
@@ -42,9 +43,10 @@ export default function HomePage({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const isMobile = useIsMobile();
 
     const isArabic = language === 'ar';
-    const safeRecentGoalsLimit = Math.max(1, recentGoalsLimit);
+    const safeRecentGoalsLimit = Math.max(1, isMobile ? Math.min(recentGoalsLimit, 2) : recentGoalsLimit);
     const recentGoals = goals.slice(0, safeRecentGoalsLimit);
 
     const isRTL = (text: string) => {

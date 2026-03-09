@@ -13,12 +13,10 @@ interface OrbitShellProps {
 
 export default function OrbitShell({
     children,
-    className,
-    backgroundIntensity = 'medium',
-    user
+    className
 }: OrbitShellProps) {
     return (
-        <div className="relative min-h-screen w-full bg-background text-foreground selection:bg-primary/30 font-sans transition-colors duration-300">
+        <div className="relative min-h-[100dvh] w-full bg-background text-foreground selection:bg-primary/30 font-sans transition-colors duration-300">
 
             {/* Dynamic Background Mesh */}
             <div className="fixed inset-0 z-0 pointer-events-none">
@@ -38,7 +36,7 @@ export default function OrbitShell({
 
             {/* Content Container */}
             <main className={cn(
-                "relative z-10 w-full min-h-screen flex flex-col",
+                "relative z-10 flex min-h-[100dvh] w-full flex-col",
                 className
             )}>
                 {children}

@@ -111,11 +111,10 @@ export default function Home() {
   return (
     <OrbitShell user={user}>
       <div
-        className={`flex-1 flex flex-col items-center p-3 sm:p-6 lg:p-12 w-full max-w-7xl mx-auto transition-all duration-300
-          lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
+        className={`mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col items-center px-3 pt-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] transition-all duration-300 sm:px-6 sm:pt-6 sm:pb-28 lg:px-12 lg:pt-8 lg:pb-12 lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
           ${currentView === 'home'
-          ? 'justify-center pb-36 sm:pb-48'
-          : 'justify-center pb-20 sm:pb-40'
+          ? 'justify-start lg:justify-center'
+          : 'justify-start'
           }`}
       >
 
@@ -220,7 +219,7 @@ export default function Home() {
             }}
           />
         ) : currentView === 'dashboard' && selectedGoal ? (
-          <div className="w-full h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="w-full min-h-0 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <Dashboard
               goal={selectedGoal}
               language={language}
