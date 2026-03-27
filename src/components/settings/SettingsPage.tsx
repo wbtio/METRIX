@@ -268,8 +268,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     <div className="bg-card/40 rounded-2xl border border-border overflow-hidden">
                         <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-indigo-500/10 flex items-center justify-center">
-                                    {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-orange-500/10 flex items-center justify-center">
+                                    {theme === 'dark' ? <Moon className="w-4 h-4 text-orange-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.appearance}</p>
@@ -292,7 +292,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     onClick={() => handleThemeChange('dark')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-                                        theme === 'dark' ? "bg-background text-indigo-500 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        theme === 'dark' ? "bg-background text-orange-500 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.darkMode}
                                 >
@@ -304,8 +304,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
                         <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                                    <Globe className="w-4 h-4 text-blue-500" />
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                                    <Globe className="w-4 h-4 text-orange-500" />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.language}</p>

@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
-        className={`${ibmPlexArabic.variable} ${plusJakartaSans.variable} font-sans antialiased bg-background text-foreground selection:bg-blue-500/30`}
+        className={`${ibmPlexArabic.variable} ${plusJakartaSans.variable} font-sans antialiased bg-background text-foreground selection:bg-orange-500/30`}
       >
         <script
           dangerouslySetInnerHTML={{
@@ -39,10 +39,10 @@ export default function RootLayout({
                   const savedTheme = localStorage.getItem('theme');
                   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
                   
-                  if (savedTheme === 'dark' || (!savedTheme && systemTheme)) {
-                    document.documentElement.classList.add('dark');
-                  } else {
+                  if (savedTheme === 'light') {
                     document.documentElement.classList.remove('dark');
+                  } else {
+                    document.documentElement.classList.add('dark');
                   }
                 } catch (e) {}
               })();
