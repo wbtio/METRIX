@@ -97,10 +97,8 @@ export function useStreakReminder(language: 'en' | 'ar' = 'en') {
         // 5. For each goal, check if there's a streak at risk
         //    "At risk" = logged yesterday but NOT today
         const now = new Date();
-        const todayStr = toLocalDateStr(now);
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = toLocalDateStr(yesterday);
 
         // Get today's start & yesterday's start in ISO for range query
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -141,13 +139,13 @@ export function useStreakReminder(language: 'en' | 'ar' = 'en') {
             if (atRiskGoals.length === 1) {
                 title = isArabic ? '🔥 سلسلتك في خطر!' : '🔥 Your streak is at risk!';
                 body = isArabic
-                    ? `لم تسجّل تقدماً اليوم في "${atRiskGoals[0].title}". سجّل الآن للحفاظ على سلسلتك!`
-                    : `You haven't logged progress today for "${atRiskGoals[0].title}". Log now to keep your streak alive!`;
+                    ? `لم تسجّل اليوم في "${atRiskGoals[0].title}". إذا انتهى اليوم بلا سجل فأنت تخسر الزخم وتعرّض سلسلتك للكسر.`
+                    : `No log yet today for "${atRiskGoals[0].title}". If today stays empty, you give away momentum and put your streak at risk.`;
             } else {
                 title = isArabic ? '🔥 سلاسلك في خطر!' : '🔥 Your streaks are at risk!';
                 body = isArabic
-                    ? `لديك ${atRiskGoals.length} أهداف بدون تسجيل اليوم. سجّل الآن!`
-                    : `You have ${atRiskGoals.length} goals with no log today. Log now to protect your streaks!`;
+                    ? `لديك ${atRiskGoals.length} أهداف بلا تسجيل اليوم. تركها فارغة يعني تراجعاً واضحاً في الزخم.`
+                    : `You have ${atRiskGoals.length} goals with no log today. Leaving them empty means a clear drop in momentum.`;
             }
 
             try {

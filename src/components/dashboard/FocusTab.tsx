@@ -180,7 +180,7 @@ export default function FocusTab({
                 </span>
               </button>
             ))}
-            <span className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+            <span className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-cyan-600/20 bg-cyan-600/10 px-3 text-[11px] font-semibold text-cyan-700 dark:text-cyan-400">
               <CheckSquare className="h-3.5 w-3.5" />
               {focusStats.completedSubtasks}/{focusStats.totalSubtasks}
             </span>
@@ -462,7 +462,7 @@ export default function FocusTab({
                               <span className={cn(
                                 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold',
                                 main.frequency === 'daily'
-                                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                                  ? 'bg-cyan-600/10 text-cyan-700 dark:text-cyan-400'
                                   : 'bg-violet-500/10 text-violet-600 dark:text-violet-300',
                               )}>
                                 {main.frequency === 'daily' ? (isArabic ? 'يومي' : 'Daily') : (isArabic ? 'أسبوعي' : 'Weekly')}
@@ -579,7 +579,7 @@ export default function FocusTab({
                                         <span className={cn(
                                           'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold',
                                           sub.frequency === 'daily'
-                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                                            ? 'bg-cyan-600/10 text-cyan-700 dark:text-cyan-400'
                                             : 'bg-violet-500/10 text-violet-600 dark:text-violet-300',
                                         )}>
                                           {sub.frequency === 'daily' ? (isArabic ? 'يومي' : 'Daily') : (isArabic ? 'أسبوعي' : 'Weekly')}

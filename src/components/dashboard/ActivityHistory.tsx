@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, Star, MessageSquare, Clock, MoreVertical, Eye, Trash2, EyeOff, Plus } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
+import { getDailyPerformanceLabel, parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +20,7 @@ interface Log {
     user_input: string;
     ai_score: number | null;
     ai_feedback: string;
+    breakdown: unknown;
 }
 
 interface ActivityHistoryProps {
@@ -112,9 +114,23 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted, o
                     const userInputRTL = isRTL(log.user_input);
                     const feedbackRTL = log.ai_feedback ? isRTL(log.ai_feedback) : false;
                     const isExpanded = expandedLogId === log.id;
+                    const performanceMeta = parseDailyLogBreakdown(log.breakdown).meta;
+                    const performanceLabel = getDailyPerformanceLabel(performanceMeta, language);
+                    const performanceBadgeClass = performanceMeta?.performance_tier === 'exceptional'
+                        ? 'bg-chart-5/12 text-chart-5 ring-chart-5/20 dark:bg-chart-3/12 dark:text-chart-3 dark:ring-chart-3/20'
+                        : performanceMeta?.performance_tier === 'strong'
+                            ? 'bg-chart-2/12 text-chart-2 ring-chart-2/20'
+                            : performanceMeta?.performance_tier === 'weak'
+                                ? 'bg-destructive/10 text-destructive ring-destructive/20'
+                                : 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-300';
+                    const cardToneClass = performanceMeta?.warning_level === 'high'
+                        ? 'hover:border-destructive/30'
+                        : performanceMeta?.badge !== 'none'
+                            ? 'hover:border-chart-3/40'
+                            : 'hover:border-chart-3/30';
 
                     return (
-                        <div key={log.id} className="bg-card/60 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/80 shadow-sm hover:shadow-lg hover:border-chart-3/30 hover:bg-card/80 transition-all group">
+                        <div key={log.id} className={`bg-card/60 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/80 shadow-sm hover:shadow-lg hover:bg-card/80 transition-all group ${cardToneClass}`}>
                             {/* First Row: Date/Time, Points, Menu Button */}
                             <div className="flex items-center justify-between gap-3 mb-2.5">
                                 <div className="flex items-center gap-2 min-w-0">
@@ -124,6 +140,11 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted, o
                                     <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
+                                    {performanceLabel && (
+                                        <div className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ${performanceBadgeClass}`}>
+                                            <span>{performanceLabel}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-1 bg-chart-2/10 text-chart-2 px-2 py-1 rounded-lg text-xs font-bold ring-1 ring-chart-2/20">
                                         <Star className="w-3 h-3 fill-current" />
                                         <span>+{log.ai_score ?? 0}</span>
@@ -148,6 +169,12 @@ export default function ActivityHistory({ logs, language = 'en', onLogDeleted, o
                                     </DropdownMenu>
                                 </div>
                             </div>
+
+                            {performanceLabel && (
+                                <div className={`mb-2 inline-flex sm:hidden items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ${performanceBadgeClass}`}>
+                                    <span>{performanceLabel}</span>
+                                </div>
+                            )}
 
                             {/* Second Row: Activity Text */}
                             <p

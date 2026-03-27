@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type Language } from '@/lib/translations';
+import { getDailyPerformanceLabel, parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
 import { cn } from '@/lib/utils';
 
 interface Log {
@@ -21,6 +22,7 @@ interface Log {
   user_input: string;
   ai_score: number | null;
   ai_feedback: string;
+  breakdown: unknown;
 }
 
 interface DayCalendarGridProps {
@@ -38,6 +40,7 @@ interface CalendarCell {
   hasLogs: boolean;
   logCount: number;
   totalPoints: number;
+  badge: 'none' | 'strong' | 'exceptional';
 }
 
 function parseLocalDay(value: string) {
@@ -64,6 +67,14 @@ function formatShortNumber(value: number, isArabic: boolean) {
 
 function formatYearNumber(value: number, isArabic: boolean) {
   return new Intl.NumberFormat(isArabic ? 'ar-SA' : 'en-US', { useGrouping: false }).format(value);
+}
+
+function getDayBadgeLabel(badge: 'none' | 'strong' | 'exceptional', language: Language) {
+  if (badge === 'none') return null;
+  if (language === 'ar') {
+    return badge === 'exceptional' ? 'يوم استثنائي' : 'يوم قوي';
+  }
+  return badge === 'exceptional' ? 'Exceptional Day' : 'Strong Day';
 }
 
 export default function DayCalendarGrid({
@@ -106,6 +117,7 @@ export default function DayCalendarGrid({
     x: number;
     y: number;
     state: 'active' | 'before-start' | 'future';
+    badgeLabel: string | null;
   } | null>(null);
 
   const logsByDate = useMemo(() => {
@@ -154,6 +166,11 @@ export default function DayCalendarGrid({
       const dateKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
       const dayLogs = logsByDate.get(dateKey) || [];
       const totalPoints = dayLogs.reduce((sum, log) => sum + (log.ai_score || 0), 0);
+      const badge = dayLogs.some((log) => parseDailyLogBreakdown(log.breakdown).meta?.badge === 'exceptional')
+        ? 'exceptional'
+        : dayLogs.some((log) => parseDailyLogBreakdown(log.breakdown).meta?.badge === 'strong')
+          ? 'strong'
+          : 'none';
 
       return {
         date: dateKey,
@@ -164,6 +181,7 @@ export default function DayCalendarGrid({
         hasLogs: dayLogs.length > 0,
         logCount: dayLogs.length,
         totalPoints,
+        badge,
       };
     });
 
@@ -231,6 +249,12 @@ export default function DayCalendarGrid({
   ];
 
   const selectedLogs = selectedDate ? logsByDate.get(selectedDate) || [] : [];
+  const selectedDayBadge = selectedLogs.some((log) => parseDailyLogBreakdown(log.breakdown).meta?.badge === 'exceptional')
+    ? 'exceptional'
+    : selectedLogs.some((log) => parseDailyLogBreakdown(log.breakdown).meta?.badge === 'strong')
+      ? 'strong'
+      : 'none';
+  const selectedDayBadgeLabel = getDayBadgeLabel(selectedDayBadge, language);
   const isRTLText = (text: string) => /[\u0600-\u06ff]/.test(text);
 
   const handleMonthPickerOpenChange = (open: boolean) => {
@@ -347,6 +371,7 @@ export default function DayCalendarGrid({
               const isSelectable = !day.isBeforeStart && !day.isAfterToday;
               const isSelected = selectedDate === day.date;
               const state = day.isBeforeStart ? 'before-start' : day.isAfterToday ? 'future' : 'active';
+              const badgeLabel = getDayBadgeLabel(day.badge, language);
 
               return (
                 <button
@@ -362,6 +387,7 @@ export default function DayCalendarGrid({
                       x: rect.left + rect.width / 2,
                       y: rect.top,
                       state,
+                      badgeLabel,
                     });
                   }}
                   onMouseLeave={() => setTooltip(null)}
@@ -373,8 +399,10 @@ export default function DayCalendarGrid({
                     day.isToday && !isSelected && 'ring-1 ring-primary/55',
                     isSelectable && 'hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm',
                     isSelected && 'scale-[1.03] ring-2 ring-primary ring-offset-1 ring-offset-card',
+                    day.badge === 'strong' && !day.isBeforeStart && !day.isAfterToday && 'shadow-[0_0_0_1px_rgba(34,197,94,0.22)]',
+                    day.badge === 'exceptional' && !day.isBeforeStart && !day.isAfterToday && 'shadow-[0_0_0_1px_rgba(245,158,11,0.28)] ring-1 ring-chart-5/35 dark:ring-chart-3/40',
                   )}
-                  aria-label={`${day.date} ${day.logCount > 0 ? `${day.logCount} ${labels.logs}` : labels.noActivity}`}
+                  aria-label={`${day.date} ${day.logCount > 0 ? `${day.logCount} ${labels.logs}` : labels.noActivity}${badgeLabel ? ` ${badgeLabel}` : ''}`}
                 >
                   <span
                     className={cn(
@@ -390,7 +418,16 @@ export default function DayCalendarGrid({
                   </span>
 
                   {day.hasLogs && !day.isBeforeStart && !day.isAfterToday && (
-                    <span className="absolute bottom-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-foreground/80 shadow-[0_0_0_2px_rgba(255,255,255,0.14)] dark:bg-foreground/90" />
+                    <span
+                      className={cn(
+                        'absolute bottom-1.5 right-1.5 h-1.5 w-1.5 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.14)]',
+                        day.badge === 'exceptional'
+                          ? 'bg-chart-5 dark:bg-chart-3'
+                          : day.badge === 'strong'
+                            ? 'bg-chart-2'
+                            : 'bg-foreground/80 dark:bg-foreground/90',
+                      )}
+                    />
                   )}
                 </button>
               );
@@ -442,7 +479,7 @@ export default function DayCalendarGrid({
             : tooltip.state === 'future'
               ? `${labels.futureDay} — ${tooltip.date}`
               : tooltip.count > 0
-                ? `${tooltip.count} ${labels.logs} · +${formatShortNumber(tooltip.pts, isArabic)} ${labels.points} — ${tooltip.date}`
+                ? `${tooltip.count} ${labels.logs} · +${formatShortNumber(tooltip.pts, isArabic)} ${labels.points}${tooltip.badgeLabel ? ` · ${tooltip.badgeLabel}` : ''} — ${tooltip.date}`
                 : `${labels.noActivity} — ${tooltip.date}`}
         </div>
       )}
@@ -469,6 +506,16 @@ export default function DayCalendarGrid({
                     day: 'numeric',
                   })}
                 </p>
+                {selectedDayBadgeLabel && (
+                  <div className={cn(
+                    'mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1',
+                    selectedDayBadge === 'exceptional'
+                      ? 'bg-chart-5/12 text-chart-5 ring-chart-5/20 dark:bg-chart-3/12 dark:text-chart-3 dark:ring-chart-3/20'
+                      : 'bg-chart-2/12 text-chart-2 ring-chart-2/20',
+                  )}>
+                    {selectedDayBadgeLabel}
+                  </div>
+                )}
               </div>
 
               <div className="flex shrink-0 items-center gap-2 pt-1">
@@ -507,6 +554,8 @@ export default function DayCalendarGrid({
                   .map((log) => {
                     const inputRTL = isRTLText(log.user_input);
                     const feedbackRTL = log.ai_feedback ? isRTLText(log.ai_feedback) : false;
+                    const performanceMeta = parseDailyLogBreakdown(log.breakdown).meta;
+                    const performanceLabel = getDailyPerformanceLabel(performanceMeta, language);
 
                     return (
                       <div key={log.id} className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3.5">
@@ -522,6 +571,21 @@ export default function DayCalendarGrid({
                             <span>+{formatShortNumber(log.ai_score ?? 0, isArabic)}</span>
                           </div>
                         </div>
+
+                        {performanceLabel && (
+                          <div className={cn(
+                            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1',
+                            performanceMeta?.performance_tier === 'exceptional'
+                              ? 'bg-chart-5/12 text-chart-5 ring-chart-5/20 dark:bg-chart-3/12 dark:text-chart-3 dark:ring-chart-3/20'
+                              : performanceMeta?.performance_tier === 'strong'
+                                ? 'bg-chart-2/12 text-chart-2 ring-chart-2/20'
+                                : performanceMeta?.performance_tier === 'weak'
+                                  ? 'bg-destructive/10 text-destructive ring-destructive/20'
+                                  : 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-300',
+                          )}>
+                            {performanceLabel}
+                          </div>
+                        )}
 
                         <p
                           className="text-sm font-medium leading-relaxed text-foreground"

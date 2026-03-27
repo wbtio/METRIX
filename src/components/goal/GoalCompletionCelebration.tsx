@@ -51,7 +51,7 @@ export default function GoalCompletionCelebration({ goalTitle, language = 'en', 
                         shapeSize={12}
                         spreadDeg={60}
                         launchSpeed={1.4}
-                        colors={['#a855f7', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#f97316']}
+                        colors={['#a855f7', '#ec4899', '#f59e0b', '#10b981', '#0097b2', '#06b6d4']}
                     />
                 </div>
             )}

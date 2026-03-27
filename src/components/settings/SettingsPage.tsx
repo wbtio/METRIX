@@ -268,8 +268,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     <div className="bg-card/40 rounded-2xl border border-border overflow-hidden">
                         <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-orange-500/10 flex items-center justify-center">
-                                    {theme === 'dark' ? <Moon className="w-4 h-4 text-orange-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-600/10 flex items-center justify-center">
+                                    {theme === 'dark' ? <Moon className="w-4 h-4 text-cyan-600" /> : <Sun className="w-4 h-4 text-cyan-600" />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.appearance}</p>
@@ -281,7 +281,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     onClick={() => handleThemeChange('light')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-                                        theme === 'light' ? "bg-background text-amber-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        theme === 'light' ? "bg-background text-cyan-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.lightMode}
                                 >
@@ -292,7 +292,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     onClick={() => handleThemeChange('dark')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-                                        theme === 'dark' ? "bg-background text-orange-500 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        theme === 'dark' ? "bg-background text-cyan-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.darkMode}
                                 >
@@ -304,8 +304,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
                         <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="shrink-0 w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                                    <Globe className="w-4 h-4 text-orange-500" />
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-600/10 flex items-center justify-center">
+                                    <Globe className="w-4 h-4 text-cyan-600" />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.language}</p>
@@ -340,8 +340,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
                         <div className="p-4 sm:p-5 flex flex-row items-center justify-between gap-4 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className={cn("shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors", notifEnabled ? "bg-orange-500/10" : "bg-muted/50")}>
-                                    {notifEnabled ? <Bell className="w-4 h-4 text-orange-500" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+                                <div className={cn("shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors", notifEnabled ? "bg-cyan-600/10" : "bg-muted/50")}>
+                                    {notifEnabled ? <Bell className="w-4 h-4 text-cyan-600" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.notifications}</p>
@@ -358,7 +358,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         onClick={handleToggleNotifications}
                                         className={cn(
                                             "relative w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30",
-                                            notifEnabled ? "bg-orange-500" : "bg-muted-foreground/40"
+                                            notifEnabled ? "bg-cyan-600" : "bg-muted-foreground/40"
                                         )}
                                         role="switch"
                                         aria-checked={notifEnabled}
@@ -531,7 +531,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 </div>
                                 <div className="flex gap-1.5 mt-3">
                                     {maxStreak >= 7 && (
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg ring-2 ring-background" title={isArabic ? "شعلة المواظبة: 7 أيام" : "Consistency Flame: 7 Days"}>
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg ring-2 ring-background" title={isArabic ? "شعلة المواظبة: 7 أيام" : "Consistency Flame: 7 Days"}>
                                             <Flame className="w-4 h-4 text-white" />
                                         </div>
                                     )}

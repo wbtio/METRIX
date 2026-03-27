@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/client';
 import { getPeriodStart, getPeriodTypeFromFrequency } from '@/lib/task-periods';
 import { buildTaskHierarchy, type MainTask, type TaskRow } from '@/lib/task-hierarchy';
 import { getTaskAccent, type TaskColorKey } from '@/lib/task-colors';
+import { parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
 import ProgressLogDialog from '../progress/ProgressLogDialog';
 import GrowthChart from './GrowthChart';
 import DayCalendarGrid from './DayCalendarGrid';
@@ -58,6 +59,7 @@ interface ActivityLog {
   user_input: string;
   ai_score: number | null;
   ai_feedback: string;
+  breakdown: unknown;
 }
 
 interface DailyLogBreakdownRow {
@@ -90,33 +92,11 @@ function getLocalDayWindow(referenceDate = new Date()) {
 }
 
 function normalizeBreakdown(value: unknown): BreakdownRow[] {
-  const parsed = typeof value === 'string'
-    ? (() => {
-        try {
-          return JSON.parse(value);
-        } catch {
-          return [];
-        }
-      })()
-    : value;
-
-  if (!Array.isArray(parsed)) return [];
-
-  return parsed.reduce<BreakdownRow[]>((rows, item) => {
-    if (!item || typeof item !== 'object') return rows;
-
-    const row = item as Record<string, unknown>;
-    const taskId = typeof row.task_id === 'string' ? row.task_id : '';
-    if (!taskId) return rows;
-
-    rows.push({
-      task_id: taskId,
-      points: Number(row.points) || 0,
-      status: typeof row.status === 'string' ? row.status : undefined,
-    });
-
-    return rows;
-  }, []);
+  return parseDailyLogBreakdown(value).items.map((item) => ({
+    task_id: item.task_id,
+    points: Number(item.points) || 0,
+    status: item.status,
+  }));
 }
 
 function hasMeaningfulProgress(item: BreakdownRow) {
@@ -368,7 +348,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
   const fetchLogs = useCallback(async () => {
     const { data } = await supabase
       .from('daily_logs')
-      .select('id, created_at, user_input, ai_score, ai_feedback')
+      .select('id, created_at, user_input, ai_score, ai_feedback, breakdown')
       .eq('goal_id', goal.id)
       .order('created_at', { ascending: false });
 
@@ -666,6 +646,11 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
 
   // --- Render ---
   const taskCount = tasks.filter((tk) => tk.task_type === 'sub').length || tasks.length;
+  const completedTaskCount = useMemo(() => {
+    const subs = hierarchy.flatMap(m => m.subtasks);
+    if (subs.length > 0) return subs.filter(sub => isChecked(sub.id, sub.frequency)).length;
+    return hierarchy.filter(m => isChecked(m.id, m.frequency)).length;
+  }, [hierarchy, isChecked]);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 pb-2 sm:pb-4" dir={isArabic ? 'rtl' : 'ltr'}>
@@ -675,6 +660,7 @@ export default function Dashboard({ goal, language = 'en', onGoalUpdated }: Dash
         progress={progress}
         streak={streak}
         taskCount={taskCount}
+        completedTaskCount={completedTaskCount}
         language={language}
         showGoalDetails={showGoalDetails}
         onToggleDetails={() => setShowGoalDetails(!showGoalDetails)}

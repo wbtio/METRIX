@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { type Language } from '@/lib/translations';
+import { parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
 import { getScorableTasks, type TaskRow } from '@/lib/task-hierarchy';
 import { getTaskAccent, type TaskAccent } from '@/lib/task-colors';
 import { cn } from '@/lib/utils';
@@ -112,34 +113,6 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
   useEffect(() => {
     let mounted = true;
 
-    const normalizeBreakdown = (value: unknown): BreakdownRow[] => {
-      const parsed = typeof value === 'string'
-        ? (() => {
-            try {
-              return JSON.parse(value);
-            } catch {
-              return [];
-            }
-          })()
-        : value;
-
-      if (!Array.isArray(parsed)) return [];
-
-      return parsed.reduce<BreakdownRow[]>((rows, item) => {
-        if (!item || typeof item !== 'object') return rows;
-        const row = item as Record<string, unknown>;
-        const taskId = typeof row.task_id === 'string' ? row.task_id : '';
-        if (!taskId) return rows;
-
-        rows.push({
-          task_id: taskId,
-          points: Number(row.points) || 0,
-          status: typeof row.status === 'string' ? row.status : undefined,
-        });
-        return rows;
-      }, []);
-    };
-
     async function fetchHistory() {
       setLoading(true);
       const [{ data: checkinData }, { data: logData }] = await Promise.all([
@@ -169,7 +142,11 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
         const periodStart = log.created_at?.split('T')[0];
         if (!periodStart) continue;
 
-        for (const item of normalizeBreakdown(log.breakdown)) {
+        for (const item of parseDailyLogBreakdown(log.breakdown).items.map((entry) => ({
+          task_id: entry.task_id,
+          points: Number(entry.points) || 0,
+          status: entry.status,
+        } satisfies BreakdownRow))) {
           const hasProgress = (item.points || 0) > 0 || item.status === 'done' || item.status === 'partial';
           if (!hasProgress) continue;
 

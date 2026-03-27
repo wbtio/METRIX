@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
-import { Mic, StopCircle, Loader2, Pin, Target, PenLine, Sparkles, CircleAlert } from 'lucide-react';
+import { Mic, StopCircle, Loader2, Pin, Target, PenLine, Sparkles, CircleAlert, ListChecks } from 'lucide-react';
 import { type Language } from '@/lib/translations';
+import type { GoalTaskStats } from '@/app/page';
 import Image from 'next/image';
 import { getIconComponent } from './goal/IconPicker';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ interface Goal {
 
 interface HomePageProps {
     goals: Goal[];
+    taskStatsMap?: Record<string, GoalTaskStats>;
     onSelectGoal: (id: string) => void;
     onNavigateToCreate?: (goalText: string, mode: 'ai' | 'manual') => void;
     language?: Language;
@@ -34,6 +36,7 @@ interface HomePageProps {
 
 export default function HomePage({
     goals,
+    taskStatsMap = {},
     onSelectGoal,
     onNavigateToCreate,
     language = 'en',
@@ -485,14 +488,15 @@ export default function HomePage({
                             const Icon = getIconComponent(goal.icon || 'Target');
                             const goalIsRTL = isArabic || isRTL(goal.title);
                             const daysChip = getGoalEndDaysChip(goal.estimated_completion_date, isArabic);
+                            const stats = taskStatsMap[goal.id];
 
                             return (
                                 <div
                                     key={goal.id}
                                     className="w-full p-4 sm:p-5 rounded-3xl border transition-all relative group bg-card/40 border-border hover:bg-card/60 hover:border-primary/30 hover:shadow-md"
                                 >
-                                    {/* تثبيت + أيام حتى انتهاء الهدف (موعد estimated_completion_date) */}
-                                    {(goal.is_pinned || daysChip) && (
+                                    {/* تثبيت + أيام حتى انتهاء الهدف + إحصائية المهام */}
+                                    {(goal.is_pinned || daysChip || stats) && (
                                         <div
                                             className={cn(
                                                 'absolute top-[5px] z-10 flex items-center gap-1',
@@ -521,6 +525,15 @@ export default function HomePage({
                                                     title={daysChip.title}
                                                 >
                                                     {daysChip.text}
+                                                </div>
+                                            )}
+                                            {stats && stats.total > 0 && (
+                                                <div
+                                                    className="h-7 min-w-7 px-1.5 flex items-center justify-center gap-1 rounded-full text-[11px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
+                                                    title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}
+                                                >
+                                                    <ListChecks className="w-3 h-3 shrink-0" aria-hidden />
+                                                    <span dir="ltr">{stats.completed}/{stats.total}</span>
                                                 </div>
                                             )}
                                         </div>

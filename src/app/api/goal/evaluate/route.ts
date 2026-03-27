@@ -8,11 +8,19 @@ export async function POST(req: Request) {
             mainTasks = [],
             log,
             previousLogs = [],
-            goalContext = {}
+            goalContext = {},
+            calculateTimeBonus = false,
         } = await req.json();
-        const result = await GeminiService.evaluateDailyLog(tasks, log, previousLogs, goalContext, mainTasks);
+        const result = await GeminiService.evaluateDailyLog(
+            tasks,
+            log,
+            previousLogs,
+            goalContext,
+            mainTasks,
+            calculateTimeBonus,
+        );
         return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof GeminiQuotaError) {
             return NextResponse.json({
                 error: 'quota_exceeded',

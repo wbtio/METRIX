@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenAI } from "@google/genai";
 import {
     buildTaskHierarchy,
@@ -7,6 +8,7 @@ import {
     type TaskRow,
     type MainTask,
 } from "@/lib/task-hierarchy";
+import { analyzeDailyPerformance } from "@/lib/daily-log-feedback";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY!
@@ -34,7 +36,7 @@ function extractJson(text: string): any {
         const cleanText = text.replace(/```json|```/g, '').trim();
         try {
             return JSON.parse(cleanText);
-        } catch (e2) {
+        } catch {
             const start = cleanText.indexOf('{');
             const end = cleanText.lastIndexOf('}');
 
@@ -583,6 +585,9 @@ ANTI-GAMING:
 - Repeated/copied logs => conservative score and warning in reason.
 - Unrealistic claims => conservative scoring.
 - Off-topic/gibberish => 0.
+- If the report contains multiple same-day updates, evaluate net progress so far and do not count the same accomplishment twice.
+- Your scoring must reflect actual output, not polite encouragement.
+- If progress is weak, reasons should say it is below the required level.
 
 OUTPUT JSON ONLY:
 {
@@ -675,13 +680,27 @@ ${previousLogsContext}
                 0,
             );
             const totalAwarded = clamp(sumSubtaskPoints + bonusPoints, 0, dynamicDailyCap);
-            const basePoints = parsed.base_points !== undefined ? Number(parsed.base_points) : sumSubtaskPoints;
-            const responseBonusPoints = parsed.bonus_points !== undefined ? Number(parsed.bonus_points) : bonusPoints;
+            const basePoints = clamp(sumSubtaskPoints, 0, maxBasePoints);
+            const responseBonusPoints = bonusPoints;
 
             const mainBreakdown = deriveMainBreakdown(
                 hierarchy as MainTask[],
                 normalizedSubtaskBreakdown,
             );
+
+            const performance = analyzeDailyPerformance({
+                source: 'ai',
+                language: userLanguage,
+                logText: userLog,
+                items: normalizedSubtaskBreakdown,
+                totalPoints: totalAwarded,
+                basePoints,
+                bonusPoints: responseBonusPoints,
+                dailyCap: dynamicDailyCap,
+                maxBasePoints,
+                totalTasks: fallbackTasks.length,
+                previousLogs,
+            });
 
             return {
                 ...parsed,
@@ -697,6 +716,13 @@ ${previousLogsContext}
                 base_points: basePoints,
                 bonus_points: responseBonusPoints,
                 total_points_awarded: totalAwarded,
+                day_label: performance.copy.day_label,
+                comparison_message: performance.copy.comparison_message,
+                warning_message: performance.copy.warning_message,
+                performance_meta: performance.meta,
+                full_feedback: performance.copy.full_feedback,
+                coach_message: performance.copy.coach_message,
+                comparison_with_previous: performance.copy.comparison_message,
                 score: totalAwarded,
             };
         } catch (error) {

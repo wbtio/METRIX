@@ -5,6 +5,7 @@ import {
   Edit2,
   Flame,
   Info,
+  ListChecks,
   MoreVertical,
   Pin,
   PinOff,
@@ -42,6 +43,7 @@ interface DashboardHeaderProps {
   progress: number;
   streak: number;
   taskCount: number;
+  completedTaskCount: number;
   language?: Language;
   showGoalDetails: boolean;
   onToggleDetails: () => void;
@@ -56,6 +58,7 @@ export default function DashboardHeader({
   progress,
   streak,
   taskCount,
+  completedTaskCount,
   language = 'en',
   showGoalDetails,
   onToggleDetails,
@@ -109,9 +112,12 @@ export default function DashboardHeader({
                   <Flame className="w-3 h-3" /> {streak}
                 </span>
               )}
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
-                {taskCount} {isArabic ? 'مهمة' : 'tasks'}
-              </span>
+              {taskCount > 0 && (
+                <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary tabular-nums">
+                  <ListChecks className="w-3 h-3 shrink-0" aria-hidden />
+                  <span dir="ltr">{completedTaskCount}/{taskCount}</span>
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Target, Trash2, MoreVertical, Pin, PinOff, Edit2 } from 'lucide-react';
+import { Target, Trash2, MoreVertical, Pin, PinOff, Edit2, ListChecks } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import {
     DropdownMenu,
@@ -11,6 +11,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { createClient } from '@/utils/supabase/client';
+import type { GoalTaskStats } from '@/app/page';
 import { cn } from '@/lib/utils';
 import { getGoalEndDaysChip } from '@/lib/goal-dates';
 import { getIconComponent } from './IconPicker';
@@ -33,13 +34,14 @@ interface Goal {
 
 interface GoalsListProps {
     goals: Goal[];
+    taskStatsMap?: Record<string, GoalTaskStats>;
     selectedGoalId: string | null;
     onSelectGoal: (id: string) => void;
     onGoalChanged?: () => void;
     language?: Language;
 }
 
-export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalChanged, language = 'en' }: GoalsListProps) {
+export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, onSelectGoal, onGoalChanged, language = 'en' }: GoalsListProps) {
     const t = translations[language];
     const isArabic = language === 'ar';
     const supabase = createClient();
@@ -129,6 +131,7 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
                             : 0;
                         const Icon = getIconComponent(goal.icon || 'Target');
                         const daysChip = getGoalEndDaysChip(goal.estimated_completion_date, isArabic);
+                        const stats = taskStatsMap[goal.id];
 
                         return (
                             <div
@@ -186,6 +189,15 @@ export default function GoalsList({ goals, selectedGoalId, onSelectGoal, onGoalC
                                                     title={daysChip.title}
                                                 >
                                                     {daysChip.text}
+                                                </div>
+                                            )}
+                                            {stats && stats.total > 0 && (
+                                                <div
+                                                    className="h-8 min-w-8 px-1.5 flex items-center justify-center gap-1 rounded-full text-[10px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
+                                                    title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}
+                                                >
+                                                    <ListChecks className="w-3 h-3 shrink-0" aria-hidden />
+                                                    <span dir="ltr">{stats.completed}/{stats.total}</span>
                                                 </div>
                                             )}
                                             <div onClick={(e) => e.stopPropagation()}>

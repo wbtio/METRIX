@@ -20,16 +20,10 @@ export function ThemeToggle() {
         document.documentElement.classList.remove("dark");
       }
     } else {
-      // Check system preference only if no saved preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        setTheme("dark");
-        document.documentElement.classList.add("dark");
-        localStorage.setItem('theme', 'dark');
-      } else {
-        setTheme("light");
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem('theme', 'light');
-      }
+      // Default to light mode
+      setTheme("light");
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem('theme', 'light');
     }
   }, [])
 

@@ -709,7 +709,7 @@ export default function GoalCreatorPage({
                             <p className="text-[10px] text-muted-foreground">{isArabic ? 'يوم' : 'days'}</p>
                         </div>
                         <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 text-emerald-600 dark:text-emerald-400 mb-1">
+                            <div className="flex items-center justify-center gap-1.5 text-cyan-700 dark:text-cyan-400 mb-1">
                                 <Repeat className="w-3.5 h-3.5" />
                             </div>
                             <p className="font-bold text-base text-foreground">{dailyTasks.length}</p>
@@ -741,7 +741,7 @@ export default function GoalCreatorPage({
                                 <div className="flex items-center gap-3 px-4 py-3">
                                     <div className={cn(
                                         "w-2 h-2 rounded-full shrink-0",
-                                        main.frequency === 'daily' ? "bg-emerald-500" : "bg-violet-500"
+                                        main.frequency === 'daily' ? "bg-cyan-600" : "bg-violet-500"
                                     )} />
                                     <div className="flex-1 min-w-0">
                                         <input
@@ -755,7 +755,7 @@ export default function GoalCreatorPage({
                                         <span className={cn(
                                             "text-[10px] font-semibold px-2 py-0.5 rounded-full",
                                             main.frequency === 'daily'
-                                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                ? "bg-cyan-600/10 text-cyan-700 dark:text-cyan-400"
                                                 : "bg-violet-500/10 text-violet-600 dark:text-violet-400"
                                         )}>
                                             {main.frequency === 'daily'
@@ -799,7 +799,7 @@ export default function GoalCreatorPage({
                                                     <span className={cn(
                                                         "text-[10px] font-medium px-1.5 py-0.5 rounded-full",
                                                         sub.frequency === 'daily'
-                                                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                            ? "bg-cyan-600/10 text-cyan-700 dark:text-cyan-400"
                                                             : "bg-violet-500/10 text-violet-600 dark:text-violet-400"
                                                     )}>
                                                         {sub.frequency === 'daily'

@@ -13,10 +13,16 @@ import SettingsPage from '@/components/settings/SettingsPage';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
+import { getLocalDateKey, getLocalWeekStartMonday } from '@/lib/task-periods';
 import { useStreakReminder } from '@/hooks/useStreakReminder';
 import type { User } from '@supabase/supabase-js';
 
 type AppView = 'home' | 'dashboard' | 'settings' | 'goals' | 'create-goal';
+
+export interface GoalTaskStats {
+  completed: number;
+  total: number;
+}
 
 interface Goal {
   id: string;
@@ -48,6 +54,7 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>('en');
   const [user, setUser] = useState<User | null>(null);
   const [supabase] = useState(() => createClient());
+  const [taskStatsMap, setTaskStatsMap] = useState<Record<string, GoalTaskStats>>({});
   const [isAiGoalCreationGuardActive, setIsAiGoalCreationGuardActive] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
 
@@ -55,6 +62,37 @@ export default function Home() {
 
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
+
+  const fetchTaskStats = useCallback(async (goalIds: string[]) => {
+    if (goalIds.length === 0) { setTaskStatsMap({}); return; }
+
+    const todayKey = getLocalDateKey();
+    const weekKey = getLocalWeekStartMonday();
+
+    const [{ data: tasks }, { data: checkins }] = await Promise.all([
+      supabase
+        .from('sub_layers')
+        .select('id, goal_id, frequency')
+        .in('goal_id', goalIds),
+      supabase
+        .from('task_checkins')
+        .select('task_id, goal_id')
+        .eq('completed', true)
+        .in('goal_id', goalIds)
+        .in('period_start', [todayKey, weekKey]),
+    ]);
+
+    const completedSet = new Set(checkins?.map(c => c.task_id) || []);
+    const statsMap: Record<string, GoalTaskStats> = {};
+
+    for (const task of tasks || []) {
+      if (!statsMap[task.goal_id]) statsMap[task.goal_id] = { completed: 0, total: 0 };
+      statsMap[task.goal_id].total++;
+      if (completedSet.has(task.id)) statsMap[task.goal_id].completed++;
+    }
+
+    setTaskStatsMap(statsMap);
+  }, [supabase]);
 
   const fetchGoals = useCallback(async (userId?: string) => {
     let currentUserId = userId;
@@ -81,10 +119,11 @@ export default function Home() {
     } else {
       setGoals(data || []);
       setSelectedGoalId((currentGoalId) => currentGoalId ?? (data && data.length > 0 ? data[0].id : null));
+      fetchTaskStats((data || []).map(g => g.id));
     }
 
     setLoading(false);
-  }, [supabase, user]);
+  }, [supabase, user, fetchTaskStats]);
 
   useEffect(() => {
     const initData = async () => {
@@ -216,6 +255,7 @@ export default function Home() {
         ) : currentView === 'home' ? (
           <HomePage
             goals={goals}
+            taskStatsMap={taskStatsMap}
             onSelectGoal={(id) => {
               setSelectedGoalId(id);
               setCurrentView('dashboard');
@@ -269,6 +309,7 @@ export default function Home() {
         ) : currentView === 'goals' ? (
           <GoalsList
             goals={goals}
+            taskStatsMap={taskStatsMap}
             selectedGoalId={selectedGoalId}
             onSelectGoal={(id) => {
               setSelectedGoalId(id);
