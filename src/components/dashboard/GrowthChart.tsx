@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,20 +11,20 @@ import {
   LineChart,
   XAxis,
   YAxis,
-} from 'recharts';
-import { BarChart2, Layers, TrendingUp } from 'lucide-react';
+} from "recharts";
+import { BarChart2, Layers, TrendingUp } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
-} from '@/components/ui/chart';
-import { translations, type Language } from '@/lib/translations';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/chart";
+import { translations, type Language } from "@/lib/translations";
+import { cn } from "@/lib/utils";
 
-type TimeRange = 'week' | 'month' | 'year' | 'all';
-type ChartType = 'bar' | 'line' | 'area';
-type BucketMode = 'day' | 'month';
+type TimeRange = "week" | "month" | "year" | "all";
+type ChartType = "bar" | "line" | "area";
+type BucketMode = "day" | "month";
 
 interface GrowthChartProps {
   data: { date: string; points: number }[];
@@ -35,84 +35,83 @@ interface GrowthChartProps {
 }
 
 function parseLocalDay(value: string) {
-  const [year, month, day] = value
-    .split('T')[0]
-    .split('-')
-    .map(Number);
+  const [year, month, day] = value.split("T")[0].split("-").map(Number);
   const date = new Date(year, (month || 1) - 1, day || 1);
   date.setHours(0, 0, 0, 0);
   return date;
 }
 
 function formatNumber(value: number, isArabic: boolean) {
-  return new Intl.NumberFormat(isArabic ? 'ar-SA' : 'en-US', {
+  return new Intl.NumberFormat(isArabic ? "ar-SA" : "en-US", {
     maximumFractionDigits: value >= 10 ? 0 : 1,
   }).format(value);
 }
 
 export default function GrowthChart({
   data,
-  language = 'en',
+  language = "en",
   className,
   fillHeight = false,
   embedded = false,
 }: GrowthChartProps) {
   const t = translations[language];
-  const isArabic = language === 'ar';
-  const [timeRange, setTimeRange] = useState<TimeRange>('month');
-  const [chartType, setChartType] = useState<ChartType>('bar');
-  const gradientId = useId().replace(/:/g, '');
+  const isArabic = language === "ar";
+  const [timeRange, setTimeRange] = useState<TimeRange>("month");
+  const [chartType, setChartType] = useState<ChartType>("bar");
+  const gradientId = useId().replace(/:/g, "");
 
   const labels = {
-    noRangeData: isArabic ? 'لا يوجد نشاط ضمن هذا النطاق بعد.' : 'No activity in this range yet.',
+    noRangeData: isArabic
+      ? "لا يوجد نشاط ضمن هذا النطاق بعد."
+      : "No activity in this range yet.",
   };
 
-  const locale = isArabic ? 'ar-SA-u-ca-gregory' : 'en-US';
+  const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-US";
   const shortDayFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        day: 'numeric',
+        month: "short",
+        day: "numeric",
       }),
     [locale],
   );
   const weekDayFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        weekday: 'short',
-        day: 'numeric',
+        weekday: "short",
+        day: "numeric",
       }),
     [locale],
   );
   const shortMonthFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        month: 'short',
+        month: "short",
       }),
     [locale],
   );
   const shortMonthYearFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        year: '2-digit',
+        month: "short",
+        year: "2-digit",
       }),
     [locale],
   );
   const longDayFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       }),
     [locale],
   );
   const longMonthYearFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        month: 'long',
-        year: 'numeric',
+        month: "long",
+        year: "numeric",
       }),
     [locale],
   );
@@ -120,8 +119,8 @@ export default function GrowthChart({
   const chartConfig = useMemo<ChartConfig>(
     () => ({
       points: {
-        label: isArabic ? 'النقاط' : 'Points',
-        color: 'var(--chart-1)',
+        label: isArabic ? "النقاط" : "Points",
+        color: "var(--chart-1)",
       },
     }),
     [isArabic],
@@ -137,15 +136,15 @@ export default function GrowthChart({
     now.setHours(23, 59, 59, 999);
 
     let cutoffDate = new Date(0);
-    if (timeRange === 'week') {
+    if (timeRange === "week") {
       cutoffDate = new Date(now);
       cutoffDate.setDate(now.getDate() - 6);
       cutoffDate.setHours(0, 0, 0, 0);
-    } else if (timeRange === 'month') {
+    } else if (timeRange === "month") {
       cutoffDate = new Date(now);
       cutoffDate.setDate(now.getDate() - 29);
       cutoffDate.setHours(0, 0, 0, 0);
-    } else if (timeRange === 'year') {
+    } else if (timeRange === "year") {
       cutoffDate = new Date(now);
       cutoffDate.setDate(now.getDate() - 364);
       cutoffDate.setHours(0, 0, 0, 0);
@@ -157,7 +156,8 @@ export default function GrowthChart({
     });
   }, [data, timeRange]);
 
-  const bucketMode: BucketMode = timeRange === 'year' || timeRange === 'all' ? 'month' : 'day';
+  const bucketMode: BucketMode =
+    timeRange === "year" || timeRange === "all" ? "month" : "day";
 
   const chartData = useMemo(() => {
     if (filteredData.length === 0) {
@@ -169,8 +169,8 @@ export default function GrowthChart({
     filteredData.forEach((entry) => {
       const entryDate = parseLocalDay(entry.date);
       const rawDate =
-        bucketMode === 'month'
-          ? `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}-01`
+        bucketMode === "month"
+          ? `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, "0")}-01`
           : entry.date;
 
       const existing = buckets.get(rawDate) ?? { rawDate, points: 0 };
@@ -179,20 +179,24 @@ export default function GrowthChart({
     });
 
     return Array.from(buckets.values())
-      .sort((a, b) => parseLocalDay(a.rawDate).getTime() - parseLocalDay(b.rawDate).getTime())
+      .sort(
+        (a, b) =>
+          parseLocalDay(a.rawDate).getTime() -
+          parseLocalDay(b.rawDate).getTime(),
+      )
       .map((entry) => {
         const entryDate = parseLocalDay(entry.rawDate);
         const label =
-          bucketMode === 'month'
-            ? timeRange === 'all'
+          bucketMode === "month"
+            ? timeRange === "all"
               ? shortMonthYearFormatter.format(entryDate)
               : shortMonthFormatter.format(entryDate)
-            : timeRange === 'week'
+            : timeRange === "week"
               ? weekDayFormatter.format(entryDate)
               : shortDayFormatter.format(entryDate);
 
         const fullLabel =
-          bucketMode === 'month'
+          bucketMode === "month"
             ? longMonthYearFormatter.format(entryDate)
             : longDayFormatter.format(entryDate);
 
@@ -215,50 +219,63 @@ export default function GrowthChart({
     weekDayFormatter,
   ]);
 
-  const maxBarSize = chartData.length <= 7 ? 40 : chartData.length <= 12 ? 28 : 18;
+  const maxBarSize =
+    chartData.length <= 7 ? 40 : chartData.length <= 12 ? 28 : 18;
   const showDots = chartData.length <= 18;
   const chartViewportClass = fillHeight
-    ? 'aspect-auto h-full min-h-[236px] w-full flex-1 sm:min-h-[248px] lg:min-h-[262px]'
-    : 'aspect-auto h-[184px] w-full sm:h-[196px] lg:h-[208px]';
+    ? "aspect-auto h-full min-h-[200px] w-full flex-1 sm:min-h-[240px] lg:min-h-[262px]"
+    : "aspect-auto h-[180px] w-full sm:h-[196px] lg:h-[208px]";
   const emptyStateClass = fillHeight
-    ? 'h-full min-h-[236px] sm:min-h-[248px] lg:min-h-[262px]'
-    : 'h-[184px] sm:h-[196px] lg:h-[208px]';
+    ? "h-full min-h-[200px] sm:min-h-[240px] lg:min-h-[262px]"
+    : "h-[180px] sm:h-[196px] lg:h-[208px]";
 
   const containerClass = cn(
     embedded
-      ? 'rounded-none border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent'
-      : 'relative flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 p-1.5 shadow-xl ring-1 ring-border/10 backdrop-blur-xl sm:p-2',
-    fillHeight && 'h-full min-h-0',
+      ? "rounded-none border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent"
+      : "relative flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 p-1.5 shadow-xl ring-1 ring-border/10 backdrop-blur-xl sm:p-2",
+    fillHeight && "h-full min-h-0",
     className,
   );
 
   const timeRangeOptions: { key: TimeRange; label: string }[] = [
-    { key: 'week', label: t.thisWeek },
-    { key: 'month', label: t.thisMonth },
-    { key: 'year', label: t.thisYear },
-    { key: 'all', label: t.allTime },
+    { key: "week", label: t.thisWeek },
+    { key: "month", label: t.thisMonth },
+    { key: "year", label: t.thisYear },
+    { key: "all", label: t.allTime },
   ];
 
-  const chartTypeOptions: { key: ChartType; label: string; icon: React.ReactNode }[] = [
-    { key: 'bar', label: t.barChart, icon: <BarChart2 className="h-3 w-3" /> },
-    { key: 'line', label: t.lineChart, icon: <TrendingUp className="h-3 w-3" /> },
-    { key: 'area', label: t.areaChart, icon: <Layers className="h-3 w-3" /> },
+  const chartTypeOptions: {
+    key: ChartType;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    { key: "bar", label: t.barChart, icon: <BarChart2 className="h-3 w-3" /> },
+    {
+      key: "line",
+      label: t.lineChart,
+      icon: <TrendingUp className="h-3 w-3" />,
+    },
+    { key: "area", label: t.areaChart, icon: <Layers className="h-3 w-3" /> },
   ];
 
   const renderChart = () => {
     const tooltipContent = (
       <ChartTooltipContent
         className="border-border/70 bg-background/95 backdrop-blur-md"
-        indicator={chartType === 'bar' ? 'dashed' : 'line'}
-        labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ''}
+        indicator={chartType === "bar" ? "dashed" : "line"}
+        labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ""}
       />
     );
 
     switch (chartType) {
-      case 'line':
+      case "line":
         return (
           <LineChart data={chartData} margin={chartMargin}>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/50" />
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="4 4"
+              className="stroke-border/50"
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
@@ -278,7 +295,10 @@ export default function GrowthChart({
               className="text-[11px] fill-muted-foreground"
               tickFormatter={(value: number) => formatNumber(value, isArabic)}
             />
-            <ChartTooltip cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} content={tooltipContent} />
+            <ChartTooltip
+              cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+              content={tooltipContent}
+            />
             <Line
               dataKey="points"
               type="monotone"
@@ -287,32 +307,50 @@ export default function GrowthChart({
               dot={
                 showDots
                   ? {
-                      fill: 'var(--color-points)',
+                      fill: "var(--color-points)",
                       r: 3.5,
                       strokeWidth: 2,
-                      stroke: 'var(--background)',
+                      stroke: "var(--background)",
                     }
                   : false
               }
               activeDot={{
                 r: 5,
                 strokeWidth: 2,
-                stroke: 'var(--background)',
+                stroke: "var(--background)",
               }}
             />
           </LineChart>
         );
 
-      case 'area':
+      case "area":
         return (
           <AreaChart data={chartData} margin={chartMargin}>
             <defs>
-              <linearGradient id={`growth-gradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-points)" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="var(--color-points)" stopOpacity={0.04} />
+              <linearGradient
+                id={`growth-gradient-${gradientId}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="var(--color-points)"
+                  stopOpacity={0.35}
+                />
+                <stop
+                  offset="100%"
+                  stopColor="var(--color-points)"
+                  stopOpacity={0.04}
+                />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/50" />
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="4 4"
+              className="stroke-border/50"
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
@@ -332,7 +370,10 @@ export default function GrowthChart({
               className="text-[11px] fill-muted-foreground"
               tickFormatter={(value: number) => formatNumber(value, isArabic)}
             />
-            <ChartTooltip cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} content={tooltipContent} />
+            <ChartTooltip
+              cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+              content={tooltipContent}
+            />
             <Area
               dataKey="points"
               type="monotone"
@@ -342,27 +383,31 @@ export default function GrowthChart({
               dot={
                 showDots
                   ? {
-                      fill: 'var(--color-points)',
+                      fill: "var(--color-points)",
                       r: 3,
                       strokeWidth: 2,
-                      stroke: 'var(--background)',
+                      stroke: "var(--background)",
                     }
                   : false
               }
               activeDot={{
                 r: 5,
                 strokeWidth: 2,
-                stroke: 'var(--background)',
+                stroke: "var(--background)",
               }}
             />
           </AreaChart>
         );
 
-      case 'bar':
+      case "bar":
       default:
         return (
           <BarChart data={chartData} margin={chartMargin}>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/50" />
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="4 4"
+              className="stroke-border/50"
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
@@ -382,7 +427,10 @@ export default function GrowthChart({
               className="text-[11px] fill-muted-foreground"
               tickFormatter={(value: number) => formatNumber(value, isArabic)}
             />
-            <ChartTooltip cursor={{ fill: 'var(--muted)', opacity: 0.2 }} content={tooltipContent} />
+            <ChartTooltip
+              cursor={{ fill: "var(--muted)", opacity: 0.2 }}
+              content={tooltipContent}
+            />
             <Bar
               dataKey="points"
               fill="var(--color-points)"
@@ -395,13 +443,13 @@ export default function GrowthChart({
   };
 
   return (
-    <div className={containerClass} dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className={containerClass} dir={isArabic ? "rtl" : "ltr"}>
       {!embedded && (
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       )}
 
-      <div className="border-b border-border/60 pb-0.5">
-        <div className="flex flex-wrap items-center justify-between gap-0.5">
+      <div className="border-b border-border/60 pb-1.5 sm:pb-1">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-1">
           <div className="inline-flex rounded-[13px] border border-border/70 bg-background/60 p-[2px] shadow-sm">
             {timeRangeOptions.map((option) => (
               <button
@@ -410,10 +458,10 @@ export default function GrowthChart({
                 onClick={() => setTimeRange(option.key)}
                 aria-pressed={timeRange === option.key}
                 className={cn(
-                  'h-[26px] rounded-[10px] px-2 text-[10px] font-semibold transition-all sm:min-w-[2.75rem] sm:px-2',
+                  "h-[26px] rounded-[10px] px-1.5 text-[10px] font-semibold transition-all min-w-[2.1rem] sm:min-w-[2.75rem] sm:px-2",
                   timeRange === option.key
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 )}
               >
                 {option.label}
@@ -430,10 +478,10 @@ export default function GrowthChart({
                 aria-pressed={chartType === option.key}
                 aria-label={option.label}
                 className={cn(
-                  'flex h-[26px] w-[26px] items-center justify-center rounded-[10px] transition-all',
+                  "flex h-[26px] w-[26px] items-center justify-center rounded-[10px] transition-all",
                   chartType === option.key
-                    ? 'bg-chart-1 text-white shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                    ? "bg-chart-1 text-white shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 )}
                 title={option.label}
               >
@@ -444,12 +492,12 @@ export default function GrowthChart({
         </div>
       </div>
 
-      <div className="mt-0.5 flex flex-1 min-h-0">
-        <div className="flex w-full flex-1 min-h-0 rounded-xl border border-border/60 bg-gradient-to-b from-background/70 via-background/45 to-background/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-1.5">
+      <div className="mt-1 flex flex-1 min-h-0">
+        <div className="flex w-full flex-1 min-h-0 rounded-xl border border-border/60 bg-gradient-to-b from-background/70 via-background/45 to-background/20 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-2">
           {chartData.length === 0 ? (
             <div
               className={cn(
-                'flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/15 px-4 text-center text-sm text-muted-foreground',
+                "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/15 px-4 text-center text-sm text-muted-foreground",
                 emptyStateClass,
               )}
             >

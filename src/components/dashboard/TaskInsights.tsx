@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
   AlertCircle,
-  CheckCircle2,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import {
@@ -329,33 +327,27 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
   const pulsePeak = analytics.pulseDays.reduce((peak, day) => Math.max(peak, day.total), 0) || 1;
   const highlightedTaskId = selectedTask?.id ?? analytics.topTasks[0]?.id ?? null;
   const topTaskPeak = analytics.topTasks.reduce((peak, item) => Math.max(peak, item.completions), 0) || 1;
+  const insightCardClassName =
+    'relative flex h-full flex-col overflow-hidden rounded-[26px] border border-border/80 bg-white/85 p-3 shadow-sm ring-1 ring-border/5 dark:bg-card/55 sm:p-3.5';
+  const insightTileClassName =
+    'rounded-2xl border border-border/60 bg-background/75 px-2.5 py-2 backdrop-blur-sm';
 
   return (
-    <section className="space-y-3" dir={isArabic ? 'rtl' : 'ltr'}>
-      <div className="grid gap-3 lg:grid-cols-[0.95fr_1.35fr]">
-        <div className="relative flex h-full flex-col overflow-hidden rounded-[26px] border border-border/80 bg-white/85 p-4 shadow-sm ring-1 ring-border/5 dark:bg-card/55">
-          <div className="pointer-events-none absolute inset-x-8 top-0 h-24 rounded-full bg-chart-5/10 blur-3xl dark:bg-chart-3/10" />
+    <section className="space-y-2.5" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="grid gap-2.5 lg:grid-cols-[0.95fr_1.35fr]">
+        <div className={insightCardClassName} aria-label={text.weeklyPulse}>
+          <div className="pointer-events-none absolute inset-x-6 top-0 h-20 rounded-full bg-chart-5/10 blur-3xl dark:bg-chart-3/10" />
 
-          <div className="relative mb-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-black text-foreground">{text.weeklyPulse}</h3>
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-chart-5/15 px-1.5 text-[10px] font-black text-chart-5 dark:bg-chart-3/15 dark:text-chart-3">
-                {analytics.activeDays}/7
-              </span>
-            </div>
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-chart-5 dark:text-chart-3" />
-          </div>
-
-          <div className="relative mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/60 bg-background/75 px-3 py-2 backdrop-blur-sm">
+          <div className="relative grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            <div className={insightTileClassName}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.completions}</div>
               <div className="mt-0.5 text-base font-black text-foreground">{analytics.totalCompleted}</div>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/75 px-3 py-2 backdrop-blur-sm">
+            <div className={insightTileClassName}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.activeDays}</div>
               <div className="mt-0.5 text-base font-black text-foreground">{analytics.activeDays}</div>
             </div>
-            <div className="col-span-2 rounded-2xl border border-border/60 bg-background/75 px-3 py-2 backdrop-blur-sm sm:col-span-1">
+            <div className={cn(insightTileClassName, 'col-span-2 sm:col-span-1')}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.points}</div>
               <div className="mt-0.5 text-base font-black text-foreground">
                 {analytics.totalPoints}
@@ -363,20 +355,20 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
             {analytics.pulseDays.map((day) => (
               <div
                 key={day.key}
-                className="rounded-[18px] border border-border/60 bg-background/75 px-3 py-2.5"
+                className="rounded-[18px] border border-border/60 bg-background/75 px-2.5 py-2"
               >
-                <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
                   <div className="truncate text-xs font-bold text-muted-foreground">{day.label}</div>
-                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full border border-border/60 bg-background text-[11px] font-black text-foreground">
+                  <div className="flex h-[1.375rem] min-w-[1.375rem] items-center justify-center rounded-full border border-border/60 bg-background px-1 text-[10px] font-black text-foreground">
                     {day.total}
                   </div>
                 </div>
 
-                <div className="h-2 overflow-hidden rounded-full bg-muted/45">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted/45">
                   <div
                     className={cn(
                       'h-full rounded-full transition-all',
@@ -397,15 +389,10 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
           </div>
         </div>
 
-        <div className="relative flex h-full flex-col overflow-hidden rounded-[26px] border border-border/80 bg-white/85 p-4 shadow-sm ring-1 ring-border/5 dark:bg-card/55">
+        <div className={insightCardClassName} aria-label={text.topTasks}>
           <div className="pointer-events-none absolute -top-8 right-6 h-28 w-28 rounded-full bg-primary/10 blur-3xl" />
 
-          <div className="relative mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-xs font-black text-foreground">{text.topTasks}</h3>
-            <Activity className="h-4 w-4 shrink-0 text-primary" />
-          </div>
-
-          <div className="grid min-h-[11.25rem] grid-cols-2 grid-rows-3 gap-2">
+          <div className="grid min-h-[10rem] flex-1 grid-cols-2 grid-rows-3 gap-1.5 sm:gap-2">
             {analytics.topTasks.map((item) => {
               const isActive = highlightedTaskId === item.id;
 
@@ -415,13 +402,13 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
                   type="button"
                   onClick={() => setSelectedTask(item)}
                   className={cn(
-                    'flex min-h-[5.25rem] flex-col justify-between rounded-[22px] border px-3 py-2.5 text-start transition-all',
+                    'flex min-h-[4.75rem] flex-col justify-between rounded-[20px] border px-2.5 py-2 text-start transition-all',
                     isActive
                       ? cn(item.accent.softClass, item.accent.borderClass, 'shadow-sm')
                       : 'border-border/60 bg-background/65 hover:bg-background/80',
                   )}
                 >
-                  <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-start gap-2">
                         <span
@@ -450,7 +437,7 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
                           <div className="line-clamp-2 text-[13px] font-black leading-4.5 text-foreground">
                             {item.fullName}
                           </div>
-                          <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <span className="shrink-0">{item.points} {text.points}</span>
                             {item.mainTaskLabel ? (
                               <span className="truncate">{item.mainTaskLabel}</span>
@@ -466,8 +453,8 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/45">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/45">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
