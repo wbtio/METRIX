@@ -1,7 +1,7 @@
 'use client';
 
 import { Target, LayoutDashboard, LogOut } from 'lucide-react';
-import { getIconComponent } from './IconPicker';
+import { getIconComponent } from './goal/IconPicker';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';

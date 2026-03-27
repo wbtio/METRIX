@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { X, Loader2, Send, Trophy, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
-import VoiceRecorder from './VoiceRecorder';
+import VoiceRecorder from '../shared/VoiceRecorder';
 
 interface DailyLogModalProps {
     goal: { id: string; title: string; ai_summary?: string; created_at?: string; current_points?: number; target_points?: number };
@@ -114,13 +114,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
 
             if (updateError) throw updateError;
 
-            // 5. Invalidate analytics cache so dashboard shows fresh data
-            await supabase
-                .from('analytics_cache')
-                .delete()
-                .eq('goal_id', goal.id);
-
-            // Notify challenge tab listeners to refresh immediately.
+            // 5. Notify challenge tab listeners to refresh immediately.
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(
                     new CustomEvent('challenge-log-updated', {
@@ -151,6 +145,11 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                         </div>
                         <div>
                             <h3 className="text-3xl font-black text-foreground">+{evaluation.total_points_awarded} {t.pointsAwarded}</h3>
+                            {evaluation.bonus_points > 0 && (
+                                <p className="text-sm text-chart-1 font-bold mt-1">
+                                    {t.bonusPoints}: +{evaluation.bonus_points}
+                                </p>
+                            )}
                             <p className="text-muted-foreground font-medium">{t.progressAdded}</p>
                         </div>
 
@@ -183,6 +182,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                                                     </span>
                                                     <span className={`font-bold ms-3 ${item.points > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
                                                         +{item.points}
+                                                        {item.time_bonus > 0 && <span className="text-chart-1"> (+{item.time_bonus})</span>}
                                                     </span>
                                                 </div>
                                             ))}
@@ -196,6 +196,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                                         </span>
                                         <span className={`font-bold ms-4 ${item.points > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
                                             +{item.points}
+                                            {item.time_bonus > 0 && <span className="text-chart-1"> (+{item.time_bonus})</span>}
                                         </span>
                                     </div>
                                 ))

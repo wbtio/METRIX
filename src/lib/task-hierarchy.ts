@@ -6,6 +6,7 @@ export interface TaskRow {
   goal_id: string;
   task_description: string;
   impact_weight: number;
+  accent_color?: string | null;
   frequency: string;
   time_required_minutes?: number | null;
   completion_criteria?: string | null;
@@ -69,6 +70,7 @@ export function normalizeTaskRow(task: TaskRow): TaskRow {
   return {
     ...task,
     task_type: taskType,
+    accent_color: task.accent_color || null,
     frequency: normalizeFrequency(task.frequency),
     impact_weight: clamp(Number(task.impact_weight) || 1, 1, maxWeight),
     sort_order: Number(task.sort_order) || 0,

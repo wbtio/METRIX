@@ -10,6 +10,8 @@ interface ConfirmModalProps {
   onCancel: () => void;
   language?: Language;
   variant?: 'danger' | 'primary';
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 export default function ConfirmModal({
@@ -19,7 +21,9 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   language = 'en',
-  variant = 'danger'
+  variant = 'danger',
+  confirmLabel,
+  cancelLabel,
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
@@ -42,7 +46,7 @@ export default function ConfirmModal({
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-border bg-background text-foreground hover:bg-muted transition-colors"
           >
-            {t.cancel || (isArabic ? 'إلغاء' : 'Cancel')}
+            {cancelLabel || t.cancel || (isArabic ? 'إلغاء' : 'Cancel')}
           </button>
           <button
             onClick={() => { onConfirm(); onCancel(); }}
@@ -52,7 +56,7 @@ export default function ConfirmModal({
                 : 'bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20'
             }`}
           >
-            {isArabic ? 'تأكيد' : 'Confirm'}
+            {confirmLabel || (isArabic ? 'تأكيد' : 'Confirm')}
           </button>
         </div>
       </div>

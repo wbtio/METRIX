@@ -1,8 +1,9 @@
 'use client';
 
+import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
 import { useState, useEffect, useRef } from 'react';
 import {
-    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2
+    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText
 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
@@ -43,6 +44,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
     const [signingOut, setSigningOut] = useState(false);
     const [notifEnabled, setNotifEnabled] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
+    const [isManifestoOpen, setIsManifestoOpen] = useState(false);
 
     // Profile state
     const [displayName, setDisplayName] = useState('');
@@ -228,6 +230,11 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
             className="w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
+            <MatrixManifestoDialog
+                open={isManifestoOpen}
+                onOpenChange={setIsManifestoOpen}
+            />
+
             <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl">
                 {/* Tabs */}
                 <div className="flex gap-2 mb-6 border-b border-border/50 pb-4">
@@ -363,6 +370,30 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         )} />
                                     </button>
                                 )}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-border/50 bg-gradient-to-r from-background/10 via-muted/10 to-background/10 p-4 sm:p-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-950/[0.04] dark:border-white/10 dark:bg-white/6">
+                                        <ScrollText className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-foreground text-sm">{t.matrixStory}</p>
+                                        <p className="mt-1 text-[11px] leading-5 text-muted-foreground sm:text-xs sm:leading-6">
+                                            {t.matrixStoryDesc}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsManifestoOpen(true)}
+                                    className="w-full sm:w-auto min-h-11 shrink-0 rounded-xl border border-border bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-all duration-200 hover:bg-background hover:shadow-md"
+                                >
+                                    {t.readStory}
+                                </button>
                             </div>
                         </div>
                     </div>

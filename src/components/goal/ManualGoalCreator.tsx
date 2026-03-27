@@ -27,7 +27,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -613,21 +612,15 @@ export default function ManualGoalCreator({
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent className="px-6 py-6 space-y-5">
-                        <div className="grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
+                    <CardContent className="space-y-5 px-6 py-6">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-[1.5rem] border border-border/60 bg-background/75 px-4 py-3 shadow-sm">
                                 <p className="text-xs text-muted-foreground">
                                     {isArabic ? 'المهام الرئيسية' : 'Main tasks'}
                                 </p>
                                 <p className="mt-1 text-lg font-semibold text-foreground">{mainTasks.length}</p>
                             </div>
-                            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
-                                <p className="text-xs text-muted-foreground">
-                                    {isArabic ? 'الرئيسية المكتملة' : 'Filled main tasks'}
-                                </p>
-                                <p className="mt-1 text-lg font-semibold text-foreground">{validMainTasks.length}</p>
-                            </div>
-                            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
+                            <div className="rounded-[1.5rem] border border-border/60 bg-background/75 px-4 py-3 shadow-sm">
                                 <p className="text-xs text-muted-foreground">
                                     {isArabic ? 'المهام الفرعية' : 'Subtasks'}
                                 </p>
@@ -646,226 +639,366 @@ export default function ManualGoalCreator({
                         <Accordion
                             type="multiple"
                             defaultValue={mainTasks.map((main) => main.id)}
-                            className="space-y-3"
+                            className="space-y-4"
                         >
-                            {mainTasks.map((main, mainIdx) => (
-                                <AccordionItem
-                                    key={main.id}
-                                    value={main.id}
-                                    className="rounded-3xl border border-border/60 bg-background/80 shadow-sm px-4"
-                                >
-                                    <AccordionTrigger className="py-3 hover:no-underline">
-                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            <Badge variant="secondary" className="shrink-0 text-[10px] rounded-full px-2.5 py-0.5">
-                                                {isArabic ? `رئيسية ${mainIdx + 1}` : `Main ${mainIdx + 1}`}
-                                            </Badge>
-                                            <span className="truncate text-sm font-medium text-foreground">
-                                                {main.title || (isArabic ? 'مهمة جديدة' : 'New task')}
-                                            </span>
-                                            <Badge variant="outline" className="shrink-0 text-[10px] rounded-full px-2 py-0.5">
-                                                {main.frequency === 'daily'
-                                                    ? isArabic ? 'يومي' : 'Daily'
-                                                    : isArabic ? 'أسبوعي' : 'Weekly'}
-                                            </Badge>
-                                            {main.subtasks.length > 0 && (
-                                                <Badge variant="outline" className="shrink-0 text-[10px] rounded-full px-2 py-0.5">
-                                                    {main.subtasks.length} {isArabic ? 'فرعية' : 'sub'}
-                                                </Badge>
+                            {mainTasks.map((main, mainIdx) => {
+                                const frequencyLabel = main.frequency === 'daily'
+                                    ? isArabic ? 'يومي' : 'Daily'
+                                    : isArabic ? 'أسبوعي' : 'Weekly';
+
+                                return (
+                                    <AccordionItem
+                                        key={main.id}
+                                        value={main.id}
+                                        className="overflow-hidden rounded-[1.75rem] border border-border/60 bg-gradient-to-br from-background via-background to-muted/30 px-0 shadow-[0_18px_40px_-32px_hsl(var(--foreground)/0.45)] transition-colors data-[state=open]:border-primary/30"
+                                    >
+                                        <AccordionTrigger
+                                            className={cn(
+                                                'items-center px-4 py-4 hover:no-underline sm:px-5',
+                                                isArabic ? 'text-right' : 'text-left'
                                             )}
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="space-y-4 pb-4 pt-3 border-t border-border/60">
-                                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-                                            <div className="space-y-2">
-                                                <Label>{isArabic ? 'اسم المهمة' : 'Task name'}</Label>
-                                                <Input
-                                                    value={main.title}
-                                                    onChange={(e) => updateMain(main.id, { title: e.target.value })}
-                                                    placeholder={isArabic ? 'المهمة الرئيسية' : 'Main task name'}
-                                                    dir={isArabic ? 'rtl' : 'ltr'}
-                                                    className={isArabic ? 'text-right' : 'text-left'}
-                                                />
-                                            </div>
-                                            <Button variant="destructive" size="sm" onClick={() => removeMain(main.id)}>
-                                                <Trash2 className="size-3.5" />
-                                                {isArabic ? 'حذف' : 'Remove'}
-                                            </Button>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-2">
-                                                <Label>{isArabic ? 'التكرار' : 'Frequency'}</Label>
-                                                <Select
-                                                    value={main.frequency}
-                                                    onValueChange={(value) =>
-                                                        updateMain(main.id, { frequency: value as 'daily' | 'weekly' })
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="daily">{isArabic ? 'يومي' : 'Daily'}</SelectItem>
-                                                        <SelectItem value="weekly">{isArabic ? 'أسبوعي' : 'Weekly'}</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    {isArabic ? 'الوزن' : 'Impact weight'}
-                                                    <Badge variant="outline" className="text-[10px] ms-1">
-                                                        {main.impact_weight}
+                                        >
+                                            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px]"
+                                                    >
+                                                        {isArabic ? `رئيسية ${mainIdx + 1}` : `Main ${mainIdx + 1}`}
                                                     </Badge>
-                                                </Label>
-                                                <Slider
-                                                    min={1}
-                                                    max={10}
-                                                    step={1}
-                                                    value={[main.impact_weight]}
-                                                    onValueChange={([value]) => updateMain(main.id, { impact_weight: value })}
-                                                />
+                                                    <span className="truncate text-sm font-semibold text-foreground sm:text-base">
+                                                        {main.title || (isArabic ? 'مهمة جديدة' : 'New task')}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {frequencyLabel}
+                                                    {' / '}
+                                                    {isArabic
+                                                        ? `الوزن ${main.impact_weight}`
+                                                        : `Weight ${main.impact_weight}`}
+                                                    {' / '}
+                                                    {isArabic
+                                                        ? `${main.subtasks.length} فرعية`
+                                                        : `${main.subtasks.length} subtasks`}
+                                                </p>
                                             </div>
-                                        </div>
+                                        </AccordionTrigger>
 
-                                        <div className="space-y-2">
-                                            <Label>{isArabic ? 'معيار الإنجاز' : 'Completion criteria'}</Label>
-                                            <Input
-                                                value={main.completion_criteria}
-                                                onChange={(e) =>
-                                                    updateMain(main.id, { completion_criteria: e.target.value })
-                                                }
-                                                placeholder={
-                                                    isArabic
-                                                        ? 'كيف تعرف أن هذه المهمة أُنجزت؟'
-                                                        : 'How will you know this task is complete?'
-                                                }
-                                                dir={isArabic ? 'rtl' : 'ltr'}
-                                                className={isArabic ? 'text-right' : 'text-left'}
-                                            />
-                                        </div>
-
-                                        <Separator />
-
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <Label className="text-xs text-muted-foreground">
-                                                    {isArabic ? 'المهام الفرعية' : 'Subtasks'}
-                                                    <Badge variant="secondary" className="text-[10px] ms-1.5">
-                                                        {main.subtasks.length}
-                                                    </Badge>
-                                                </Label>
-                                                <Button variant="outline" size="xs" onClick={() => addSub(main.id)}>
-                                                    <Plus className="size-3" />
-                                                    {isArabic ? 'إضافة فرعية' : 'Add subtask'}
-                                                </Button>
-                                            </div>
-
-                                            {main.subtasks.map((sub) => (
-                                                <Card key={sub.id} className="py-0 gap-0 bg-muted/30">
-                                                    <CardContent className="p-3 space-y-3">
-                                                        <div className="flex items-center gap-2">
+                                        <AccordionContent className="border-t border-border/60 bg-muted/10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+                                            <div className="space-y-4">
+                                                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.85fr)]">
+                                                    <div className="space-y-4 rounded-[1.5rem] border border-border/60 bg-background/80 p-4 shadow-sm">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-sm font-semibold">
+                                                                {isArabic ? 'اسم المهمة' : 'Task name'}
+                                                            </Label>
                                                             <Input
-                                                                value={sub.description}
-                                                                onChange={(e) =>
-                                                                    updateSub(main.id, sub.id, { description: e.target.value })
-                                                                }
-                                                                placeholder={isArabic ? 'المهمة الفرعية' : 'Subtask name'}
-                                                                className={cn('flex-1 h-8 text-sm', isArabic ? 'text-right' : 'text-left')}
+                                                                value={main.title}
+                                                                onChange={(e) => updateMain(main.id, { title: e.target.value })}
+                                                                placeholder={isArabic ? 'المهمة الرئيسية' : 'Main task name'}
                                                                 dir={isArabic ? 'rtl' : 'ltr'}
+                                                                className={cn(
+                                                                    'h-11 rounded-2xl border-border/70 bg-background/90 px-4 shadow-sm',
+                                                                    isArabic ? 'text-right' : 'text-left'
+                                                                )}
                                                             />
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon-xs"
-                                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                                onClick={() => removeSub(main.id, sub.id)}
-                                                            >
-                                                                <Trash2 />
-                                                            </Button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                            <Select
-                                                                value={sub.frequency}
-                                                                onValueChange={(value) =>
-                                                                    updateSub(main.id, sub.id, {
-                                                                        frequency: value as 'daily' | 'weekly',
-                                                                    })
-                                                                }
-                                                            >
-                                                                <SelectTrigger className="h-8 text-xs">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="daily">{isArabic ? 'يومي' : 'Daily'}</SelectItem>
-                                                                    <SelectItem value="weekly">{isArabic ? 'أسبوعي' : 'Weekly'}</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-
-                                                            <div className="space-y-1">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[10px] text-muted-foreground">
-                                                                        {isArabic ? 'الوزن' : 'Weight'}
-                                                                    </span>
-                                                                    <Badge variant="outline" className="text-[10px] h-4 px-1">
-                                                                        {sub.impact_weight}
-                                                                    </Badge>
-                                                                </div>
-                                                                <Slider
-                                                                    min={1}
-                                                                    max={5}
-                                                                    step={1}
-                                                                    value={[sub.impact_weight]}
-                                                                    onValueChange={([value]) =>
-                                                                        updateSub(main.id, sub.id, { impact_weight: value })
-                                                                    }
-                                                                />
-                                                            </div>
-
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Clock className="size-3 text-muted-foreground shrink-0" />
-                                                                <Input
-                                                                    type="number"
-                                                                    min={0}
-                                                                    value={sub.time_required_minutes}
-                                                                    onChange={(e) =>
-                                                                        updateSub(main.id, sub.id, {
-                                                                            time_required_minutes: Number(e.target.value) || 0,
-                                                                        })
-                                                                    }
-                                                                    className="h-8 text-xs"
-                                                                    placeholder="min"
-                                                                />
-                                                            </div>
                                                         </div>
 
                                                         <div className="space-y-2">
-                                                            <Label className="text-xs">
+                                                            <Label className="text-sm font-semibold">
                                                                 {isArabic ? 'معيار الإنجاز' : 'Completion criteria'}
                                                             </Label>
                                                             <Input
-                                                                value={sub.completion_criteria}
+                                                                value={main.completion_criteria}
                                                                 onChange={(e) =>
-                                                                    updateSub(main.id, sub.id, {
-                                                                        completion_criteria: e.target.value,
-                                                                    })
+                                                                    updateMain(main.id, { completion_criteria: e.target.value })
                                                                 }
                                                                 placeholder={
                                                                     isArabic
-                                                                        ? 'مثال: إنهاء 20 دقيقة تركيز'
-                                                                        : 'Example: complete 20 focused minutes'
+                                                                        ? 'كيف تعرف أن هذه المهمة أُنجزت؟'
+                                                                        : 'How will you know this task is complete?'
                                                                 }
-                                                                className={cn('h-8 text-xs', isArabic ? 'text-right' : 'text-left')}
                                                                 dir={isArabic ? 'rtl' : 'ltr'}
+                                                                className={cn(
+                                                                    'h-11 rounded-2xl border-border/70 bg-background/90 px-4 shadow-sm',
+                                                                    isArabic ? 'text-right' : 'text-left'
+                                                                )}
                                                             />
                                                         </div>
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
+                                                    </div>
+
+                                                    <div className="space-y-4 rounded-[1.5rem] border border-border/60 bg-muted/20 p-4">
+                                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-sm font-semibold">
+                                                                    {isArabic ? 'التكرار' : 'Frequency'}
+                                                                </Label>
+                                                                <Select
+                                                                    value={main.frequency}
+                                                                    onValueChange={(value) =>
+                                                                        updateMain(main.id, {
+                                                                            frequency: value as 'daily' | 'weekly',
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <SelectTrigger className="h-11 w-full rounded-2xl border-border/70 bg-background/90 px-4 text-sm shadow-sm">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="daily">
+                                                                            {isArabic ? 'يومي' : 'Daily'}
+                                                                        </SelectItem>
+                                                                        <SelectItem value="weekly">
+                                                                            {isArabic ? 'أسبوعي' : 'Weekly'}
+                                                                        </SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <Label className="text-sm font-semibold">
+                                                                        {isArabic ? 'الوزن' : 'Impact weight'}
+                                                                    </Label>
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className="rounded-full px-2.5 py-0.5 text-[10px]"
+                                                                    >
+                                                                        {main.impact_weight}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="rounded-2xl border border-border/60 bg-background/90 px-4 py-4 shadow-sm">
+                                                                    <Slider
+                                                                        min={1}
+                                                                        max={10}
+                                                                        step={1}
+                                                                        value={[main.impact_weight]}
+                                                                        onValueChange={([value]) =>
+                                                                            updateMain(main.id, {
+                                                                                impact_weight: value,
+                                                                            })
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            className="h-10 w-full rounded-xl"
+                                                            onClick={() => removeMain(main.id)}
+                                                        >
+                                                            <Trash2 className="size-3.5" />
+                                                            {isArabic ? 'حذف المهمة الرئيسية' : 'Remove main task'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-[1.5rem] border border-border/60 bg-background/75 p-4 shadow-sm">
+                                                    <div className="flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div>
+                                                            <Label className="text-sm font-semibold text-foreground">
+                                                                {isArabic ? 'المهام الفرعية' : 'Subtasks'}
+                                                            </Label>
+                                                        </div>
+
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-9 rounded-xl"
+                                                            onClick={() => addSub(main.id)}
+                                                        >
+                                                            <Plus className="size-3.5" />
+                                                            {isArabic ? 'إضافة فرعية' : 'Add subtask'}
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="mt-4 space-y-3">
+                                                        {main.subtasks.length === 0 && (
+                                                            <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-muted/15 px-4 py-5 text-center text-sm text-muted-foreground">
+                                                                {isArabic
+                                                                    ? 'لا توجد مهام فرعية بعد. أضف أول خطوة تنفيذية لهذه المهمة.'
+                                                                    : 'No subtasks yet. Add the first actionable step for this task.'}
+                                                            </div>
+                                                        )}
+
+                                                        {main.subtasks.map((sub, subIdx) => (
+                                                            <Card
+                                                                key={sub.id}
+                                                                className="gap-0 overflow-hidden rounded-[1.25rem] border border-border/60 bg-muted/15 py-0 shadow-none"
+                                                            >
+                                                                <CardContent className="px-4 py-4">
+                                                                    <div className="flex flex-col gap-4">
+                                                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                                            <div className="min-w-0">
+                                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                                    <Badge
+                                                                                        variant="secondary"
+                                                                                        className="rounded-full px-2 py-0.5 text-[10px]"
+                                                                                    >
+                                                                                        {isArabic
+                                                                                            ? `فرعية ${subIdx + 1}`
+                                                                                            : `Sub ${subIdx + 1}`}
+                                                                                    </Badge>
+                                                                                    <span className="text-[11px] text-muted-foreground">
+                                                                                        {sub.frequency === 'daily'
+                                                                                            ? isArabic ? 'تكرار يومي' : 'Daily cadence'
+                                                                                            : isArabic ? 'تكرار أسبوعي' : 'Weekly cadence'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon-sm"
+                                                                                className="self-end rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive sm:self-start"
+                                                                                onClick={() => removeSub(main.id, sub.id)}
+                                                                            >
+                                                                                <Trash2 className="size-4" />
+                                                                            </Button>
+                                                                        </div>
+
+                                                                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-xs font-semibold">
+                                                                                    {isArabic ? 'اسم المهمة الفرعية' : 'Subtask name'}
+                                                                                </Label>
+                                                                                <Input
+                                                                                    value={sub.description}
+                                                                                    onChange={(e) =>
+                                                                                        updateSub(main.id, sub.id, {
+                                                                                            description: e.target.value,
+                                                                                        })
+                                                                                    }
+                                                                                    placeholder={
+                                                                                        isArabic ? 'المهمة الفرعية' : 'Subtask name'
+                                                                                    }
+                                                                                    className={cn(
+                                                                                        'h-10 rounded-xl border-border/70 bg-background/90 px-3 text-sm shadow-sm',
+                                                                                        isArabic ? 'text-right' : 'text-left'
+                                                                                    )}
+                                                                                    dir={isArabic ? 'rtl' : 'ltr'}
+                                                                                />
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <div className="flex items-center justify-between gap-2">
+                                                                                    <Label className="text-xs font-semibold">
+                                                                                        {isArabic ? 'الوزن' : 'Weight'}
+                                                                                    </Label>
+                                                                                    <Badge
+                                                                                        variant="outline"
+                                                                                        className="rounded-full px-2 py-0.5 text-[10px]"
+                                                                                    >
+                                                                                        {sub.impact_weight}
+                                                                                    </Badge>
+                                                                                </div>
+                                                                                <div className="rounded-xl border border-border/60 bg-background/90 px-3 py-3 shadow-sm">
+                                                                                    <Slider
+                                                                                        min={1}
+                                                                                        max={5}
+                                                                                        step={1}
+                                                                                        value={[sub.impact_weight]}
+                                                                                        onValueChange={([value]) =>
+                                                                                            updateSub(main.id, sub.id, {
+                                                                                                impact_weight: value,
+                                                                                            })
+                                                                                        }
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,0.55fr)_minmax(0,1fr)]">
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-xs font-semibold">
+                                                                                    {isArabic ? 'التكرار' : 'Frequency'}
+                                                                                </Label>
+                                                                                <Select
+                                                                                    value={sub.frequency}
+                                                                                    onValueChange={(value) =>
+                                                                                        updateSub(main.id, sub.id, {
+                                                                                            frequency: value as 'daily' | 'weekly',
+                                                                                        })
+                                                                                    }
+                                                                                >
+                                                                                    <SelectTrigger className="h-10 w-full rounded-xl border-border/70 bg-background/90 px-3 text-xs shadow-sm">
+                                                                                        <SelectValue />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent>
+                                                                                        <SelectItem value="daily">
+                                                                                            {isArabic ? 'يومي' : 'Daily'}
+                                                                                        </SelectItem>
+                                                                                        <SelectItem value="weekly">
+                                                                                            {isArabic ? 'أسبوعي' : 'Weekly'}
+                                                                                        </SelectItem>
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <Label
+                                                                                    className={cn(
+                                                                                        'flex items-center gap-1.5 text-xs font-semibold',
+                                                                                        isArabic && 'flex-row-reverse justify-end'
+                                                                                    )}
+                                                                                >
+                                                                                    <Clock className="size-3 text-muted-foreground" />
+                                                                                    <span>{isArabic ? 'الوقت' : 'Time'}</span>
+                                                                                </Label>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    min={0}
+                                                                                    value={sub.time_required_minutes}
+                                                                                    onChange={(e) =>
+                                                                                        updateSub(main.id, sub.id, {
+                                                                                            time_required_minutes: Number(e.target.value) || 0,
+                                                                                        })
+                                                                                    }
+                                                                                    className={cn(
+                                                                                        'h-10 rounded-xl border-border/70 bg-background/90 px-3 text-xs shadow-sm',
+                                                                                        isArabic ? 'text-right' : 'text-left'
+                                                                                    )}
+                                                                                    placeholder={isArabic ? 'بالدقائق' : 'Minutes'}
+                                                                                />
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-xs font-semibold">
+                                                                                    {isArabic ? 'معيار الإنجاز' : 'Completion criteria'}
+                                                                                </Label>
+                                                                                <Input
+                                                                                    value={sub.completion_criteria}
+                                                                                    onChange={(e) =>
+                                                                                        updateSub(main.id, sub.id, {
+                                                                                            completion_criteria: e.target.value,
+                                                                                        })
+                                                                                    }
+                                                                                    placeholder={
+                                                                                        isArabic
+                                                                                            ? 'مثال: إنهاء 20 دقيقة تركيز'
+                                                                                            : 'Example: complete 20 focused minutes'
+                                                                                    }
+                                                                                    className={cn(
+                                                                                        'h-10 rounded-xl border-border/70 bg-background/90 px-3 text-xs shadow-sm',
+                                                                                        isArabic ? 'text-right' : 'text-left'
+                                                                                    )}
+                                                                                    dir={isArabic ? 'rtl' : 'ltr'}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                );
+                            })}
                         </Accordion>
                     </CardContent>
                 </Card>

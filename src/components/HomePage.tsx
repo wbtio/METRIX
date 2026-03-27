@@ -1,14 +1,16 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
-import { Mic, StopCircle, Loader2, Pin, Target, PenLine, Sparkles } from 'lucide-react';
+import { Mic, StopCircle, Loader2, Pin, Target, PenLine, Sparkles, CircleAlert } from 'lucide-react';
 import { type Language } from '@/lib/translations';
 import Image from 'next/image';
-import { getIconComponent } from './IconPicker';
+import { getIconComponent } from './goal/IconPicker';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { getGoalEndDaysChip } from '@/lib/goal-dates';
 import { useIsMobile } from '@/hooks/use-mobile';
+import GoalProgressBar from '@/components/shared/GoalProgressBar';
 
 interface Goal {
     id: string;
@@ -17,7 +19,7 @@ interface Goal {
     target_points: number;
     status: string;
     created_at: string;
-    estimated_completion_date: string;
+    estimated_completion_date?: string | null;
     icon?: string;
     is_pinned?: boolean;
 }
@@ -40,6 +42,7 @@ export default function HomePage({
     const [goalInput, setGoalInput] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showAIDetailPrompt, setShowAIDetailPrompt] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
@@ -59,16 +62,37 @@ export default function HomePage({
         return isArabic;
     };
 
-    const handleAICreate = () => {
-        if (goalInput.trim()) {
-            onNavigateToCreate?.(goalInput.trim(), 'ai');
-        }
+    const minimumGoalWords = 15;
+
+    const analyzeGoalInput = (value: string) => {
+        const normalized = value.trim().replace(/\s+/g, ' ');
+        const wordCount = normalized ? normalized.split(' ').length : 0;
+        const needsMoreDetail = normalized.length > 0 && wordCount < minimumGoalWords;
+        const detailProgress = normalized.length > 0
+            ? Math.min(wordCount / minimumGoalWords, 1)
+            : 0;
+
+        return {
+            normalized,
+            wordCount,
+            needsMoreDetail,
+            detailProgress,
+        };
     };
 
-    const handleManualCreate = () => {
-        if (goalInput.trim()) {
-            onNavigateToCreate?.(goalInput.trim(), 'manual');
+    const handleAICreate = () => {
+        const trimmedGoal = normalizedGoalInput;
+        if (!trimmedGoal) {
+            return;
         }
+
+        if (goalNeedsMoreDetail) {
+            setShowAIDetailPrompt(true);
+            return;
+        }
+
+        setShowAIDetailPrompt(false);
+        onNavigateToCreate?.(trimmedGoal, 'ai');
     };
 
     const cleanupStream = useCallback(() => {
@@ -143,12 +167,71 @@ export default function HomePage({
         else startRecording();
     }, [isRecording, isProcessing, startRecording, stopRecording]);
 
-    const hasGoalInput = goalInput.trim().length > 0;
+    const { normalized: normalizedGoalInput, wordCount: goalWordCount, needsMoreDetail: goalNeedsMoreDetail } = analyzeGoalInput(goalInput);
+    const hasGoalInput = normalizedGoalInput.length > 0;
+    const aiPromptVisible = showAIDetailPrompt && goalNeedsMoreDetail;
+    const promptColorStage = !goalNeedsMoreDetail
+        ? 0
+        : goalWordCount < 3
+            ? 5
+            : goalWordCount < 6
+                ? 4
+                : goalWordCount < 9
+                    ? 3
+                    : goalWordCount < 12
+                        ? 2
+                        : 1;
+    const promptToneClasses = promptColorStage === 5
+        ? "border-amber-500/45 bg-gradient-to-b from-amber-500/24 via-amber-300/30 to-background"
+        : promptColorStage === 4
+            ? "border-amber-400/40 bg-gradient-to-b from-amber-400/18 via-amber-200/24 to-background"
+            : promptColorStage === 3
+                ? "border-amber-300/35 bg-gradient-to-b from-amber-300/14 via-amber-100/20 to-background"
+                : promptColorStage === 2
+                    ? "border-amber-200/30 bg-gradient-to-b from-amber-200/10 via-amber-50/18 to-background"
+                    : "border-amber-100/24 bg-gradient-to-b from-amber-100/10 via-background/96 to-background";
+    const promptCardClasses = promptColorStage === 5
+        ? "border-amber-500/60 bg-amber-500/[0.05]"
+        : promptColorStage === 4
+            ? "border-amber-400/55 bg-amber-500/[0.04]"
+            : promptColorStage === 3
+                ? "border-amber-300/45 bg-amber-500/[0.03]"
+                : promptColorStage === 2
+                    ? "border-amber-200/38 bg-amber-500/[0.022]"
+                    : "border-amber-100/28 bg-amber-500/[0.015]";
+    const promptMessages = {
+        ar: {
+            5: 'وضّح النتيجة التي تريد الوصول لها وما الذي تريد تغييره فعلاً.',
+            4: 'أضف لماذا هذا الهدف مهم لك أو ما الأثر الذي تنتظره منه.',
+            3: 'زد وقتاً أو ظرفاً مهماً حتى تصبح الخطة أقرب لواقعك.',
+            2: 'الوصف صار أفضل، وأي تفصيل عن النتيجة سيجعل البداية أدق.',
+            1: 'باقي توضيح صغير عن الهدف حتى نبدأ بخطة أوضح.',
+        },
+        en: {
+            5: 'Clarify the result you want and what you want to change.',
+            4: 'Add why this goal matters or the impact you expect from it.',
+            3: 'Add timing or context so the plan feels closer to your reality.',
+            2: 'This is clearer now, and one more outcome detail will sharpen the start.',
+            1: 'One small clarification will help us start with a clearer plan.',
+        },
+    } as const;
+    const goalPromptMessage = goalNeedsMoreDetail
+        ? (isArabic ? promptMessages.ar[promptColorStage as 1 | 2 | 3 | 4 | 5] : promptMessages.en[promptColorStage as 1 | 2 | 3 | 4 | 5])
+        : null;
     const goalInputPlaceholder = isProcessing
         ? (isArabic ? 'جارِ المعالجة...' : 'Processing...')
         : isRecording
             ? (isArabic ? 'جارِ الاستماع...' : 'Listening...')
-            : (isArabic ? 'اكتب هدفك هنا...' : 'Write your goal here...');
+            : (isArabic ? 'اكتب هدفك هنا\u200f...' : 'Write your goal here...');
+
+    const handleManualCreate = () => {
+        if (!hasGoalInput) {
+            return;
+        }
+
+        setShowAIDetailPrompt(false);
+        onNavigateToCreate?.(normalizedGoalInput, 'manual');
+    };
 
     const resizeGoalTextarea = (textarea: HTMLTextAreaElement) => {
         textarea.style.height = '0px';
@@ -171,13 +254,15 @@ export default function HomePage({
             className="w-full max-w-3xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
-            <div className="flex justify-center items-center mb-4 sm:mb-8 text-center">
+            <div className="mb-4 flex flex-col items-center justify-center text-center sm:mb-8">
                 <Image
                     src="/logo1.svg"
                     alt="METRIX Logo"
                     width={240}
                     height={96}
+                    sizes="(max-width: 640px) 170px, (max-width: 768px) 220px, 240px"
                     className="w-[170px] sm:w-[220px] md:w-[240px] h-auto object-contain dark:hidden"
+                    style={{ height: 'auto' }}
                     priority
                 />
                 <Image
@@ -185,137 +270,198 @@ export default function HomePage({
                     alt="METRIX Logo Dark"
                     width={240}
                     height={96}
+                    sizes="(max-width: 640px) 170px, (max-width: 768px) 220px, 240px"
                     className="hidden w-[170px] sm:w-[220px] md:w-[240px] h-auto object-contain dark:block"
+                    style={{ height: 'auto' }}
                     priority
                 />
+                <p
+                    className="-mt-2 max-w-[19rem] text-sm font-medium leading-6 text-muted-foreground sm:-mt-1 sm:max-w-[24rem] sm:text-base"
+                    dir={isArabic ? "rtl" : "ltr"}
+                    lang={isArabic ? "ar" : "en"}
+                >
+                    {isArabic ? "اذا ما استمرت بهدفك راح تفشل يا غبي" : "If you don't stick to your goal, you'll fail, stupid"}
+                </p>
             </div>
 
             <div
                 className={cn(
-                    "relative overflow-hidden rounded-[24px] border bg-background/92 backdrop-blur-xl",
-                    "shadow-lg shadow-black/5 transition-all duration-300 dark:shadow-black/20",
-                    "focus-within:border-primary/35 focus-within:shadow-xl focus-within:shadow-black/5",
-                    isRecording
-                        ? "border-red-400/40 bg-red-500/[0.03]"
-                        : isProcessing
-                            ? "border-amber-300/50 bg-amber-500/[0.03]"
-                            : "border-border/70"
+                    "relative transition-all duration-300",
+                    aiPromptVisible ? "pt-10 sm:pt-11" : "pt-0"
                 )}
                 dir={isArabic ? 'rtl' : 'ltr'}
             >
                 <div
                     className={cn(
-                        "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
-                        isRecording
-                            ? "from-red-500/[0.08] via-red-500/[0.03]"
-                            : isProcessing
-                                ? "from-amber-500/[0.08] via-amber-500/[0.03]"
-                                : "from-primary/[0.07] via-primary/[0.02]"
+                        "pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden transition-all duration-300",
+                        aiPromptVisible
+                            ? "h-[5.5rem] opacity-100 sm:h-[5.75rem]"
+                            : "h-0 opacity-0"
                     )}
-                />
-
-                <div className="relative px-2 pt-1 pb-1 sm:px-3 sm:pt-2 sm:pb-2">
-                    <Textarea
-                        rows={1}
-                        value={goalInput}
-                        onChange={(e) => {
-                            setGoalInput(e.target.value);
-                            resizeGoalTextarea(e.currentTarget);
-                        }}
-                        onInput={(e) => resizeGoalTextarea(e.currentTarget)}
-                        placeholder={goalInputPlaceholder}
+                >
+                    <div
                         className={cn(
-                            "min-h-[44px] max-h-[140px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none",
-                            "scrollbar-thin",
-                            "text-sm font-medium leading-7 text-foreground sm:text-base md:text-base",
-                            "placeholder:text-muted-foreground/50",
-                            "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                            "dark:bg-transparent",
-                            isArabic ? "text-right" : "text-left",
-                            isRecording && "placeholder:text-red-500/60 caret-red-500"
+                            "rounded-t-[24px] border border-b-0 px-4 pt-1 pb-8 sm:px-5 sm:pt-1.5 sm:pb-9",
+                            promptToneClasses
                         )}
-                        dir="auto"
-                    />
+                    >
+                        <div
+                            role="status"
+                            aria-live="polite"
+                            className={cn(
+                                "flex items-center gap-3 text-sm font-medium leading-6 text-amber-950 dark:text-amber-100",
+                                isArabic ? "flex-row-reverse text-right" : "text-left"
+                            )}
+                        >
+                            <div className="shrink-0 rounded-full border border-amber-500/25 bg-background/70 p-1.5 backdrop-blur">
+                                <CircleAlert className="size-4 shrink-0 text-amber-600 dark:text-amber-300" />
+                            </div>
+                            <p id="goal-ai-detail-prompt" className="flex-1 text-[13px] font-semibold leading-5 text-amber-900/95 dark:text-amber-100/90">
+                                {goalPromptMessage}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div
                     className={cn(
-                        "flex flex-col gap-2 px-2 pb-2 pt-0 sm:px-3 sm:pb-3 sm:pt-0",
-                        isArabic ? "sm:flex-row-reverse sm:items-center sm:justify-between" : "sm:flex-row sm:items-center sm:justify-between"
+                        "relative z-20 overflow-hidden rounded-[24px] border bg-background/92 backdrop-blur-xl",
+                        "shadow-lg shadow-black/5 transition-all duration-300 dark:shadow-black/20",
+                        "focus-within:border-primary/35 focus-within:shadow-xl focus-within:shadow-black/5",
+                        isRecording
+                            ? "border-red-400/40 bg-red-500/[0.03]"
+                            : isProcessing
+                                ? "border-amber-300/50 bg-amber-500/[0.03]"
+                                : aiPromptVisible
+                                    ? promptCardClasses
+                                    : "border-border/70"
                     )}
                 >
-                    <div className={cn("flex items-center gap-2", isArabic ? "flex-row-reverse" : "flex-row")}>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={toggleRecording}
-                            disabled={isProcessing}
-                            aria-pressed={isRecording}
-                            aria-label={isProcessing
-                                ? (isArabic ? 'جارِ معالجة التسجيل الصوتي' : 'Processing voice recording')
-                                : isRecording
-                                    ? (isArabic ? 'إيقاف التسجيل الصوتي' : 'Stop voice recording')
-                                    : (isArabic ? 'بدء التسجيل الصوتي' : 'Start voice recording')
-                            }
+                    <div
+                        className={cn(
+                            "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
+                            isRecording
+                                ? "from-red-500/[0.08] via-red-500/[0.03]"
+                            : isProcessing
+                                ? "from-amber-500/[0.08] via-amber-500/[0.03]"
+                                : aiPromptVisible
+                                    ? "from-amber-500/[0.08] via-amber-500/[0.02]"
+                                    : "from-primary/[0.07] via-primary/[0.02]"
+                        )}
+                    />
+
+                    <div className="relative px-2 pt-1 pb-1 sm:px-3 sm:pt-2 sm:pb-2">
+                        <Textarea
+                            rows={1}
+                            value={goalInput}
+                            onChange={(e) => {
+                                const nextValue = e.target.value;
+                                const nextAnalysis = analyzeGoalInput(nextValue);
+
+                                setGoalInput(nextValue);
+                                if (!nextAnalysis.needsMoreDetail) {
+                                    setShowAIDetailPrompt(false);
+                                }
+                                resizeGoalTextarea(e.currentTarget);
+                            }}
+                            onInput={(e) => resizeGoalTextarea(e.currentTarget)}
+                            placeholder={goalInputPlaceholder}
+                            aria-describedby={aiPromptVisible ? 'goal-ai-detail-prompt' : undefined}
                             className={cn(
-                                "h-9 rounded-full px-3.5 text-sm shadow-none",
-                                isProcessing
-                                    ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                                    : isRecording
-                                        ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
-                                        : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                                "min-h-[44px] max-h-[140px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none",
+                                "scrollbar-thin",
+                                "text-sm font-medium leading-7 text-foreground sm:text-base md:text-base",
+                                "placeholder:text-muted-foreground/50",
+                                "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                                "dark:bg-transparent",
+                                isArabic ? "text-right" : "text-left",
+                                isRecording && "placeholder:text-red-500/60 caret-red-500"
                             )}
-                        >
-                            {isProcessing ? (
-                                <Loader2 className="size-4 animate-spin" />
-                            ) : isRecording ? (
-                                <StopCircle className="size-4" />
-                            ) : (
-                                <Mic className="size-4" />
-                            )}
-                            <span>
-                                {isProcessing
-                                    ? (isArabic ? 'معالجة' : 'Processing')
-                                    : isRecording
-                                        ? (isArabic ? 'إيقاف' : 'Stop')
-                                        : (isArabic ? 'صوت' : 'Voice')}
-                            </span>
-                        </Button>
+                            dir={isArabic ? 'rtl' : 'auto'}
+                        />
                     </div>
 
-                    <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[280px]">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleManualCreate}
-                            disabled={!hasGoalInput}
-                            className={cn(
-                                "h-10 rounded-full px-4 text-sm font-semibold shadow-none",
-                                hasGoalInput
-                                    ? "border-border/70 bg-background/70 text-foreground hover:bg-muted/60"
-                                    : "border border-border/70 bg-muted/40 text-muted-foreground"
-                            )}
-                        >
-                            <PenLine className="size-4 shrink-0" />
-                            <span>{isArabic ? 'يدوي' : 'Manual'}</span>
-                        </Button>
+                    <div
+                        className={cn(
+                            "flex flex-col gap-2 px-2 pb-2 pt-0 sm:px-3 sm:pb-3 sm:pt-0",
+                            isArabic ? "sm:flex-row-reverse sm:items-center sm:justify-between" : "sm:flex-row sm:items-center sm:justify-between"
+                        )}
+                    >
+                        <div className={cn("flex items-center gap-2", isArabic ? "flex-row-reverse" : "flex-row")}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={toggleRecording}
+                                disabled={isProcessing}
+                                aria-pressed={isRecording}
+                                aria-label={isProcessing
+                                    ? (isArabic ? 'جارِ معالجة التسجيل الصوتي' : 'Processing voice recording')
+                                    : isRecording
+                                        ? (isArabic ? 'إيقاف التسجيل الصوتي' : 'Stop voice recording')
+                                        : (isArabic ? 'بدء التسجيل الصوتي' : 'Start voice recording')
+                                }
+                                className={cn(
+                                    "h-9 rounded-full px-3.5 text-sm shadow-none",
+                                    isProcessing
+                                        ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                                        : isRecording
+                                            ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
+                                            : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                                )}
+                            >
+                                {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : isRecording ? (
+                                    <StopCircle className="size-4" />
+                                ) : (
+                                    <Mic className="size-4" />
+                                )}
+                                <span>
+                                    {isProcessing
+                                        ? (isArabic ? 'معالجة' : 'Processing')
+                                        : isRecording
+                                            ? (isArabic ? 'إيقاف' : 'Stop')
+                                            : (isArabic ? 'صوت' : 'Voice')}
+                                </span>
+                            </Button>
+                        </div>
 
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleAICreate}
-                            disabled={!hasGoalInput}
-                            className={cn(
-                                "h-10 rounded-full px-4 text-sm font-semibold shadow-none",
-                                hasGoalInput
-                                    ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
-                                    : "border border-border/70 bg-muted/40 text-muted-foreground"
-                            )}
-                        >
-                            <Sparkles className="size-4 shrink-0" />
-                            <span>{isArabic ? 'ذكاء اصطناعي' : 'AI Plan'}</span>
-                        </Button>
+                        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[280px]">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleManualCreate}
+                                disabled={!hasGoalInput}
+                                className={cn(
+                                    "h-10 rounded-full px-4 text-sm font-semibold shadow-none",
+                                    hasGoalInput
+                                        ? "border-border/70 bg-background/70 text-foreground hover:bg-muted/60"
+                                        : "border border-border/70 bg-muted/40 text-muted-foreground"
+                                )}
+                            >
+                                <PenLine className="size-4 shrink-0" />
+                                <span>{isArabic ? 'يدوي' : 'Manual'}</span>
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleAICreate}
+                                disabled={!hasGoalInput}
+                                className={cn(
+                                    "h-10 rounded-full px-4 text-sm font-semibold shadow-none transition-all duration-300",
+                                    aiPromptVisible
+                                        ? "border-amber-300/60 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200"
+                                        : hasGoalInput
+                                            ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                                            : "border border-border/70 bg-muted/40 text-muted-foreground"
+                                )}
+                            >
+                                <Sparkles className="size-4 shrink-0" />
+                                <span>{isArabic ? 'ذكاء اصطناعي' : 'AI Plan'}</span>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,19 +484,45 @@ export default function HomePage({
                             const progress = targetPoints > 0 ? Math.round((currentPoints / targetPoints) * 100) : 0;
                             const Icon = getIconComponent(goal.icon || 'Target');
                             const goalIsRTL = isArabic || isRTL(goal.title);
+                            const daysChip = getGoalEndDaysChip(goal.estimated_completion_date, isArabic);
 
                             return (
                                 <div
                                     key={goal.id}
                                     className="w-full p-4 sm:p-5 rounded-3xl border transition-all relative group bg-card/40 border-border hover:bg-card/60 hover:border-primary/30 hover:shadow-md"
                                 >
-                                    {/* زر التثبيت: مرفوع للأعلى (top-2)، يسار في العربي (left-2)، ويمين في الإنجليزي (right-2) */}
-                                    {goal.is_pinned && (
-                                        <div className={cn(
-                                            "absolute top-2 w-7 h-7 flex items-center justify-center rounded-full bg-chart-5/10 z-10",
-                                            goalIsRTL ? "left-2" : "right-2"
-                                        )}>
-                                            <Pin className="w-3.5 h-3.5 text-chart-5 rotate-45" />
+                                    {/* تثبيت + أيام حتى انتهاء الهدف (موعد estimated_completion_date) */}
+                                    {(goal.is_pinned || daysChip) && (
+                                        <div
+                                            className={cn(
+                                                'absolute top-[5px] z-10 flex items-center gap-1',
+                                                goalIsRTL ? 'left-[6px] flex-row' : 'right-[6px] flex-row-reverse'
+                                            )}
+                                        >
+                                            {goal.is_pinned && (
+                                                <div
+                                                    className="w-7 h-7 flex items-center justify-center rounded-full bg-chart-5/10"
+                                                    title={isArabic ? 'هدف مثبّت' : 'Pinned goal'}
+                                                >
+                                                    <Pin className="w-3.5 h-3.5 text-chart-5 rotate-45" aria-hidden />
+                                                </div>
+                                            )}
+                                            {daysChip && (
+                                                <div
+                                                    className={cn(
+                                                        'h-7 min-w-7 px-1.5 flex items-center justify-center rounded-full text-[11px] font-bold tabular-nums',
+                                                        daysChip.tone === 'soon' &&
+                                                            'bg-primary/10 text-primary border border-primary/20',
+                                                        daysChip.tone === 'today' &&
+                                                            'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25',
+                                                        daysChip.tone === 'late' &&
+                                                            'bg-destructive/15 text-destructive border border-destructive/25'
+                                                    )}
+                                                    title={daysChip.title}
+                                                >
+                                                    {daysChip.text}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     <button
@@ -358,7 +530,12 @@ export default function HomePage({
                                         className="w-full text-start"
                                         dir={goalIsRTL ? 'rtl' : 'ltr'}
                                     >
-                                        <div className="w-full flex flex-col gap-3">
+                                        <div
+                                            className={cn(
+                                                'w-full flex flex-col gap-3',
+                                                (goal.is_pinned || daysChip) && 'pt-2.5 sm:pt-3'
+                                            )}
+                                        >
                                             <div className="flex items-center gap-3 w-full">
                                                 <div className="shrink-0 w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors shadow-sm">
                                                     <Icon className="w-6 h-6" />
@@ -370,31 +547,14 @@ export default function HomePage({
                                                 </div>
                                             </div>
 
-                                            <div className="relative h-10 w-full bg-muted/40 rounded-2xl overflow-hidden border border-border/60 shadow-inner ring-1 ring-white/5 mx-auto">
-                                                <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none"></div>
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-primary/80 via-primary to-primary transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]"
-                                                    style={{ width: `${Math.min(100, progress)}%` }}
-                                                >
-                                                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
-                                                    <div className="absolute inset-0 opacity-30 bg-[url('/patterns/waves.svg')] animate-pulse"></div>
-                                                    <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
-                                                </div>
-
-                                                <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-5 z-20 font-bold text-xs sm:text-sm tracking-wide" dir="ltr">
-                                                    <span className="text-foreground/70 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-1">
-                                                        {currentPoints.toLocaleString()}
-                                                        <span className="text-[9px] sm:text-[10px] opacity-70 font-medium">XP</span>
-                                                    </span>
-                                                    <span className="text-foreground/90 mix-blend-screen drop-shadow-sm font-black text-sm sm:text-base">
-                                                        {progress}%
-                                                    </span>
-                                                    <span className="text-muted-foreground/80 mix-blend-screen drop-shadow-sm tabular-nums flex items-center gap-0.5">
-                                                        <span className="text-[9px] sm:text-[10px] opacity-60">/</span>
-                                                        {targetPoints.toLocaleString()}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            <GoalProgressBar
+                                                currentPoints={currentPoints}
+                                                targetPoints={targetPoints}
+                                                progress={progress}
+                                                className="mx-auto border-border/60 bg-muted/40 shadow-inner ring-1 ring-white/5"
+                                                labelClassName="px-3 sm:px-5 text-xs sm:text-sm"
+                                                percentClassName="text-sm sm:text-base"
+                                            />
                                         </div>
                                     </button>
                                 </div>

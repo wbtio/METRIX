@@ -182,6 +182,63 @@
   }
 }
 
+@keyframes focus-task-complete {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+  }
+
+  38% {
+    transform: translateY(-2px) scale(1.01);
+    filter: saturate(1.06);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes focus-task-pill-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.focus-task-completed-today {
+  position: relative;
+}
+
+.focus-task-completed-today::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(var(--focus-accent-rgb, 16, 185, 129), 0.08), transparent 56%);
+}
+
+.focus-task-completed-pill {
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .focus-task-completed-today[data-fresh="true"] {
+    animation: focus-task-complete 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .focus-task-completed-pill[data-fresh="true"] {
+    animation: focus-task-pill-pop 380ms ease-out both;
+  }
+}
+
 /* ============================================================ */
 /*  Calendar / Date-Picker Dropdown Styles                      */
 /* ============================================================ */
@@ -348,4 +405,106 @@ span:has(> select.rdp-years_dropdown) {
 /* Popover that wraps the calendar */
 [data-radix-popper-content-wrapper] .rdp-root {
   font-family: var(--font-ibm-arabic, var(--font-sans, inherit));
+}
+
+@keyframes reward-pack-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes reward-pack-shimmer {
+  0% {
+    transform: translateX(-160%) rotate(18deg);
+  }
+
+  100% {
+    transform: translateX(210%) rotate(18deg);
+  }
+}
+
+@keyframes reward-pack-seal-break {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+
+  35% {
+    opacity: 1;
+    transform: translateY(-8%) scaleY(0.92);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-42%) scaleY(0.28);
+  }
+}
+
+@keyframes reward-pack-core-burst {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  42% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.62);
+  }
+}
+
+@keyframes reward-card-emerge {
+  0% {
+    opacity: 0;
+    transform: translateY(14%) scale(0.84);
+    filter: blur(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reward-pack-shell {
+    animation: reward-pack-float 3.8s ease-in-out infinite;
+  }
+
+  .reward-pack-shell::after {
+    content: "";
+    position: absolute;
+    inset: -20% 32%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+    opacity: 0.55;
+    transform: translateX(-160%) rotate(18deg);
+    animation: reward-pack-shimmer 3.3s linear infinite;
+    pointer-events: none;
+  }
+
+  [data-opening="true"] .reward-pack-shell {
+    animation: reward-card-emerge 920ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  [data-opening="true"] .reward-pack-seal {
+    animation: reward-pack-seal-break 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  [data-opening="true"] .reward-pack-core {
+    animation: reward-pack-core-burst 680ms ease-out both;
+  }
+
+  .reward-card-face {
+    animation: reward-card-emerge 660ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }

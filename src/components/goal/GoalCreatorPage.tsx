@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     Loader2,
     CheckCircle,
@@ -26,6 +26,7 @@ interface GoalCreatorPageProps {
     initialGoalText: string;
     onComplete: () => void;
     onCancel: () => void;
+    onGuardStateChange?: (active: boolean) => void;
     language?: Language;
 }
 
@@ -47,12 +48,80 @@ interface StructuredMainTask {
     subtasks: StructuredSubtask[];
 }
 
+type GoalCreatorStep = 'INVESTIGATING' | 'QUESTIONS' | 'GENERATING_PLAN' | 'REVIEW';
+
+interface InvestigationQuestion {
+    id: string;
+    question: string;
+    type?: 'single_choice' | 'choice' | 'number' | 'text' | string;
+    options?: string[];
+    unit?: string;
+}
+
+interface GoalUnderstanding {
+    readiness?: string;
+    goal_summary?: string;
+    domain?: string;
+}
+
+interface InvestigationResult {
+    status?: string;
+    questions?: InvestigationQuestion[];
+    goal_understanding?: GoalUnderstanding;
+    safe_redirection?: {
+        message?: string;
+    };
+}
+
+interface LegacyTask {
+    id?: string;
+    task?: string;
+    frequency?: 'daily' | 'weekly' | string;
+    impact_weight?: number | string;
+    time_required_minutes?: number | string;
+    completion_criteria?: string;
+}
+
+interface PlanSummary {
+    goal_summary?: string;
+    estimated_total_days?: number;
+}
+
+interface PlanResult {
+    plan?: PlanSummary;
+    ai_summary?: string;
+    main_tasks?: StructuredMainTask[];
+    tasks?: LegacyTask[];
+}
+
+interface ApiErrorResponse {
+    error?: string;
+    message_ar?: string;
+    message_en?: string;
+}
+
 const isArabicText = (text: string) => /[\u0600-\u06FF]/.test(text);
+
+const isApiErrorResponse = (value: unknown): value is ApiErrorResponse =>
+    typeof value === 'object' &&
+    value !== null &&
+    ('error' in value || 'message_ar' in value || 'message_en' in value);
+
+const isPlanResult = (value: unknown): value is PlanResult =>
+    typeof value === 'object' &&
+    value !== null &&
+    ('plan' in value || 'ai_summary' in value || 'main_tasks' in value || 'tasks' in value);
+
+const isInvestigationResult = (value: unknown): value is InvestigationResult =>
+    typeof value === 'object' &&
+    value !== null &&
+    ('status' in value || 'questions' in value || 'goal_understanding' in value || 'safe_redirection' in value);
 
 export default function GoalCreatorPage({
     initialGoalText,
     onComplete,
     onCancel,
+    onGuardStateChange,
     language = 'en',
 }: GoalCreatorPageProps) {
     const supabase = createClient();
@@ -61,19 +130,91 @@ export default function GoalCreatorPage({
     const isArabic = resolvedLanguage === 'ar';
     const t = translations[resolvedLanguage];
 
-    const [step, setStep] = useState<'LOADING' | 'QUESTIONS' | 'REVIEW'>('LOADING');
+    const [step, setStep] = useState<GoalCreatorStep>('INVESTIGATING');
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [guardDismissed, setGuardDismissed] = useState(false);
 
-    const [investigationResult, setInvestigationResult] = useState<any>(null);
+    const [investigationResult, setInvestigationResult] = useState<InvestigationResult | null>(null);
     const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [planResult, setPlanResult] = useState<any>(null);
+    const [planResult, setPlanResult] = useState<PlanResult | null>(null);
     const [notification, setNotification] = useState<{ type: 'error' | 'warning' | 'info'; message: string } | null>(null);
+    const [refusedMessage, setRefusedMessage] = useState<string | null>(null);
 
     const [expandedMainTasks, setExpandedMainTasks] = useState<Record<number, boolean>>({});
 
-    const handleInvestigate = useCallback(async (currentAnswers?: Record<string, string>) => {
+    useEffect(() => {
+        const shouldGuard = !guardDismissed && (
+            step === 'QUESTIONS' ||
+            step === 'GENERATING_PLAN' ||
+            step === 'REVIEW'
+        );
+
+        onGuardStateChange?.(shouldGuard);
+    }, [guardDismissed, onGuardStateChange, step]);
+
+    useEffect(() => {
+        return () => {
+            onGuardStateChange?.(false);
+        };
+    }, [onGuardStateChange]);
+
+    const handleCreatePlan = useCallback(async (
+        finalAnswers?: Record<string, string>,
+        options?: { setGeneratingStep?: boolean }
+    ) => {
+        if (options?.setGeneratingStep) {
+            setStep('GENERATING_PLAN');
+        }
+
         setLoading(true);
+        setNotification(null);
+
+        try {
+            const res = await fetch('/api/goal/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    goal: initialGoalText,
+                    answers: finalAnswers || answers,
+                    structured_input: {},
+                }),
+            });
+
+            const data: PlanResult | ApiErrorResponse | null = await res.json().catch(() => null);
+            if (!res.ok) {
+                if (isApiErrorResponse(data) && data.error === 'quota_exceeded') {
+                    setNotification({
+                        type: 'warning',
+                        message: (isArabic ? data.message_ar : data.message_en) || data.error || `HTTP ${res.status}`,
+                    });
+                    setStep('QUESTIONS');
+                    return;
+                }
+                throw new Error(isApiErrorResponse(data) ? data.error || `HTTP ${res.status}` : `HTTP ${res.status}`);
+            }
+
+            if (!isPlanResult(data) || !data.plan) throw new Error('Invalid plan response');
+
+            setPlanResult(data);
+            setStep('REVIEW');
+        } catch (error: unknown) {
+            console.error(error);
+            setNotification({ type: 'error', message: isArabic ? 'فشل إنشاء الخطة.' : 'Failed to create plan.' });
+            setStep('QUESTIONS');
+        } finally {
+            setLoading(false);
+        }
+    }, [initialGoalText, answers, isArabic]);
+
+    const handleInvestigate = useCallback(async (
+        currentAnswers?: Record<string, string>,
+        pendingStep: GoalCreatorStep = 'INVESTIGATING'
+    ) => {
+        setStep(pendingStep);
+        setLoading(true);
+        setNotification(null);
+
         try {
             const res = await fetch('/api/goal/investigate', {
                 method: 'POST',
@@ -85,75 +226,50 @@ export default function GoalCreatorPage({
                 }),
             });
 
-            const data = await res.json().catch(() => null);
+            const data: InvestigationResult | ApiErrorResponse | null = await res.json().catch(() => null);
             if (!res.ok) {
-                if (data?.error === 'quota_exceeded') {
-                    setNotification({ type: 'warning', message: isArabic ? data.message_ar : data.message_en });
+                if (isApiErrorResponse(data) && data.error === 'quota_exceeded') {
+                    setNotification({
+                        type: 'warning',
+                        message: (isArabic ? data.message_ar : data.message_en) || data.error || `HTTP ${res.status}`,
+                    });
                     setStep('QUESTIONS');
                     return;
                 }
-                throw new Error(data?.error || `HTTP ${res.status}`);
+                throw new Error(isApiErrorResponse(data) ? data.error || `HTTP ${res.status}` : `HTTP ${res.status}`);
+            }
+
+            if (!isInvestigationResult(data)) {
+                throw new Error('Invalid investigation response');
             }
 
             setInvestigationResult(data);
 
             if (data.status === 'refused') {
-                setNotification({ type: 'error', message: data.safe_redirection?.message || 'Goal refused for safety reasons.' });
-                onCancel();
+                setGuardDismissed(true);
+                setRefusedMessage(data.safe_redirection?.message || (isArabic ? 'تم رفض الهدف لأسباب تتعلق بالسلامة.' : 'Goal refused for safety reasons.'));
                 return;
             }
 
             const ready = data.goal_understanding?.readiness === 'ready_for_plan';
             if (ready) {
-                await handleCreatePlan(currentAnswers);
+                await handleCreatePlan(currentAnswers, { setGeneratingStep: true });
                 return;
             }
+
             setStep('QUESTIONS');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
             setNotification({ type: 'error', message: isArabic ? 'فشل تحليل الهدف.' : 'Failed to analyze goal.' });
             setStep('QUESTIONS');
         } finally {
             setLoading(false);
         }
-    }, [initialGoalText, isArabic]);
-
-    const handleCreatePlan = useCallback(async (finalAnswers?: Record<string, string>) => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/goal/plan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    goal: initialGoalText,
-                    answers: finalAnswers || answers,
-                    structured_input: {},
-                }),
-            });
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                if (data?.error === 'quota_exceeded') {
-                    setNotification({ type: 'warning', message: isArabic ? data.message_ar : data.message_en });
-                    return;
-                }
-                throw new Error(data?.error || `HTTP ${res.status}`);
-            }
-
-            if (!data.plan) throw new Error('Invalid plan response');
-
-            setPlanResult(data);
-            setStep('REVIEW');
-        } catch (error: any) {
-            console.error(error);
-            setNotification({ type: 'error', message: isArabic ? 'فشل إنشاء الخطة.' : 'Failed to create plan.' });
-        } finally {
-            setLoading(false);
-        }
-    }, [initialGoalText, answers, isArabic]);
+    }, [handleCreatePlan, initialGoalText, isArabic, onCancel]);
 
     // Auto-start on mount
     useEffect(() => {
-        handleInvestigate();
+        void handleInvestigate();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -164,13 +280,13 @@ export default function GoalCreatorPage({
                 if (answers[q.id]) contextWithQuestions[q.question] = answers[q.id];
             }
         }
-        handleInvestigate(contextWithQuestions);
+        void handleInvestigate(contextWithQuestions, 'GENERATING_PLAN');
     };
 
-    const ensurePlanHasMainTasks = (rawPlan: any): StructuredMainTask[] => {
+    const ensurePlanHasMainTasks = (rawPlan: PlanResult): StructuredMainTask[] => {
         const cloned = { ...rawPlan };
         const mainTasks = Array.isArray(cloned.main_tasks) ? cloned.main_tasks : [];
-        if (mainTasks.length > 0) return cloned.main_tasks;
+        if (mainTasks.length > 0) return mainTasks;
 
         const legacyTasks = Array.isArray(cloned.tasks) ? cloned.tasks : [];
         if (legacyTasks.length > 0) {
@@ -180,7 +296,7 @@ export default function GoalCreatorPage({
                 frequency: 'weekly',
                 impact_weight: 6,
                 completion_criteria: '',
-                subtasks: legacyTasks.map((task: any, idx: number) => ({
+                subtasks: legacyTasks.map((task: LegacyTask, idx: number) => ({
                     id: task.id || `s${idx + 1}`,
                     task: task.task || `Task ${idx + 1}`,
                     frequency: task.frequency === 'weekly' ? 'weekly' : 'daily',
@@ -193,8 +309,8 @@ export default function GoalCreatorPage({
         return [];
     };
 
-    const updatePlanMain = (mainIndex: number, patch: any) => {
-        setPlanResult((prev: any) => {
+    const updatePlanMain = (mainIndex: number, patch: Partial<StructuredMainTask>) => {
+        setPlanResult((prev) => {
             if (!prev?.main_tasks) return prev;
             const updated = [...prev.main_tasks];
             updated[mainIndex] = { ...updated[mainIndex], ...patch };
@@ -202,8 +318,8 @@ export default function GoalCreatorPage({
         });
     };
 
-    const updatePlanSub = (mainIndex: number, subIndex: number, patch: any) => {
-        setPlanResult((prev: any) => {
+    const updatePlanSub = (mainIndex: number, subIndex: number, patch: Partial<StructuredSubtask>) => {
+        setPlanResult((prev) => {
             if (!prev?.main_tasks) return prev;
             const mains = [...prev.main_tasks];
             const subs = [...(mains[mainIndex]?.subtasks || [])];
@@ -270,7 +386,7 @@ export default function GoalCreatorPage({
                 const subtasks = Array.isArray(main.subtasks) ? main.subtasks : [];
                 if (subtasks.length === 0) continue;
 
-                const subRows = subtasks.map((sub: any, subIndex: number) => ({
+                const subRows = subtasks.map((sub: StructuredSubtask, subIndex: number) => ({
                     goal_id: goalData.id,
                     task_description: sub.task || `Subtask ${subIndex + 1}`,
                     frequency: sub.frequency === 'weekly' ? 'weekly' : 'daily',
@@ -287,10 +403,12 @@ export default function GoalCreatorPage({
             }
 
             setNotification({ type: 'info', message: isArabic ? 'تم إنشاء الهدف بنجاح.' : 'Goal created successfully.' });
+            setGuardDismissed(true);
             setTimeout(() => onComplete(), 600);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            setNotification({ type: 'error', message: `${isArabic ? 'فشل الحفظ' : 'Save failed'}: ${error.message}` });
+            const message = error instanceof Error ? error.message : (isArabic ? 'خطأ غير معروف.' : 'Unknown error.');
+            setNotification({ type: 'error', message: `${isArabic ? 'فشل الحفظ' : 'Save failed'}: ${message}` });
         } finally {
             setSaving(false);
         }
@@ -319,15 +437,43 @@ export default function GoalCreatorPage({
             </div>
         ) : null;
 
-    // ─── LOADING state ────────────────────────────────────────────────
+    const renderLoadingState = (title: string, subtitle: string) => (
+        <div
+            className="w-full max-w-2xl mx-auto animate-in fade-in duration-300"
+            dir={isArabic ? 'rtl' : 'ltr'}
+        >
+            <div className="rounded-2xl border border-border bg-card/40 px-5 py-4 mb-6">
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                    {isArabic ? 'هدفك' : 'Your goal'}
+                </p>
+                <p className="text-base font-semibold text-foreground leading-snug">
+                    {initialGoalText}
+                </p>
+            </div>
 
-    if (step === 'LOADING' || (loading && step !== 'QUESTIONS' && step !== 'REVIEW')) {
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-2 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                    </div>
+                </div>
+                <div className="text-center space-y-1">
+                    <p className="font-semibold text-foreground">{title}</p>
+                    <p className="text-sm text-muted-foreground">{subtitle}</p>
+                </div>
+            </div>
+        </div>
+    );
+
+    // ─── Refused state ────────────────────────────────────────────────
+
+    if (refusedMessage) {
         return (
             <div
                 className="w-full max-w-2xl mx-auto animate-in fade-in duration-300"
                 dir={isArabic ? 'rtl' : 'ltr'}
             >
-                {/* Goal echo */}
                 <div className="rounded-2xl border border-border bg-card/40 px-5 py-4 mb-6">
                     <p className="text-xs font-medium text-muted-foreground mb-1">
                         {isArabic ? 'هدفك' : 'Your goal'}
@@ -337,23 +483,49 @@ export default function GoalCreatorPage({
                     </p>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-16 gap-4">
-                    <div className="relative w-16 h-16">
-                        <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                        <div className="absolute inset-2 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                        </div>
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-6 py-8 flex flex-col items-center gap-4 text-center">
+                    <div className="w-14 h-14 rounded-full bg-destructive/15 flex items-center justify-center">
+                        <AlertTriangle className="w-7 h-7 text-destructive" />
                     </div>
-                    <div className="text-center space-y-1">
-                        <p className="font-semibold text-foreground">
-                            {isArabic ? 'الذكاء الاصطناعي يحلل هدفك...' : 'AI is analyzing your goal...'}
+                    <div className="space-y-2">
+                        <p className="font-semibold text-foreground text-lg">
+                            {isArabic ? 'تعذّر إنشاء الهدف' : 'Goal could not be created'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                            {isArabic ? 'جارِ بناء خطتك الشخصية' : 'Building your personalized plan'}
+                        <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
+                            {refusedMessage}
                         </p>
                     </div>
+                    <button
+                        onClick={onCancel}
+                        className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                        {isArabic ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+                        {isArabic ? 'العودة للرئيسية' : 'Back to home'}
+                    </button>
                 </div>
             </div>
+        );
+    }
+
+    // ─── Loading states ───────────────────────────────────────────────
+
+    if (step === 'INVESTIGATING') {
+        return renderLoadingState(
+            isArabic ? 'الذكاء الاصطناعي يحلل هدفك...' : 'AI is analyzing your goal...',
+            isArabic ? 'جارِ بناء خطتك الشخصية' : 'Building your personalized plan'
+        );
+    }
+
+    if (step === 'GENERATING_PLAN') {
+        return renderLoadingState(t.generatingPlanTitle, t.generatingPlanSubtitle);
+    }
+
+    if (loading && step !== 'QUESTIONS' && step !== 'REVIEW') {
+        return (
+            renderLoadingState(
+                isArabic ? 'الذكاء الاصطناعي يحلل هدفك...' : 'AI is analyzing your goal...',
+                isArabic ? 'جارِ بناء خطتك الشخصية' : 'Building your personalized plan'
+            )
         );
     }
 
@@ -396,7 +568,7 @@ export default function GoalCreatorPage({
                                 ? 'أجب على هذه الأسئلة لبناء خطة دقيقة:'
                                 : 'Answer these questions to build a precise plan:'}
                         </p>
-                        {questions.map((q: any, idx: number) => (
+                        {questions.map((q: InvestigationQuestion, idx: number) => (
                             <div key={q.id} className="rounded-2xl border border-border bg-card/30 px-5 py-4 space-y-3">
                                 <label className="text-sm font-semibold text-foreground leading-snug">
                                     {idx + 1}. {q.question}
@@ -471,15 +643,7 @@ export default function GoalCreatorPage({
                 )}
 
                 {/* Actions */}
-                <div className={cn("flex items-center gap-3 pt-2", isArabic ? "flex-row-reverse" : "flex-row")}>
-                    <button
-                        onClick={onCancel}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        {isArabic ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-                        {isArabic ? 'رجوع' : 'Back'}
-                    </button>
-                    <div className="flex-1" />
+                <div className={cn("flex items-center justify-end gap-3 pt-2", isArabic ? "flex-row-reverse" : "flex-row")}>
                     <button
                         onClick={submitAnswers}
                         disabled={loading}
@@ -567,7 +731,7 @@ export default function GoalCreatorPage({
                         {isArabic ? 'المهام والخطوات:' : 'Tasks & Steps:'}
                     </p>
 
-                    {mainTasks.map((main: any, mainIdx: number) => {
+                    {mainTasks.map((main: StructuredMainTask, mainIdx: number) => {
                         const isExpanded = expandedMainTasks[mainIdx] !== false;
                         const subCount = (main.subtasks || []).length;
 
@@ -616,7 +780,7 @@ export default function GoalCreatorPage({
                                 {/* Subtasks */}
                                 {isExpanded && subCount > 0 && (
                                     <div className="border-t border-border/60 divide-y divide-border/40">
-                                        {(main.subtasks || []).map((sub: any, subIdx: number) => (
+                                        {(main.subtasks || []).map((sub: StructuredSubtask, subIdx: number) => (
                                             <div key={sub.id || `${mainIdx}-${subIdx}`} className="flex items-center gap-3 px-4 py-2.5 bg-muted/10">
                                                 <div className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0 ms-2" />
                                                 <input

@@ -1,24 +1,36 @@
 'use client';
 
+import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
+const MANIFESTO_STORAGE_KEY = 'metrix-login-manifesto-seen';
+
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
+  const [isManifestoOpen, setIsManifestoOpen] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session) {
         router.push('/');
       } else {
+        if (!window.localStorage.getItem(MANIFESTO_STORAGE_KEY)) {
+          window.localStorage.setItem(MANIFESTO_STORAGE_KEY, 'true');
+          setIsManifestoOpen(true);
+        }
         setLoading(false);
       }
     };
+
     checkUser();
   }, [router, supabase]);
 
@@ -47,6 +59,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      <MatrixManifestoDialog
+        open={isManifestoOpen}
+        onOpenChange={setIsManifestoOpen}
+      />
+
       <div className="w-full max-w-md">
         <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* Logo */}
@@ -56,22 +73,27 @@ export default function LoginPage() {
               alt="Metrix Logo"
               width={180}
               height={180}
+              sizes="(max-width: 640px) 192px, 208px"
               priority
               className="h-auto w-48 sm:w-52 dark:hidden"
+              style={{ height: 'auto' }}
             />
             <Image
               src="/logo2.svg"
               alt="Metrix Logo Dark"
               width={180}
               height={180}
+              sizes="(max-width: 640px) 192px, 208px"
               priority
               className="hidden h-auto w-48 sm:w-52 dark:block"
+              style={{ height: 'auto' }}
             />
           </div>
 
           {/* Login Button */}
           <div className="space-y-4">
             <button
+              type="button"
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-4 rounded-xl border-2 border-gray-200 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -94,6 +116,14 @@ export default function LoginPage() {
                 />
               </svg>
               <span>تسجيل الدخول باستخدام جوجل</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsManifestoOpen(true)}
+              className="w-full text-center text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              القصة وراء ماتريكس
             </button>
 
             <p className="text-xs text-center text-muted-foreground">

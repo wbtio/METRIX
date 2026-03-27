@@ -517,6 +517,7 @@ Target Deadline (Optional): ${targetDeadline || "None"}
         previousLogs: any[] = [],
         goalContext: any = {},
         mainTasksInput: any[] = [],
+        calculateTimeBonus: boolean = false,
     ) {
         const safetyCheck = GeminiService.checkContentSafety(userLog);
         if (!safetyCheck.isSafe) {
@@ -550,6 +551,14 @@ Target Deadline (Optional): ${targetDeadline || "None"}
         const dynamicDailyCap = calculateDailyCap(sourceRows);
         const maxBasePoints = fallbackTasks.reduce((sum, t) => sum + (t.impact_weight || 0), 0);
 
+        const timeBonusInstruction = calculateTimeBonus ? `
+TIME-BASED BONUS:
+- If user mentions time spent on a task that exceeds the task's time_required_minutes, award bonus points.
+- Bonus calculation: (actual_time / expected_time - 1) * base_points * 0.5
+- Add time_bonus field to subtask_breakdown items when applicable.
+- Include total time bonus in the main bonus.points field.
+` : '';
+
         const systemPrompt = `
 SYSTEM ROLE:
 You are "Daily Judge" for a goal-tracking app.
@@ -569,7 +578,7 @@ SCORING RULES:
 - MAX BASE POINTS today = ${maxBasePoints}
 - ABSOLUTE DAILY CAP = ${dynamicDailyCap}
 - total_points_awarded = min(ABSOLUTE DAILY CAP, sum(subtask points) + bonus)
-
+${timeBonusInstruction}
 ANTI-GAMING:
 - Repeated/copied logs => conservative score and warning in reason.
 - Unrealistic claims => conservative scoring.
@@ -585,11 +594,14 @@ OUTPUT JSON ONLY:
       "task_id": "string",
       "status": "done|partial|missed|unknown",
       "points": number,
-      "reason": "string"
+      "reason": "string",
+      "time_bonus": number (optional, if time exceeded)
     }
   ],
   "bonus": {"points": number, "reason": "string"},
   "total_points_awarded": number,
+  "base_points": number,
+  "bonus_points": number,
   "coach_message": "string",
   "comparison_with_previous": "string",
   "safe_redirection": {"message": "string", "alternatives": ["string"]}
@@ -609,13 +621,17 @@ GOAL CONTEXT:
 ${JSON.stringify(goalContext || {}, null, 2)}
 
 DEFINED SUBTASKS:
-${JSON.stringify(fallbackTasks.map((t) => ({
-            id: t.id,
-            task_description: t.task_description,
-            frequency: t.frequency,
-            impact_weight: t.impact_weight,
-            max_points_possible: t.impact_weight,
-        })), null, 2)}
+${JSON.stringify(fallbackTasks.map((t) => {
+            const taskRow = sourceRows.find(row => row.id === t.id);
+            return {
+                id: t.id,
+                task_description: t.task_description,
+                frequency: t.frequency,
+                impact_weight: t.impact_weight,
+                max_points_possible: t.impact_weight,
+                time_required_minutes: taskRow?.time_required_minutes || null,
+            };
+        }), null, 2)}
 
 USER REPORT:
 <<<BEGIN_USER_INPUT>>>
@@ -650,14 +666,17 @@ ${previousLogsContext}
                 status: (item.status || 'unknown') as 'done' | 'partial' | 'missed' | 'unknown',
                 points: Math.max(0, Number(item.points) || 0),
                 reason: item.reason || '',
+                time_bonus: item.time_bonus ? Math.max(0, Number(item.time_bonus)) : undefined,
             }));
 
-            const bonusPoints = clamp(Number(parsed?.bonus?.points) || 0, 0, 5);
+            const bonusPoints = clamp(Number(parsed?.bonus?.points) || 0, 0, 10);
             const sumSubtaskPoints = normalizedSubtaskBreakdown.reduce(
                 (sum: number, item: any) => sum + (Number(item.points) || 0),
                 0,
             );
             const totalAwarded = clamp(sumSubtaskPoints + bonusPoints, 0, dynamicDailyCap);
+            const basePoints = parsed.base_points !== undefined ? Number(parsed.base_points) : sumSubtaskPoints;
+            const responseBonusPoints = parsed.bonus_points !== undefined ? Number(parsed.bonus_points) : bonusPoints;
 
             const mainBreakdown = deriveMainBreakdown(
                 hierarchy as MainTask[],
@@ -675,6 +694,8 @@ ${previousLogsContext}
                     points: bonusPoints,
                     reason: parsed?.bonus?.reason || "",
                 },
+                base_points: basePoints,
+                bonus_points: responseBonusPoints,
                 total_points_awarded: totalAwarded,
                 score: totalAwarded,
             };

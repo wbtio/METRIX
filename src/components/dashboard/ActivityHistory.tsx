@@ -11,7 +11,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import ConfirmModal from './ConfirmModal';
+import ConfirmModal from '../shared/ConfirmModal';
 
 interface Log {
     id: string;

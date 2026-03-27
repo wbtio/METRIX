@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Home, User, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getIconComponent } from './IconPicker';
+import { getIconComponent } from './goal/IconPicker';
 import {
     Tooltip,
     TooltipContent,
