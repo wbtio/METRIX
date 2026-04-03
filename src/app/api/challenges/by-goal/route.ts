@@ -76,12 +76,18 @@ async function buildParticipantScore(params: {
   participant: ParticipantRow;
   referenceDate: Date;
   challengeEndedAt: string | null;
+  localMidnightUtc?: string | null;
 }) {
-  const { supabase, participant, referenceDate, challengeEndedAt } = params;
+  const { supabase, participant, referenceDate, challengeEndedAt, localMidnightUtc } = params;
 
-  const todayStart = startOfUtcDay(referenceDate);
-  const tomorrowStart = addUtcDays(todayStart, 1);
-  const last7Start = addUtcDays(todayStart, -6);
+  // For active challenges, use the client's local midnight so "today" matches the user's timezone.
+  // For ended challenges, use the UTC end date as the reference.
+  const todayStart =
+    !challengeEndedAt && localMidnightUtc && !isNaN(new Date(localMidnightUtc).getTime())
+      ? new Date(localMidnightUtc)
+      : startOfUtcDay(referenceDate);
+  const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  const last7Start = new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
 
   const joinedAt = participant.joined_at;
   const totalEnd = challengeEndedAt || new Date().toISOString();
@@ -148,7 +154,7 @@ function noneSnapshot() {
 
 export async function POST(req: Request) {
   try {
-    const { goalId } = await req.json();
+    const { goalId, localMidnightUtc } = await req.json();
 
     if (!goalId) {
       return NextResponse.json({ error: 'goalId is required' }, { status: 400 });
@@ -237,6 +243,7 @@ export async function POST(req: Request) {
         participant: me,
         referenceDate,
         challengeEndedAt: room.ended_at,
+        localMidnightUtc,
       }),
       opponent
         ? buildParticipantScore({
@@ -244,6 +251,7 @@ export async function POST(req: Request) {
             participant: opponent,
             referenceDate,
             challengeEndedAt: room.ended_at,
+            localMidnightUtc,
           })
         : Promise.resolve(ZERO_SCORE),
       getRecentEvents(supabase, me, 'me', room.ended_at),

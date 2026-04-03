@@ -166,6 +166,18 @@ export default function GrowthChart({
 
     const buckets = new Map<string, { rawDate: string; points: number }>();
 
+    // Pre-fill every day in the visible range with 0 so gaps show as empty bars
+    if (bucketMode === "day") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const daysBack = timeRange === "week" ? 6 : 29;
+      for (let i = daysBack; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        buckets.set(key, { rawDate: key, points: 0 });
+      }
+    }
+
     filteredData.forEach((entry) => {
       const entryDate = parseLocalDay(entry.date);
       const rawDate =

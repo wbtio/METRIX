@@ -9,6 +9,13 @@ import {
     type MainTask,
 } from "@/lib/task-hierarchy";
 import { analyzeDailyPerformance } from "@/lib/daily-log-feedback";
+import type {
+    DailyFocusGoalContext,
+    DailyFocusHistoryItem,
+    DailyFocusLogContext,
+    DailyFocusResult,
+} from "@/lib/daily-focus";
+import { DAILY_FOCUS_REQUIRED_DAYS } from "@/lib/daily-focus";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY!
@@ -75,8 +82,57 @@ const MODEL_FALLBACK_CHAIN = [
 const clamp = (value: number, min: number, max: number) =>
     Math.max(min, Math.min(max, value));
 
+const DAILY_FOCUS_ANGLES = [
+    {
+        enLabel: "Method Fit",
+        arLabel: "ملاءمة الطريقة",
+        prompt: "Ask whether the current learning or work method truly fits the user's reality and strengths.",
+    },
+    {
+        enLabel: "Yesterday Review",
+        arLabel: "مراجعة الأمس",
+        prompt: "Anchor the question in yesterday or the latest real execution, not abstract motivation.",
+    },
+    {
+        enLabel: "Task Value",
+        arLabel: "قيمة المهمة",
+        prompt: "Check if the current tasks are actually moving the user closer to the goal or just keeping them busy.",
+    },
+    {
+        enLabel: "Obstacle",
+        arLabel: "العائق",
+        prompt: "Surface the specific friction, blocker, or pattern that is slowing execution.",
+    },
+    {
+        enLabel: "Evidence",
+        arLabel: "الدليل",
+        prompt: "Ask for real evidence that the current plan is producing progress toward the target.",
+    },
+    {
+        enLabel: "Sustainability",
+        arLabel: "الاستمرارية الواقعية",
+        prompt: "Check whether the plan is sustainable day after day and what should change to keep it realistic.",
+    },
+];
+
 function normalizeFrequency(value: any): 'daily' | 'weekly' {
     return value === 'weekly' ? 'weekly' : 'daily';
+}
+
+function hashSeed(value: string) {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+    }
+    return hash;
+}
+
+function pickDailyFocusAngle(seed: string, language: 'ar' | 'en') {
+    const angle = DAILY_FOCUS_ANGLES[hashSeed(seed) % DAILY_FOCUS_ANGLES.length];
+    return {
+        label: language === 'ar' ? angle.arLabel : angle.enLabel,
+        prompt: angle.prompt,
+    };
 }
 
 function normalizePlanHierarchy(rawPlan: any) {
@@ -508,6 +564,264 @@ Target Deadline (Optional): ${targetDeadline || "None"}
             return normalizePlanHierarchy(parsed);
         } catch (error) {
             console.error("Gemini createPlan Error:", error);
+            throw error;
+        }
+    }
+
+    static async generateDailyFocus(
+        goalContext: DailyFocusGoalContext,
+        taskRows: TaskRow[],
+        recentLogs: DailyFocusLogContext[] = [],
+        options: {
+            date?: string;
+            answer?: string;
+            existingQuestion?: string;
+            history?: DailyFocusHistoryItem[];
+        } = {},
+    ): Promise<DailyFocusResult> {
+        const safetySource = [goalContext.title, goalContext.ai_summary || '', options.answer || '']
+            .join('\n')
+            .trim();
+        const safetyCheck = GeminiService.checkContentSafety(safetySource);
+        if (!safetyCheck.isSafe) {
+            return {
+                status: "refused",
+                date: options.date || new Date().toISOString().split('T')[0],
+                angle_label: "",
+                question: "",
+                question_why: "",
+                answer_coaching: "",
+                suggestions: [],
+                suggestions_unlocked: false,
+                answered_days_count: 0,
+                required_answer_days: DAILY_FOCUS_REQUIRED_DAYS,
+                safe_redirection: {
+                    message: safetyCheck.reason,
+                    alternatives: ["Please reach out to professional support if you are in distress."],
+                },
+            };
+        }
+
+        const languageProbe = [
+            options.answer || '',
+            goalContext.title,
+            goalContext.ai_summary || '',
+            recentLogs.map((log) => log.user_input || '').join('\n'),
+        ]
+            .filter(Boolean)
+            .join('\n');
+        const userLanguage = GeminiService.detectLanguage(languageProbe || goalContext.title);
+        const date = options.date || new Date().toISOString().split('T')[0];
+        const hierarchy = buildTaskHierarchy(taskRows);
+        const history = Array.isArray(options.history) ? options.history : [];
+        const answeredDaysCount =
+            history.length + (options.answer?.trim() ? 1 : 0);
+        const suggestionsUnlocked = answeredDaysCount >= DAILY_FOCUS_REQUIRED_DAYS;
+        const focusAngle = pickDailyFocusAngle(
+            `${goalContext.id || goalContext.title}:${date}`,
+            userLanguage,
+        );
+
+        const scopedMainTasks = hierarchy.map((main) => ({
+            id: main.id,
+            title: main.task_description,
+            frequency: main.frequency,
+            impact_weight: main.impact_weight,
+            subtasks: main.subtasks.map((sub) => ({
+                id: sub.id,
+                title: sub.task_description,
+                frequency: sub.frequency,
+                impact_weight: sub.impact_weight,
+            })),
+        }));
+
+        const existingSubtaskNames = hierarchy.flatMap((main) =>
+            main.subtasks.map((sub) => sub.task_description),
+        );
+
+        const systemPrompt = `
+SYSTEM ROLE:
+You are "Plan Feedback Strategist" inside a goal-tracking app.
+
+PRIMARY OBJECTIVE:
+- Read the goal, task structure, recent progress logs, and previous daily answers.
+- Produce one diagnostic question for today that evaluates the PLAN, the METHOD, or the TASKS.
+- Explain briefly why this question matters now.
+- Produce 0 to 4 suggested tasks only when enough answer history exists.
+
+QUESTION RULES:
+- One question only.
+- Keep it concise, direct, and useful for plan evaluation.
+- It must be tightly connected to the goal, current task system, and recent execution.
+- Use today's angle hint to vary the perspective.
+- Prefer questions such as:
+  - Is this method actually helping?
+  - Which task helped yesterday and which task wasted effort?
+  - Did yesterday's execution move the goal forward or only create activity?
+  - What should change in the plan to make progress more real?
+- The question should often reference yesterday or the latest real day of work, not vague feelings.
+
+SUGGESTION RULES:
+- Each suggestion must be specific, actionable, and measurable.
+- Suggestions must be derived from answer history and plan feedback, not generic task ideas.
+- Avoid duplicating existing subtasks unless the logs or answers clearly show the user needs a better version of that step.
+- If a suggestion fits under an existing main task, set target_type="sub" and use one valid parent_task_id from the provided main tasks list.
+- If it introduces a new strategic track, set target_type="main" and parent_task_id=null.
+- frequency must be only "daily" or "weekly".
+- impact_weight must be 1..5 for sub tasks and 1..10 for main tasks.
+- If ANSWER_HISTORY_COUNT is lower than REQUIRED_ANSWER_DAYS, return an empty suggestions array.
+
+ANSWER HANDLING:
+- If USER_ANSWER exists, keep the same daily question and refine the suggestions using the answer.
+- answer_coaching should become a short coach line that reacts to the answer.
+- If USER_ANSWER is empty, answer_coaching can be an empty string.
+
+LANGUAGE:
+- Respond fully in ${userLanguage === 'ar' ? 'Arabic' : 'English'}.
+
+OUTPUT JSON ONLY:
+{
+  "status": "ok" | "refused",
+  "date": "YYYY-MM-DD",
+  "angle_label": "string",
+  "question": "string",
+  "question_why": "string",
+  "answer_coaching": "string",
+  "suggestions_unlocked": boolean,
+  "answered_days_count": number,
+  "required_answer_days": number,
+  "suggestions": [
+    {
+      "id": "s1",
+      "title": "string",
+      "reason": "string",
+      "frequency": "daily|weekly",
+      "impact_weight": number,
+      "target_type": "main|sub",
+      "parent_task_id": "string or null"
+    }
+  ],
+  "safe_redirection": {
+    "message": "string",
+    "alternatives": ["string"]
+  }
+}`;
+
+        const userPrompt = `
+DATE:
+${date}
+
+ANGLE HINT:
+${focusAngle.label} - ${focusAngle.prompt}
+
+ANSWER HISTORY COUNT:
+${history.length}
+
+REQUIRED ANSWER DAYS BEFORE SUGGESTIONS:
+${DAILY_FOCUS_REQUIRED_DAYS}
+
+GOAL:
+${JSON.stringify(goalContext, null, 2)}
+
+MAIN TASK OPTIONS FOR parent_task_id:
+${JSON.stringify(
+            scopedMainTasks.map((main) => ({
+                id: main.id,
+                title: main.title,
+                frequency: main.frequency,
+            })),
+            null,
+            2,
+        )}
+
+CURRENT TASK MAP:
+${JSON.stringify(scopedMainTasks, null, 2)}
+
+EXISTING SUBTASK TITLES:
+${JSON.stringify(existingSubtaskNames, null, 2)}
+
+RECENT LOGS:
+${JSON.stringify(
+            recentLogs.slice(0, 8).map((log) => ({
+                created_at: log.created_at,
+                ai_score: log.ai_score ?? null,
+                ai_feedback: log.ai_feedback ?? '',
+                user_input: log.user_input ?? '',
+            })),
+            null,
+            2,
+        )}
+
+PREVIOUS DAILY FEEDBACK ANSWERS:
+${JSON.stringify(history.slice(0, 8), null, 2)}
+
+EXISTING QUESTION TO KEEP:
+${options.existingQuestion || ''}
+
+USER_ANSWER:
+${options.answer || ''}
+`;
+
+        try {
+            const response = await GeminiService.callWithRetry(
+                {
+                    responseMimeType: "application/json",
+                    systemInstruction: { parts: [{ text: systemPrompt }], role: "system" },
+                },
+                { role: "user", parts: [{ text: userPrompt }] },
+            );
+
+            const responseText = response.text || "";
+            if (!responseText) throw new Error("Empty response from Gemini API");
+
+            const parsed = extractJson(responseText);
+            const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+
+            return {
+                status: parsed.status === 'refused' ? 'refused' : 'ok',
+                date: typeof parsed.date === 'string' ? parsed.date : date,
+                angle_label:
+                    typeof parsed.angle_label === 'string' && parsed.angle_label.trim()
+                        ? parsed.angle_label.trim()
+                        : focusAngle.label,
+                question:
+                    typeof parsed.question === 'string' && parsed.question.trim()
+                        ? parsed.question.trim()
+                        : options.existingQuestion?.trim() || '',
+                question_why:
+                    typeof parsed.question_why === 'string'
+                        ? parsed.question_why.trim()
+                        : '',
+                answer_coaching:
+                    typeof parsed.answer_coaching === 'string'
+                        ? parsed.answer_coaching.trim()
+                        : '',
+                suggestions_unlocked: suggestionsUnlocked,
+                answered_days_count: answeredDaysCount,
+                required_answer_days: DAILY_FOCUS_REQUIRED_DAYS,
+                suggestions: (suggestionsUnlocked ? suggestions : []).map((item: any, index: number) => {
+                    const targetType = item?.target_type === 'sub' ? 'sub' : 'main';
+                    return {
+                        id: typeof item?.id === 'string' ? item.id : `daily-focus-${index + 1}`,
+                        title: typeof item?.title === 'string' ? item.title.trim() : '',
+                        reason: typeof item?.reason === 'string' ? item.reason.trim() : '',
+                        frequency: normalizeFrequency(item?.frequency),
+                        impact_weight: clamp(
+                            Number(item?.impact_weight) || 1,
+                            1,
+                            targetType === 'sub' ? 5 : 10,
+                        ),
+                        target_type: targetType,
+                        parent_task_id:
+                            targetType === 'sub' && typeof item?.parent_task_id === 'string'
+                                ? item.parent_task_id
+                                : null,
+                    };
+                }).filter((item: any) => item.title),
+                safe_redirection: parsed.safe_redirection,
+            };
+        } catch (error) {
+            console.error("Gemini generateDailyFocus Error:", error);
             throw error;
         }
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { type Language } from '@/lib/translations';
+import { getLocalDateKey } from '@/lib/task-periods';
 import { parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
 import { getScorableTasks, type TaskRow } from '@/lib/task-hierarchy';
 import { getTaskAccent, type TaskAccent } from '@/lib/task-colors';
@@ -101,7 +102,8 @@ const copy = {
 } as const;
 
 export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskInsightsProps) {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const isArabic = language === 'ar';
   const text = copy[language];
   const [history, setHistory] = useState<TaskCheckinRow[]>([]);
@@ -176,7 +178,7 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
     return () => {
       mounted = false;
     };
-  }, [goalId, supabase]);
+  }, [goalId]);
 
   const analytics = useMemo(() => {
     const scorableTasks = getScorableTasks(tasks);
@@ -222,10 +224,11 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
     }
 
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 6 * 86400000);
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgoLocal = new Date(todayLocal.getTime() - 6 * 86400000);
     const pulseDays = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(now.getTime() - (6 - index) * 86400000);
-      const key = date.toISOString().split('T')[0];
+      const date = new Date(todayLocal.getTime() - (6 - index) * 86400000);
+      const key = getLocalDateKey(date);
       return {
         key,
         label: date.toLocaleDateString(isArabic ? 'ar-IQ' : 'en-US', { weekday: 'short' }),
@@ -247,11 +250,11 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
         aggregate.lastCompletedAt = stamp;
       }
 
-      if (completedDate >= weekAgo) {
+      if (completedDate >= weekAgoLocal) {
         aggregate.recentCount += 1;
       }
 
-      const pulseKey = completedDate.toISOString().split('T')[0];
+      const pulseKey = getLocalDateKey(completedDate);
       if (pulseMap.has(pulseKey)) {
         pulseMap.get(pulseKey)!.total += 1;
       }
@@ -259,6 +262,19 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
 
     const aggregates = Array.from(baseAggregates.values());
     const completedTasks = aggregates.filter((item) => item.completionCount > 0);
+
+    // Weekly stats: count completions and points from the last 7 days only
+    const weeklyCompleted = history.filter((row) => {
+      const stamp = row.completed_at || `${row.period_start}T00:00:00.000Z`;
+      return new Date(stamp) >= weekAgoLocal;
+    }).length;
+    const weeklyPoints = history
+      .filter((row) => {
+        const stamp = row.completed_at || `${row.period_start}T00:00:00.000Z`;
+        return new Date(stamp) >= weekAgoLocal;
+      })
+      .reduce((sum, row) => sum + (row.points ?? 0), 0);
+
     const topTasks = [...completedTasks]
       .sort((a, b) => b.completionCount - a.completionCount || b.totalPoints - a.totalPoints)
       .slice(0, 6)
@@ -292,7 +308,8 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
       topTasks,
       pulseDays,
       activeDays: pulseDays.filter((day) => day.total > 0).length,
-      totalPoints: completedTasks.reduce((sum, item) => sum + item.totalPoints, 0),
+      weeklyCompleted,
+      weeklyPoints,
       totalCompleted: completedTasks.reduce((sum, item) => sum + item.completionCount, 0),
     };
   }, [history, isArabic, tasks]);
@@ -341,7 +358,7 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
           <div className="relative grid grid-cols-2 gap-1.5 sm:grid-cols-3">
             <div className={insightTileClassName}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.completions}</div>
-              <div className="mt-0.5 text-base font-black text-foreground">{analytics.totalCompleted}</div>
+              <div className="mt-0.5 text-base font-black text-foreground">{analytics.weeklyCompleted}</div>
             </div>
             <div className={insightTileClassName}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.activeDays}</div>
@@ -350,7 +367,7 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
             <div className={cn(insightTileClassName, 'col-span-2 sm:col-span-1')}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{text.points}</div>
               <div className="mt-0.5 text-base font-black text-foreground">
-                {analytics.totalPoints}
+                {analytics.weeklyPoints}
               </div>
             </div>
           </div>

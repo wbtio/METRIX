@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
   CheckSquare,
   Square,
@@ -28,18 +28,24 @@ import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
 import { getTaskAccent, type TaskColorKey } from '@/lib/task-colors';
 import { type MainTask } from '@/lib/task-hierarchy';
+import type { DailyFocusSession } from '@/lib/daily-focus';
 import FullEmojiPicker from '../shared/FullEmojiPicker';
 import TaskAppearancePicker from '../shared/TaskAppearancePicker';
 import TaskColorPicker from '../shared/TaskColorPicker';
+import DailyFocusPanel from './DailyFocusPanel';
 
 interface FocusTabProps {
   language?: Language;
   isArabic: boolean;
+  dailyFocus: DailyFocusSession | null;
+  dailyFocusLoading: boolean;
+  dailyFocusSubmitting: boolean;
+  dailyFocusAddingSuggestionId: string | null;
+  dailyFocusError: string | null;
+  dailyFocusAnswer: string;
   filteredHierarchy: MainTask[];
   hierarchy: MainTask[];
   loadingTasks: boolean;
-  taskFilter: 'all' | 'daily' | 'weekly';
-  focusFilterCounts: { all: number; daily: number; weekly: number };
   focusStats: { totalSubtasks: number; completedSubtasks: number };
   expandedMains: Set<string>;
   addingMain: boolean;
@@ -57,7 +63,6 @@ interface FocusTabProps {
   isChecked: (taskId: string, frequency: string) => boolean;
   isCompletedToday: (taskId: string) => boolean;
   shouldAnimateTask: (taskId: string) => boolean;
-  onSetTaskFilter: (filter: 'all' | 'daily' | 'weekly') => void;
   onToggleExpand: (mainId: string) => void;
   onToggleCheckin: (taskId: string, frequency: string) => void;
   onOpenNewMainComposer: () => void;
@@ -73,6 +78,11 @@ interface FocusTabProps {
   onUpdateTaskIcon: (taskId: string, icon: string) => void;
   onUpdateTaskColor: (taskId: string, color: TaskColorKey | null) => void;
   onUpdateTaskWeight: (taskId: string, weight: number) => void;
+  onSetDailyFocusAnswer: (text: string) => void;
+  onAppendDailyFocusTranscript: (text: string) => void;
+  onSubmitDailyFocusAnswer: () => void;
+  onRetryDailyFocus: () => void;
+  onAddDailyFocusSuggestion: (suggestionId: string) => void;
   onSetNewMainText: (text: string) => void;
   onSetNewMainFreq: (freq: 'daily' | 'weekly') => void;
   onSetNewMainWeight: (weight: number) => void;
@@ -97,11 +107,15 @@ function hexToRgbChannels(hex: string) {
 export default function FocusTab({
   language = 'en',
   isArabic,
+  dailyFocus,
+  dailyFocusLoading,
+  dailyFocusSubmitting,
+  dailyFocusAddingSuggestionId,
+  dailyFocusError,
+  dailyFocusAnswer,
   filteredHierarchy,
   hierarchy,
   loadingTasks,
-  taskFilter,
-  focusFilterCounts,
   focusStats,
   expandedMains,
   addingMain,
@@ -119,7 +133,6 @@ export default function FocusTab({
   isChecked,
   isCompletedToday,
   shouldAnimateTask,
-  onSetTaskFilter,
   onToggleExpand,
   onToggleCheckin,
   onOpenNewMainComposer,
@@ -135,6 +148,11 @@ export default function FocusTab({
   onUpdateTaskIcon,
   onUpdateTaskColor,
   onUpdateTaskWeight,
+  onSetDailyFocusAnswer,
+  onAppendDailyFocusTranscript,
+  onSubmitDailyFocusAnswer,
+  onRetryDailyFocus,
+  onAddDailyFocusSuggestion,
   onSetNewMainText,
   onSetNewMainFreq,
   onSetNewMainWeight,
@@ -145,11 +163,11 @@ export default function FocusTab({
   onSetEditingText,
 }: FocusTabProps) {
   const t = translations[language];
+  const [focusSection, setFocusSection] = useState<'tasks' | 'suggestions'>('tasks');
 
-  const focusFilterOptions = [
-    { key: 'all' as const, label: isArabic ? 'الكل' : 'All', count: focusFilterCounts.all },
-    { key: 'daily' as const, label: isArabic ? 'يومي' : 'Daily', count: focusFilterCounts.daily },
-    { key: 'weekly' as const, label: isArabic ? 'أسبوعي' : 'Weekly', count: focusFilterCounts.weekly },
+  const sectionTabs = [
+    { key: 'tasks' as const, label: t.focusTasksTab },
+    { key: 'suggestions' as const, label: t.focusSuggestionsTab },
   ];
 
   return (
@@ -158,50 +176,60 @@ export default function FocusTab({
         {/* Filter bar */}
         <div className="border-b border-border/60 px-3 py-3 sm:px-4">
           <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            {focusFilterOptions.map((option) => (
+            {sectionTabs.map((tab) => (
               <button
-                key={option.key}
-                onClick={() => onSetTaskFilter(option.key)}
+                key={tab.key}
+                onClick={() => setFocusSection(tab.key)}
                 className={cn(
                   'inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all',
-                  taskFilter === option.key
+                  focusSection === tab.key
                     ? 'border-border/70 bg-white text-foreground shadow-sm dark:bg-background'
                     : 'border-border/60 bg-background/80 text-muted-foreground hover:text-foreground dark:bg-background/20',
                 )}
               >
-                <span>{option.label}</span>
-                <span className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[10px] font-black',
-                  taskFilter === option.key
-                    ? 'bg-foreground/10 text-foreground dark:bg-foreground/15'
-                    : 'bg-muted/70 text-muted-foreground',
-                )}>
-                  {option.count}
-                </span>
+                <span>{tab.label}</span>
               </button>
             ))}
             <span className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-cyan-600/20 bg-cyan-600/10 px-3 text-[11px] font-semibold text-cyan-700 dark:text-cyan-400">
               <CheckSquare className="h-3.5 w-3.5" />
               {focusStats.completedSubtasks}/{focusStats.totalSubtasks}
             </span>
-            <button
-              onClick={addingMain ? onCloseNewMainComposer : onOpenNewMainComposer}
-              className={cn(
-                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all',
-                addingMain
-                  ? 'border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15'
-                  : 'bg-primary text-primary-foreground shadow-sm shadow-primary/15 hover:opacity-90',
-              )}
-              aria-label={addingMain ? (isArabic ? 'إلغاء' : 'Cancel') : (isArabic ? 'إضافة مهمة رئيسية' : 'Add main task')}
-            >
-              {addingMain ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            </button>
+            {focusSection === 'tasks' ? (
+              <button
+                onClick={addingMain ? onCloseNewMainComposer : onOpenNewMainComposer}
+                className={cn(
+                  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all',
+                  addingMain
+                    ? 'border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15'
+                    : 'bg-primary text-primary-foreground shadow-sm shadow-primary/15 hover:opacity-90',
+                )}
+                aria-label={addingMain ? (isArabic ? 'إلغاء' : 'Cancel') : (isArabic ? 'إضافة مهمة رئيسية' : 'Add main task')}
+              >
+                {addingMain ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              </button>
+            ) : null}
           </div>
         </div>
 
         {/* Task list body */}
         <div className="px-3 py-3 sm:px-4 sm:py-4">
-          {loadingTasks ? (
+          {focusSection === 'suggestions' ? (
+            <DailyFocusPanel
+              language={language}
+              isArabic={isArabic}
+              dailyFocus={dailyFocus}
+              loading={dailyFocusLoading}
+              submitting={dailyFocusSubmitting}
+              addingSuggestionId={dailyFocusAddingSuggestionId}
+              error={dailyFocusError}
+              answer={dailyFocusAnswer}
+              onAnswerChange={onSetDailyFocusAnswer}
+              onAnswerSubmit={onSubmitDailyFocusAnswer}
+              onAppendTranscript={onAppendDailyFocusTranscript}
+              onAddSuggestion={onAddDailyFocusSuggestion}
+              onRetry={onRetryDailyFocus}
+            />
+          ) : loadingTasks ? (
             <div className="space-y-3">
               {[0, 1, 2].map((item) => (
                 <div key={item} className="animate-pulse rounded-2xl border border-border/60 bg-muted/20 p-3.5">
@@ -236,26 +264,6 @@ export default function FocusTab({
               >
                 <Plus className="h-4 w-4" />
                 {isArabic ? 'إضافة مهمة رئيسية' : 'Add main task'}
-              </button>
-            </div>
-          ) : filteredHierarchy.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/[0.18] px-4 py-8 text-center sm:px-6">
-              <h3 className="text-sm font-black text-foreground">
-                {taskFilter === 'daily'
-                  ? (isArabic ? 'لا توجد مسارات يومية حالياً' : 'No daily tracks right now')
-                  : (isArabic ? 'لا توجد مسارات أسبوعية حالياً' : 'No weekly tracks right now')}
-              </h3>
-              <p className="mt-2 text-xs leading-6 text-muted-foreground sm:text-sm">
-                {isArabic
-                  ? 'بدّل الفلتر أو أضف مساراً جديداً حتى تظهر لك المهام المناسبة هنا.'
-                  : 'Switch the filter or add a new track to surface the right tasks here.'}
-              </p>
-              <button
-                onClick={() => onSetTaskFilter('all')}
-                className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted/40 dark:bg-background/20"
-              >
-                <ListTodo className="h-4 w-4" />
-                {isArabic ? 'عرض كل المسارات' : 'Show all tracks'}
               </button>
             </div>
           ) : (

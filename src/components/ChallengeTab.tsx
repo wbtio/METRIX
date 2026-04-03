@@ -40,9 +40,11 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
   const fetchSnapshot = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
+      const now = new Date();
+      const localMidnightUtc = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
       try {
-        const payload = await postJSON<{ data: ChallengeSnapshot }>('/api/challenges/by-goal', { goalId });
+        const payload = await postJSON<{ data: ChallengeSnapshot }>('/api/challenges/by-goal', { goalId, localMidnightUtc });
         setSnapshot(payload.data || EMPTY_SNAPSHOT);
       } catch (error: unknown) {
         setFeedback({ type: 'error', text: getErrorMessage(error, 'Failed to load challenge') });
@@ -111,7 +113,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
 
   useEffect(() => {
     setShowAllEvents(false);
-  }, [snapshot.challengeId, snapshot.status, snapshot.recentEvents.length]);
+  }, [snapshot.challengeId, snapshot.status]);
 
   const handleCreate = async () => {
     if (!beginAction('create')) return;
@@ -287,7 +289,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
           t={t}
         />
 
-        {snapshot.status === 'active' && (
+        {(snapshot.status === 'active' || snapshot.status === 'ended') && (
           <ActivityCard
             recentEvents={snapshot.recentEvents}
             visibleEvents={visibleEvents}
@@ -303,7 +305,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
           />
         )}
 
-        {(snapshot.status === 'none' || snapshot.status === 'pending' || snapshot.status === 'ended') && (
+        {(snapshot.status === 'none' || snapshot.status === 'pending' || snapshot.status === 'ended' || snapshot.status === 'active') && (
           <HistoryCard
             history={history}
             historyLoading={historyLoading}

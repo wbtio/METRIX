@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { type Language } from "@/lib/translations";
+import { getLocalDateKey } from "@/lib/task-periods";
 import {
   getDailyPerformanceLabel,
   parseDailyLogBreakdown,
@@ -137,7 +138,7 @@ export default function DayCalendarGrid({
   const logsByDate = useMemo(() => {
     const map = new Map<string, Log[]>();
     logs.forEach((log) => {
-      const dateKey = log.created_at.split("T")[0];
+      const dateKey = getLocalDateKey(new Date(log.created_at));
       if (!map.has(dateKey)) {
         map.set(dateKey, []);
       }
@@ -156,8 +157,9 @@ export default function DayCalendarGrid({
   );
   const weekdayLabels = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
+    // Jan 8, 2024 = Monday — gives Mon-Sun order
     return Array.from({ length: 7 }, (_, index) =>
-      formatter.format(new Date(2024, 0, 7 + index)),
+      formatter.format(new Date(2024, 0, 8 + index)),
     );
   }, [locale]);
 
@@ -165,7 +167,8 @@ export default function DayCalendarGrid({
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
+    // ISO week: Monday=0 … Sunday=6  (JS getDay: Sun=0, Mon=1…Sat=6)
+    const firstDayIndex = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
     const monthStart = new Date(viewYear, viewMonth, 1);
     monthStart.setHours(0, 0, 0, 0);
     const monthEnd = new Date(viewYear, viewMonth, daysInMonth);
@@ -322,7 +325,20 @@ export default function DayCalendarGrid({
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
         <div className="border-b border-border/60 pb-1.5 sm:pb-1">
-          <div className="flex items-center">
+          <div className="flex items-center gap-0.5" dir="ltr">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDate(null);
+                setTooltip(null);
+                setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
+              }}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              aria-label={isArabic ? "الشهر السابق" : "Previous month"}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+
             <Popover
               open={isMonthPickerOpen}
               onOpenChange={handleMonthPickerOpenChange}
@@ -392,6 +408,23 @@ export default function DayCalendarGrid({
                 </div>
               </PopoverContent>
             </Popover>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDate(null);
+                setTooltip(null);
+                setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
+              }}
+              disabled={
+                viewDate.getFullYear() === today.getFullYear() &&
+                viewDate.getMonth() === today.getMonth()
+              }
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              aria-label={isArabic ? "الشهر التالي" : "Next month"}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 

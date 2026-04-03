@@ -5,7 +5,18 @@ import { Flame, BarChart3, ListTodo, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/translations";
 import { createClient } from "@/utils/supabase/client";
-import { getPeriodStart, getPeriodTypeFromFrequency } from "@/lib/task-periods";
+import { getPeriodStart, getPeriodTypeFromFrequency, getLocalDateKey } from "@/lib/task-periods";
+import {
+  buildDailyFocusHistory,
+  buildDailyFocusSessionFromRow,
+  compactDailyFocusLogs,
+  normalizeDailyFocusEntryRow,
+  normalizeDailyFocusResult,
+  DAILY_FOCUS_REQUIRED_DAYS,
+  type DailyFocusEntryRow,
+  type DailyFocusGoalContext,
+  type DailyFocusSession,
+} from "@/lib/daily-focus";
 import {
   buildTaskHierarchy,
   type MainTask,
@@ -23,6 +34,7 @@ import TaskInsights from "./TaskInsights";
 import DashboardHeader from "./DashboardHeader";
 import FocusTab from "./FocusTab";
 import ToastNotification from "./ToastNotification";
+import DailyFocusQuestionDialog from "./DailyFocusQuestionDialog";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -129,9 +141,6 @@ export default function Dashboard({
   const [activeTab, setActiveTab] = useState<DashboardTab>("focus");
   const [showLogModal, setShowLogModal] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(true);
-  const [taskFilter, setTaskFilter] = useState<"all" | "daily" | "weekly">(
-    "all",
-  );
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
@@ -167,6 +176,25 @@ export default function Dashboard({
   const [freshlyCompletedTaskIds, setFreshlyCompletedTaskIds] = useState<
     Set<string>
   >(new Set<string>());
+  const [streak, setStreak] = useState(0);
+  const [chartData, setChartData] = useState<
+    { date: string; points: number }[]
+  >([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logsLoaded, setLogsLoaded] = useState(false);
+  const [dailyFocusRows, setDailyFocusRows] = useState<DailyFocusEntryRow[]>([]);
+  const [dailyFocusRowsLoaded, setDailyFocusRowsLoaded] = useState(false);
+  const [dailyFocus, setDailyFocus] = useState<DailyFocusSession | null>(null);
+  const [dailyFocusAnswer, setDailyFocusAnswer] = useState("");
+  const [dailyFocusLoading, setDailyFocusLoading] = useState(false);
+  const [dailyFocusSubmitting, setDailyFocusSubmitting] = useState(false);
+  const [dailyFocusError, setDailyFocusError] = useState<string | null>(null);
+  const [addingSuggestionId, setAddingSuggestionId] = useState<string | null>(
+    null,
+  );
+  const [showDailyFocusPrompt, setShowDailyFocusPrompt] = useState(false);
+  const [dailyFocusPromptDismissed, setDailyFocusPromptDismissed] =
+    useState(false);
 
   const isChecked = useCallback(
     (taskId: string, frequency: string): boolean => {
@@ -211,6 +239,50 @@ export default function Dashboard({
     [freshlyCompletedTaskIds],
   );
 
+  const todayDateKey = getLocalDateKey();
+  const dailyFocusGoal = useMemo<DailyFocusGoalContext>(
+    () => ({
+      id: goal.id,
+      title: goal.title,
+      ai_summary: goal.ai_summary || "",
+      created_at: goal.created_at,
+      current_points: goal.current_points,
+      target_points: goal.target_points,
+    }),
+    [
+      goal.ai_summary,
+      goal.created_at,
+      goal.current_points,
+      goal.id,
+      goal.target_points,
+      goal.title,
+    ],
+  );
+  const recentFocusLogs = useMemo(
+    () => compactDailyFocusLogs(logs),
+    [logs],
+  );
+  const answeredDailyFocusRows = useMemo(
+    () =>
+      dailyFocusRows.filter((row) =>
+        Boolean((row.answer || "").trim() && row.answered_at),
+      ),
+    [dailyFocusRows],
+  );
+  const answeredDailyFocusCount = answeredDailyFocusRows.length;
+  const todayDailyFocusRow = useMemo(
+    () =>
+      dailyFocusRows.find((row) => row.prompt_date === todayDateKey) || null,
+    [dailyFocusRows, todayDateKey],
+  );
+  const dailyFocusHistory = useMemo(
+    () =>
+      buildDailyFocusHistory(
+        dailyFocusRows.filter((row) => row.prompt_date !== todayDateKey),
+      ),
+    [dailyFocusRows, todayDateKey],
+  );
+
   // --- Derived ---
   const hierarchy: MainTask[] = useMemo(
     () => buildTaskHierarchy(tasks),
@@ -222,35 +294,21 @@ export default function Dashboard({
     [newMainColor, newMainText],
   );
   const filteredHierarchy = useMemo(
-    () =>
-      hierarchy.filter(
-        (main) => taskFilter === "all" || main.frequency === taskFilter,
-      ),
-    [hierarchy, taskFilter],
-  );
-  const focusFilterCounts = useMemo(
-    () => ({
-      all: hierarchy.length,
-      daily: hierarchy.filter((main) => main.frequency === "daily").length,
-      weekly: hierarchy.filter((main) => main.frequency === "weekly").length,
-    }),
+    () => hierarchy,
     [hierarchy],
   );
   const focusStats = useMemo(() => {
-    const totalSubtasks = filteredHierarchy.reduce(
-      (sum, main) => sum + main.subtasks.length,
-      0,
-    );
-    const completedSubtasks = filteredHierarchy.reduce(
-      (sum, main) =>
-        sum +
-        main.subtasks.filter((sub) => isChecked(sub.id, sub.frequency)).length,
-      0,
-    );
-
+    const allSubs = filteredHierarchy.flatMap((main) => main.subtasks);
+    if (allSubs.length > 0) {
+      return {
+        totalSubtasks: allSubs.length,
+        completedSubtasks: allSubs.filter((sub) => isChecked(sub.id, sub.frequency)).length,
+      };
+    }
+    // Fallback: count main tasks when no subtasks exist
     return {
-      totalSubtasks,
-      completedSubtasks,
+      totalSubtasks: filteredHierarchy.length,
+      completedSubtasks: filteredHierarchy.filter((main) => isChecked(main.id, main.frequency)).length,
     };
   }, [filteredHierarchy, isChecked]);
 
@@ -261,15 +319,6 @@ export default function Dashboard({
           Math.round((goal.current_points / goal.target_points) * 100),
         )
       : 0;
-
-  // Streak calculation
-  const [streak, setStreak] = useState(0);
-
-  // Data for child components
-  const [chartData, setChartData] = useState<
-    { date: string; points: number }[]
-  >([]);
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
 
   // --- Data Fetch ---
   const fetchTasks = useCallback(async () => {
@@ -354,19 +403,23 @@ export default function Dashboard({
       .select("created_at")
       .eq("goal_id", goal.id)
       .order("created_at", { ascending: false })
-      .limit(60);
+      .limit(365);
 
     if (data && data.length > 0) {
+      // Build a set of local date keys so timezone is respected
+      const loggedDateKeys = new Set<string>();
+      for (const log of data) {
+        if (log.created_at) {
+          loggedDateKeys.add(getLocalDateKey(new Date(log.created_at)));
+        }
+      }
+
       let count = 0;
       const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      for (let i = 0; i < 60; i++) {
-        const checkDate = new Date(today);
-        checkDate.setDate(checkDate.getDate() - i);
-        const dateStr = checkDate.toISOString().split("T")[0];
-        const hasLog = data.some((log) => log.created_at?.startsWith(dateStr));
-        if (hasLog) {
+      for (let i = 0; i < 365; i++) {
+        const checkDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        if (loggedDateKeys.has(getLocalDateKey(checkDate))) {
           count++;
         } else if (i > 0) {
           break;
@@ -386,7 +439,8 @@ export default function Dashboard({
     if (data) {
       const grouped = new Map<string, number>();
       for (const log of data) {
-        const dateKey = log.created_at?.split("T")[0] || "";
+        if (!log.created_at) continue;
+        const dateKey = getLocalDateKey(new Date(log.created_at));
         grouped.set(dateKey, (grouped.get(dateKey) || 0) + (log.ai_score || 0));
       }
       setChartData(
@@ -406,7 +460,230 @@ export default function Dashboard({
       .order("created_at", { ascending: false });
 
     if (data) setLogs(data as ActivityLog[]);
+    setLogsLoaded(true);
   }, [goal.id, supabase]);
+
+  const fetchDailyFocusRows = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("daily_focus_answers")
+      .select(
+        "id, goal_id, user_id, prompt_date, angle_label, question, question_why, answer, answer_coaching, suggestions, created_at, updated_at, answered_at",
+      )
+      .eq("goal_id", goal.id)
+      .order("prompt_date", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.error("Failed to fetch daily focus history:", error);
+      setDailyFocusRows([]);
+      setDailyFocusRowsLoaded(true);
+      return;
+    }
+
+    setDailyFocusRows(
+      (data || [])
+        .map((row) => normalizeDailyFocusEntryRow(row))
+        .filter((row): row is DailyFocusEntryRow => Boolean(row)),
+    );
+    setDailyFocusRowsLoaded(true);
+  }, [goal.id, supabase]);
+
+  const upsertDailyFocusRow = useCallback(
+    async (payload: {
+      angle_label: string;
+      question: string;
+      question_why: string;
+      answer?: string;
+      answer_coaching?: string;
+      suggestions?: unknown[];
+      answered_at?: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from("daily_focus_answers")
+        .upsert(
+          {
+            goal_id: goal.id,
+            prompt_date: todayDateKey,
+            angle_label: payload.angle_label,
+            question: payload.question,
+            question_why: payload.question_why,
+            answer: payload.answer || null,
+            answer_coaching: payload.answer_coaching || null,
+            suggestions: payload.suggestions || [],
+            answered_at: payload.answered_at || null,
+          },
+          { onConflict: "goal_id,prompt_date" },
+        )
+        .select(
+          "id, goal_id, user_id, prompt_date, angle_label, question, question_why, answer, answer_coaching, suggestions, created_at, updated_at, answered_at",
+        )
+        .single();
+
+      if (error) throw error;
+
+      const normalizedRow = normalizeDailyFocusEntryRow(data);
+      if (!normalizedRow) {
+        throw new Error(
+          language === "ar"
+            ? "تعذر حفظ سجل أسئلة الخطة."
+            : "Could not save the plan feedback entry.",
+        );
+      }
+
+      setDailyFocusRows((currentRows) => {
+        const nextRows = currentRows.filter(
+          (row) => row.prompt_date !== normalizedRow.prompt_date,
+        );
+        return [normalizedRow, ...nextRows].sort((a, b) =>
+          b.prompt_date.localeCompare(a.prompt_date),
+        );
+      });
+
+      return normalizedRow;
+    },
+    [goal.id, language, supabase, todayDateKey],
+  );
+
+  const generateDailyFocus = useCallback(
+    async (options?: {
+      answer?: string;
+      existingQuestion?: string;
+      force?: boolean;
+    }) => {
+      const submittedAnswer = options?.answer?.trim() || "";
+      const isSubmittingAnswer = submittedAnswer.length > 0;
+
+      setDailyFocusError(null);
+      if (isSubmittingAnswer) {
+        setDailyFocusSubmitting(true);
+      } else {
+        setDailyFocusLoading(true);
+      }
+
+      try {
+        const answeredCountWithoutToday = dailyFocusRows.filter(
+          (row) =>
+            row.prompt_date !== todayDateKey &&
+            Boolean((row.answer || "").trim() && row.answered_at),
+        ).length;
+        const response = await fetch("/api/goal/daily-focus", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            goal: dailyFocusGoal,
+            tasks,
+            logs: recentFocusLogs,
+            history: dailyFocusHistory,
+            answer: submittedAnswer || undefined,
+            existingQuestion:
+              options?.existingQuestion ||
+              todayDailyFocusRow?.question ||
+              undefined,
+            date: todayDateKey,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+            data?.error === "quota_exceeded"
+              ? language === "ar"
+                ? data?.message_ar
+                : data?.message_en
+              : language === "ar"
+                ? "تعذر توليد سؤال اليوم حالياً."
+                : "Could not generate today's question right now.";
+          throw new Error(message);
+        }
+
+        const normalized = normalizeDailyFocusResult(data, todayDateKey);
+        if (!normalized) {
+          throw new Error(
+            language === "ar"
+              ? "صيغة سؤال اليوم غير صالحة."
+              : "Invalid daily focus response.",
+          );
+        }
+
+        if (normalized.status === "refused") {
+          throw new Error(
+            normalized.safe_redirection?.message ||
+              (language === "ar"
+                ? "لا يمكن توليد هذا السؤال حالياً."
+                : "This question cannot be generated right now."),
+          );
+        }
+
+        const answeredAt = submittedAnswer
+          ? new Date().toISOString()
+          : todayDailyFocusRow?.answered_at || null;
+        const savedRow = await upsertDailyFocusRow({
+          angle_label: normalized.angle_label,
+          question: normalized.question,
+          question_why: normalized.question_why,
+          answer: submittedAnswer || todayDailyFocusRow?.answer || "",
+          answer_coaching: normalized.answer_coaching,
+          suggestions: normalized.suggestions,
+          answered_at: answeredAt,
+        });
+
+        const computedAnsweredDaysCount = submittedAnswer
+          ? answeredCountWithoutToday + 1
+          : answeredCountWithoutToday +
+            (savedRow.answer && savedRow.answered_at ? 1 : 0);
+        const nextSession = buildDailyFocusSessionFromRow(savedRow, {
+          answeredDaysCount: computedAnsweredDaysCount,
+          requiredAnswerDays: normalized.required_answer_days,
+        });
+
+        nextSession.answer_coaching = normalized.answer_coaching;
+        nextSession.suggestions = normalized.suggestions;
+        nextSession.suggestions_unlocked = normalized.suggestions_unlocked;
+        nextSession.answered_days_count = normalized.answered_days_count;
+        nextSession.required_answer_days = normalized.required_answer_days;
+
+        setDailyFocus(nextSession);
+        setDailyFocusAnswer(nextSession.answer || "");
+        return nextSession;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : language === "ar"
+              ? "تعذر توليد سؤال اليوم حالياً."
+              : "Could not generate today's question right now.";
+        setDailyFocusError(message);
+
+        return null;
+      } finally {
+        setDailyFocusLoading(false);
+        setDailyFocusSubmitting(false);
+      }
+    },
+    [
+      dailyFocusGoal,
+      dailyFocusHistory,
+      dailyFocusRows,
+      language,
+      recentFocusLogs,
+      tasks,
+      todayDailyFocusRow,
+      todayDateKey,
+      upsertDailyFocusRow,
+    ],
+  );
+
+  useEffect(() => {
+    setLogsLoaded(false);
+    setDailyFocusRowsLoaded(false);
+    setDailyFocusRows([]);
+    setDailyFocus(null);
+    setDailyFocusAnswer("");
+    setDailyFocusError(null);
+    setAddingSuggestionId(null);
+    setShowDailyFocusPrompt(false);
+    setDailyFocusPromptDismissed(false);
+  }, [goal.id, todayDateKey]);
 
   useEffect(() => {
     fetchTasks();
@@ -415,6 +692,7 @@ export default function Dashboard({
     fetchStreak();
     fetchChartData();
     fetchLogs();
+    fetchDailyFocusRows();
   }, [
     fetchTasks,
     fetchCheckins,
@@ -422,7 +700,43 @@ export default function Dashboard({
     fetchStreak,
     fetchChartData,
     fetchLogs,
+    fetchDailyFocusRows,
   ]);
+
+  useEffect(() => {
+    if (loadingTasks || !logsLoaded || !dailyFocusRowsLoaded) return;
+
+    if (todayDailyFocusRow) {
+      const session = buildDailyFocusSessionFromRow(todayDailyFocusRow, {
+        answeredDaysCount: answeredDailyFocusCount,
+        requiredAnswerDays: DAILY_FOCUS_REQUIRED_DAYS,
+      });
+      setDailyFocus(session);
+      setDailyFocusAnswer(session.answer || "");
+      setDailyFocusError(null);
+      return;
+    }
+
+    generateDailyFocus();
+  }, [
+    answeredDailyFocusCount,
+    dailyFocusRowsLoaded,
+    generateDailyFocus,
+    loadingTasks,
+    logsLoaded,
+    todayDailyFocusRow,
+  ]);
+
+  useEffect(() => {
+    if (!dailyFocus || dailyFocus.answered_at || dailyFocusPromptDismissed) return;
+    setShowDailyFocusPrompt(true);
+  }, [dailyFocus, dailyFocusPromptDismissed]);
+
+  useEffect(() => {
+    if (!dailyFocus?.answered_at) return;
+    setShowDailyFocusPrompt(false);
+    setDailyFocusPromptDismissed(true);
+  }, [dailyFocus?.answered_at]);
 
   useEffect(() => {
     const nextFreshIds = Array.from(completedTodayTaskIds).filter(
@@ -465,14 +779,22 @@ export default function Dashboard({
     if (existing) {
       if (existing.completed) {
         // Uncheck
-        await supabase.from("task_checkins").delete().eq("id", existing.id);
+        const { error } = await supabase.from("task_checkins").delete().eq("id", existing.id);
+        if (error) {
+          showSuccessToast(isArabic ? "تعذر حذف الإنجاز" : "Could not remove check-in");
+          return;
+        }
         setCheckins((prev) => prev.filter((c) => c.id !== existing.id));
       } else {
         // Mark complete
-        await supabase
+        const { error } = await supabase
           .from("task_checkins")
           .update({ completed: true, completed_at: new Date().toISOString() })
           .eq("id", existing.id);
+        if (error) {
+          showSuccessToast(isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in");
+          return;
+        }
         setCheckins((prev) =>
           prev.map((c) =>
             c.id === existing.id
@@ -488,7 +810,7 @@ export default function Dashboard({
       }
     } else {
       // Create new checkin
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("task_checkins")
         .insert({
           goal_id: goal.id,
@@ -501,10 +823,13 @@ export default function Dashboard({
         .select()
         .single();
 
-      if (data) {
-        setCheckins((prev) => [...prev, data]);
-        showSuccessToast(isArabic ? "✓ تم إنجاز المهمة" : "✓ Task completed");
+      if (error || !data) {
+        showSuccessToast(isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in");
+        return;
       }
+
+      setCheckins((prev) => [...prev, data]);
+      showSuccessToast(isArabic ? "✓ تم إنجاز المهمة" : "✓ Task completed");
     }
   };
 
@@ -662,27 +987,29 @@ export default function Dashboard({
     if (onGoalUpdated) onGoalUpdated();
   };
 
-  const handleDeleteGoal = async () => {
-    const confirmMessage = isArabic
-      ? `هل أنت متأكد من حذف الهدف "${goal.title}"؟ سيتم حذف جميع المهام والسجلات المرتبطة به.`
-      : `Are you sure you want to delete "${goal.title}"? All associated tasks and logs will be deleted.`;
+  const handleDeleteGoal = () => {
+    const title = isArabic ? "حذف الهدف" : "Delete Goal";
+    const message = isArabic
+      ? `هل أنت متأكد من حذف الهدف "${goal.title}"؟ سيتم حذف جميع المهام والسجلات المرتبطة به. لا يمكن التراجع.`
+      : `Are you sure you want to delete "${goal.title}"? All associated tasks and logs will be deleted. This cannot be undone.`;
 
-    if (!confirm(confirmMessage)) return;
-
-    try {
-      const { error } = await supabase.from("goals").delete().eq("id", goal.id);
-      if (error) throw error;
-
-      // Navigate back to home or goals list
-      if (onGoalUpdated) onGoalUpdated();
-      window.location.href = "/";
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "";
-      console.error("Error deleting goal:", error);
-      alert(
-        (isArabic ? "فشل حذف الهدف: " : "Failed to delete goal: ") + message,
-      );
-    }
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.from("goals").delete().eq("id", goal.id);
+          if (error) throw error;
+          if (onGoalUpdated) onGoalUpdated();
+          window.location.href = "/";
+        } catch (err: unknown) {
+          const errMessage = err instanceof Error ? err.message : "";
+          console.error("Error deleting goal:", err);
+          showSuccessToast((isArabic ? "فشل حذف الهدف: " : "Failed to delete goal: ") + errMessage);
+        }
+      },
+    });
   };
 
   const handleUpdateIcon = async (newIcon: string) => {
@@ -738,6 +1065,182 @@ export default function Dashboard({
     setTimeout(() => setShowToast(false), 2000);
   };
 
+  const updateDailyFocusSession = useCallback(
+    (updater: (current: DailyFocusSession) => DailyFocusSession) => {
+      setDailyFocus((current) => {
+        if (!current) return current;
+        return updater(current);
+      });
+    },
+    [],
+  );
+
+  const handleDailyFocusAnswerChange = useCallback(
+    (text: string) => {
+      setDailyFocusAnswer(text);
+      updateDailyFocusSession((current) => ({ ...current, answer: text }));
+    },
+    [updateDailyFocusSession],
+  );
+
+  const handleAppendDailyFocusTranscript = useCallback(
+    (transcript: string) => {
+      setDailyFocusAnswer((currentAnswer) => {
+        const nextAnswer = currentAnswer
+          ? `${currentAnswer} ${transcript}`.replace(/\s+/g, " ").trim()
+          : transcript.trim();
+        updateDailyFocusSession((current) => ({
+          ...current,
+          answer: nextAnswer,
+        }));
+        return nextAnswer;
+      });
+    },
+    [updateDailyFocusSession],
+  );
+
+  const handleRetryDailyFocus = useCallback(() => {
+    setDailyFocus(null);
+    setDailyFocusAnswer("");
+    setDailyFocusError(null);
+    void generateDailyFocus({
+      force: true,
+      existingQuestion: "",
+      answer: todayDailyFocusRow?.answer || "",
+    });
+  }, [generateDailyFocus, todayDailyFocusRow?.answer]);
+
+  const handleSubmitDailyFocusAnswer = useCallback(async () => {
+    if (!dailyFocus || !dailyFocusAnswer.trim()) return;
+
+    const nextSession = await generateDailyFocus({
+      answer: dailyFocusAnswer,
+      existingQuestion: dailyFocus.question,
+      force: true,
+    });
+
+    if (nextSession) {
+      showSuccessToast(
+        nextSession.suggestions_unlocked
+          ? isArabic
+            ? "تم حفظ تقييم اليوم وتحديث الاقتراحات"
+            : "Today's plan feedback was saved and suggestions were updated"
+          : isArabic
+            ? "تم حفظ تقييم اليوم"
+            : "Today's plan feedback was saved",
+      );
+    }
+  }, [
+    dailyFocus,
+    dailyFocusAnswer,
+    generateDailyFocus,
+    isArabic,
+  ]);
+
+  const handleAddDailyFocusSuggestion = useCallback(
+    async (suggestionId: string) => {
+      const suggestion = dailyFocus?.suggestions.find(
+        (item) => item.id === suggestionId,
+      );
+      if (!suggestion) return;
+      if (dailyFocus?.addedSuggestionIds.includes(suggestionId)) return;
+      if (
+        tasks.some(
+          (task) =>
+            task.task_description.trim().toLowerCase() ===
+            suggestion.title.trim().toLowerCase(),
+        )
+      ) {
+        showSuccessToast(
+          isArabic ? "هذه المهمة موجودة أصلًا" : "This task already exists",
+        );
+        return;
+      }
+
+      setAddingSuggestionId(suggestionId);
+
+      try {
+        const preferredParentId =
+          suggestion.target_type === "sub" &&
+          hierarchy.some((main) => main.id === suggestion.parent_task_id)
+            ? suggestion.parent_task_id
+            : hierarchy[0]?.id || null;
+
+        if (suggestion.target_type === "sub" && preferredParentId) {
+          const siblingsCount = tasks.filter(
+            (task) => task.parent_task_id === preferredParentId,
+          ).length;
+
+          const { error } = await supabase.from("sub_layers").insert({
+            goal_id: goal.id,
+            task_description: suggestion.title.trim(),
+            frequency: suggestion.frequency,
+            impact_weight: Math.max(1, Math.min(5, suggestion.impact_weight)),
+            task_type: "sub",
+            parent_task_id: preferredParentId,
+            sort_order: siblingsCount,
+            time_required_minutes: 0,
+            completion_criteria: suggestion.reason || null,
+          });
+
+          if (error) throw error;
+
+          setExpandedMains((current) => {
+            const next = new Set(current);
+            next.add(preferredParentId);
+            return next;
+          });
+        } else {
+          const mainCount = tasks.filter(
+            (task) => (task.task_type || "main") === "main",
+          ).length;
+
+          const { error } = await supabase.from("sub_layers").insert({
+            goal_id: goal.id,
+            task_description: suggestion.title.trim(),
+            frequency: suggestion.frequency,
+            impact_weight: Math.max(1, Math.min(10, suggestion.impact_weight)),
+            task_type: "main",
+            parent_task_id: null,
+            sort_order: mainCount,
+            time_required_minutes: 0,
+            completion_criteria: suggestion.reason || null,
+          });
+
+          if (error) throw error;
+        }
+
+        await fetchTasks();
+        updateDailyFocusSession((current) => ({
+          ...current,
+          addedSuggestionIds: current.addedSuggestionIds.includes(suggestionId)
+            ? current.addedSuggestionIds
+            : [...current.addedSuggestionIds, suggestionId],
+        }));
+        showSuccessToast(
+          isArabic ? "تمت إضافة الاقتراح إلى مهامك" : "Suggestion added to your tasks",
+        );
+      } catch (error) {
+        console.error("Failed to add daily focus suggestion:", error);
+        showSuccessToast(
+          isArabic ? "تعذر إضافة هذا الاقتراح" : "Could not add this suggestion",
+        );
+      } finally {
+        setAddingSuggestionId(null);
+      }
+    },
+    [
+      dailyFocus,
+      fetchTasks,
+      goal.id,
+      hierarchy,
+      isArabic,
+      supabase,
+      tasks,
+      updateDailyFocusSession,
+    ],
+  );
+
   // --- Tab Config ---
   const tabItems: {
     key: DashboardTab;
@@ -762,8 +1265,10 @@ export default function Dashboard({
   ];
 
   // --- Render ---
-  const taskCount =
-    tasks.filter((tk) => tk.task_type === "sub").length || tasks.length;
+  const taskCount = useMemo(() => {
+    const subs = hierarchy.flatMap((m) => m.subtasks);
+    return subs.length > 0 ? subs.length : hierarchy.length;
+  }, [hierarchy]);
   const completedTaskCount = useMemo(() => {
     const subs = hierarchy.flatMap((m) => m.subtasks);
     if (subs.length > 0)
@@ -803,6 +1308,23 @@ export default function Dashboard({
         }}
       />
 
+      <DailyFocusQuestionDialog
+        open={showDailyFocusPrompt}
+        onOpenChange={(open) => {
+          setShowDailyFocusPrompt(open);
+          if (!open) setDailyFocusPromptDismissed(true);
+        }}
+        language={language}
+        isArabic={isArabic}
+        dailyFocus={dailyFocus}
+        loading={dailyFocusLoading}
+        submitting={dailyFocusSubmitting}
+        answer={dailyFocusAnswer}
+        onAnswerChange={handleDailyFocusAnswerChange}
+        onAppendTranscript={handleAppendDailyFocusTranscript}
+        onSubmit={handleSubmitDailyFocusAnswer}
+      />
+
       {/* ===== Log Progress Button ===== */}
       <button
         onClick={() => setShowLogModal(true)}
@@ -836,11 +1358,15 @@ export default function Dashboard({
         <FocusTab
           language={language}
           isArabic={isArabic}
+          dailyFocus={dailyFocus}
+          dailyFocusLoading={dailyFocusLoading}
+          dailyFocusSubmitting={dailyFocusSubmitting}
+          dailyFocusAddingSuggestionId={addingSuggestionId}
+          dailyFocusError={dailyFocusError}
+          dailyFocusAnswer={dailyFocusAnswer}
           filteredHierarchy={filteredHierarchy}
           hierarchy={hierarchy}
           loadingTasks={loadingTasks}
-          taskFilter={taskFilter}
-          focusFilterCounts={focusFilterCounts}
           focusStats={focusStats}
           expandedMains={expandedMains}
           addingMain={addingMain}
@@ -858,7 +1384,6 @@ export default function Dashboard({
           isChecked={isChecked}
           isCompletedToday={isCompletedToday}
           shouldAnimateTask={shouldAnimateTask}
-          onSetTaskFilter={setTaskFilter}
           onToggleExpand={toggleExpand}
           onToggleCheckin={toggleCheckin}
           onOpenNewMainComposer={openNewMainComposer}
@@ -874,6 +1399,11 @@ export default function Dashboard({
           onUpdateTaskIcon={handleUpdateTaskIcon}
           onUpdateTaskColor={handleUpdateTaskColor}
           onUpdateTaskWeight={handleUpdateTaskWeight}
+          onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
+          onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
+          onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
+          onRetryDailyFocus={handleRetryDailyFocus}
+          onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
           onSetNewMainText={setNewMainText}
           onSetNewMainFreq={setNewMainFreq}
           onSetNewMainWeight={setNewMainWeight}
