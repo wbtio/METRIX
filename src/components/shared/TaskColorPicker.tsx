@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Check, Palette } from 'lucide-react';
+import { Check, Palette, RotateCcw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type Language } from '@/lib/translations';
 import { cn } from '@/lib/utils';
@@ -21,21 +21,6 @@ interface TaskColorPickerProps {
   children: ReactNode;
 }
 
-const copy = {
-  en: {
-    title: 'Main task color',
-    subtitle: 'Choose a saved accent or go back to auto.',
-    auto: 'Auto',
-    autoHint: 'Use a stable generated color',
-  },
-  ar: {
-    title: 'لون المهمة الرئيسية',
-    subtitle: 'اختر لونًا محفوظًا أو ارجع للوضع التلقائي.',
-    auto: 'تلقائي',
-    autoHint: 'استخدم لونًا ثابتًا مولدًا تلقائيًا',
-  },
-} as const;
-
 export default function TaskColorPicker({
   value,
   seed,
@@ -46,44 +31,45 @@ export default function TaskColorPicker({
 }: TaskColorPickerProps) {
   const [open, setOpen] = useState(false);
   const isArabic = language === 'ar';
-  const text = copy[language];
   const selectedKey = normalizeTaskColorKey(value);
   const autoAccent = getTaskAccent(seed);
+  const labels = isArabic ? { color: 'لون', auto: 'تلقائي' } : { color: 'Color', auto: 'Auto' };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-64 rounded-2xl border-border/70 p-3 shadow-xl" align={align}>
-        <div className="mb-3">
-          <div className="flex items-center gap-2 text-sm font-black text-foreground">
-            <Palette className="h-4 w-4 text-primary" />
-            {text.title}
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{text.subtitle}</p>
+      <PopoverContent
+        className="w-[18.5rem] max-w-[calc(100vw-2rem)] rounded-2xl border-border/70 bg-popover/95 p-2 shadow-2xl backdrop-blur-xl"
+        align={align}
+        sideOffset={8}
+      >
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground">
+            <Palette className="h-4 w-4" />
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onSelect(null);
+              setOpen(false);
+            }}
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all hover:-translate-y-0.5',
+              !selectedKey
+                ? cn(autoAccent.softClass, autoAccent.borderClass, autoAccent.textClass)
+                : 'border-border/60 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+            aria-label={labels.auto}
+            title={labels.auto}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            onSelect(null);
-            setOpen(false);
-          }}
-          className={cn(
-            'mb-3 flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-start transition-colors hover:bg-muted/20',
-            !selectedKey ? cn(autoAccent.softClass, autoAccent.borderClass) : 'border-border/70',
-          )}
-        >
-          <span className={cn('h-4 w-4 rounded-full ring-2 ring-background', autoAccent.swatchClass)} />
-          <span className="flex-1">
-            <span className="block text-xs font-black text-foreground">{text.auto}</span>
-            <span className="block text-[11px] text-muted-foreground">{text.autoHint}</span>
-          </span>
-          {!selectedKey ? <Check className="h-4 w-4 text-primary" /> : null}
-        </button>
-
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {TASK_COLOR_OPTIONS.map((accent) => {
             const isSelected = selectedKey === accent.key;
+
             return (
               <button
                 key={accent.key}
@@ -93,17 +79,20 @@ export default function TaskColorPicker({
                   setOpen(false);
                 }}
                 className={cn(
-                  'rounded-2xl border px-2 py-2 text-center transition-all hover:-translate-y-0.5',
+                  'relative flex h-11 items-center justify-center rounded-xl border transition-all hover:-translate-y-0.5',
                   accent.softClass,
                   accent.borderClass,
-                  isSelected && 'ring-2 ring-primary/30',
+                  isSelected && 'ring-2 ring-primary/25',
                 )}
+                aria-label={isArabic ? accent.labelAr : accent.labelEn}
                 title={isArabic ? accent.labelAr : accent.labelEn}
               >
-                <span className={cn('mx-auto mb-2 block h-5 w-5 rounded-full ring-2 ring-background', accent.swatchClass)} />
-                <span className={cn('block text-[10px] font-bold', accent.textClass)}>
-                  {isArabic ? accent.labelAr : accent.labelEn}
-                </span>
+                <span className={cn('h-5 w-5 rounded-full ring-2 ring-background', accent.swatchClass)} />
+                {isSelected ? (
+                  <span className="absolute end-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="h-2.5 w-2.5" />
+                  </span>
+                ) : null}
               </button>
             );
           })}

@@ -227,7 +227,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
     return (
         <div
-            className="w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500"
+            className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
             <MatrixManifestoDialog
@@ -280,7 +280,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 <button
                                     onClick={() => handleThemeChange('light')}
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        "flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
                                         theme === 'light' ? "bg-background text-cyan-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.lightMode}
@@ -291,7 +291,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 <button
                                     onClick={() => handleThemeChange('dark')}
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        "flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
                                         theme === 'dark' ? "bg-background text-cyan-600 shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.darkMode}
@@ -316,7 +316,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 <button
                                     onClick={() => handleLanguageChange('en')}
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        "flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
                                         language === 'en' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.english}
@@ -327,7 +327,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 <button
                                     onClick={() => handleLanguageChange('ar')}
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+                                        "flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
                                         language === 'ar' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.arabic}

@@ -11,6 +11,10 @@ import {
   Sparkles,
   CircleAlert,
   ListChecks,
+  Bell,
+  CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 import { type Language } from "@/lib/translations";
 import type { GoalTaskStats } from "@/app/page";
@@ -19,6 +23,7 @@ import { getIconComponent } from "./goal/IconPicker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getGoalEndDaysChip } from "@/lib/goal-dates";
 import { useIsMobile } from "@/hooks/use-mobile";
 import GoalProgressBar from "@/components/shared/GoalProgressBar";
@@ -447,7 +452,9 @@ export default function HomePage({
 
           <div
             className={cn(
-              "flex flex-col gap-2 px-2 pb-2 pt-0 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3",
+              // Mobile: single row, reversed so Voice sits at the visual end
+              // (right in LTR/EN, left in RTL/AR). Desktop keeps existing behavior.
+              "flex flex-row-reverse items-center gap-2 px-2 pb-2 pt-0 sm:items-center sm:justify-between sm:px-3 sm:pb-3",
               isArabic ? "sm:flex-row-reverse" : "sm:flex-row",
             )}
           >
@@ -494,8 +501,8 @@ export default function HomePage({
             {/* Manual + AI — fill remaining width equally on mobile */}
             <div
               className={cn(
-                // Keep as grid (even on sm+) so both buttons align and share space consistently.
-                "grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex-none sm:min-w-[280px]",
+                // Mobile: take remaining space next to Voice (flex-1). Desktop: keep fixed width.
+                "grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:w-auto sm:flex-none sm:gap-2 sm:min-w-[280px]",
               )}
               dir={isArabic ? "rtl" : "ltr"}
             >
@@ -505,14 +512,14 @@ export default function HomePage({
                 onClick={handleManualCreate}
                 disabled={!hasGoalInput}
                 className={cn(
-                  "w-full h-9 rounded-full px-3 text-sm font-semibold shadow-none sm:h-10 sm:px-4",
+                  "w-full h-9 min-w-0 rounded-full px-2 text-xs font-semibold shadow-none sm:h-10 sm:px-4 sm:text-sm",
                   hasGoalInput
                     ? "border-border/70 bg-background/70 text-foreground hover:bg-muted/60"
                     : "border border-border/70 bg-muted/40 text-muted-foreground",
                 )}
               >
                 <PenLine className="size-4 shrink-0" />
-                <span>{isArabic ? "يدوي" : "Manual"}</span>
+                <span className="truncate">{isArabic ? "يدوي" : "Manual"}</span>
               </Button>
 
               <Button
@@ -521,7 +528,7 @@ export default function HomePage({
                 onClick={handleAICreate}
                 disabled={!hasGoalInput}
                 className={cn(
-                  "w-full h-9 rounded-full px-3 text-sm font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4",
+                  "w-full h-9 min-w-0 rounded-full px-2 text-xs font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4 sm:text-sm",
                   aiPromptVisible
                     ? "border-amber-300/60 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200"
                     : hasGoalInput
@@ -530,154 +537,242 @@ export default function HomePage({
                 )}
               >
                 <Sparkles className="size-4 shrink-0" />
-                <span>{isArabic ? "ذكاء اصطناعي" : "AI Plan"}</span>
+                <span className="truncate">{isArabic ? "ذكاء اصطناعي" : "AI Plan"}</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {recentGoals.length > 0 ? (
-        <div className="space-y-4">
-          <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-end sm:justify-between sm:px-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-              {language === "ar" ? "الأهداف الأخيرة" : "Recent Goals"}
-            </h2>
-            <span className="text-sm text-muted-foreground sm:text-right">
-              {recentGoals.length} {language === "ar" ? "أهداف" : "goals"}
+      <Tabs defaultValue="goals" dir={isArabic ? "rtl" : "ltr"} className="relative">
+        {/* Tab bar — overlaps the content box below */}
+        <TabsList className="relative z-10 mx-auto w-full max-w-[calc(100%-1rem)] rounded-2xl border border-border/50 bg-muted/50 backdrop-blur-sm px-2.5 py-3 gap-1.5 sm:max-w-[calc(100%-2rem)]">
+          <TabsTrigger
+            value="goals"
+            className={cn(
+              "gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all flex-1",
+              "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground/70",
+              "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50",
+            )}
+          >
+            <Target className="size-5" />
+            {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary tabular-nums">
+              {recentGoals.length}
             </span>
-          </div>
+          </TabsTrigger>
+          <TabsTrigger
+            value="notifications"
+            className={cn(
+              "gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all flex-1",
+              "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground/70",
+              "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50",
+            )}
+          >
+            <Bell className="size-5" />
+            {isArabic ? "الإشعارات" : "Notifications"}
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {recentGoals.map((goal) => {
-              const currentPoints = goal.current_points ?? 0;
-              const targetPoints = goal.target_points ?? 0;
-              const progress =
-                targetPoints > 0
-                  ? Math.round((currentPoints / targetPoints) * 100)
-                  : 0;
-              const Icon = getIconComponent(goal.icon || "Target");
-              const goalIsRTL = isArabic || isRTL(goal.title);
-              const daysChip = getGoalEndDaysChip(
-                goal.estimated_completion_date,
-                isArabic,
-              );
-              const stats = taskStatsMap[goal.id];
+        {/* Content box — fixed height with scroll, sits under the tab bar */}
+        <TabsContent value="goals" className="-mt-5 pt-5">
+          <div className="overflow-y-auto h-[340px] sm:h-[440px] rounded-2xl border border-border/60 bg-card/30 p-3 sm:rounded-3xl sm:p-4 scrollbar-thin">
+            {recentGoals.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {recentGoals.map((goal) => {
+                  const currentPoints = goal.current_points ?? 0;
+                  const targetPoints = goal.target_points ?? 0;
+                  const progress =
+                    targetPoints > 0
+                      ? Math.round((currentPoints / targetPoints) * 100)
+                      : 0;
+                  const Icon = getIconComponent(goal.icon || "Target");
+                  const goalIsRTL = isArabic || isRTL(goal.title);
+                  const daysChip = getGoalEndDaysChip(
+                    goal.estimated_completion_date,
+                    isArabic,
+                  );
+                  const stats = taskStatsMap[goal.id];
 
-              return (
-                <div
-                  key={goal.id}
-                  className="group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card/45 p-3 transition-all hover:border-primary/30 hover:bg-card/60 hover:shadow-md sm:rounded-3xl sm:p-5"
-                >
-                  {/* تثبيت + أيام حتى انتهاء الهدف + إحصائية المهام */}
-                  {(goal.is_pinned || daysChip || stats) && (
+                  return (
                     <div
-                      className={cn(
-                        "absolute top-3 z-10 flex items-center gap-1.5",
-                        goalIsRTL
-                          ? "left-3 flex-row"
-                          : "right-3 flex-row-reverse",
-                      )}
+                      key={goal.id}
+                      className="group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card/45 p-3 transition-all hover:border-primary/30 hover:bg-card/60 hover:shadow-md sm:rounded-3xl sm:p-5"
                     >
-                      {goal.is_pinned && (
-                        <div
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-chart-5/10"
-                          title={isArabic ? "هدف مثبّت" : "Pinned goal"}
-                        >
-                          <Pin
-                            className="h-3.5 w-3.5 rotate-45 text-chart-5"
-                            aria-hidden
-                          />
-                        </div>
-                      )}
-                      {daysChip && (
+                      {(goal.is_pinned || daysChip || stats) && (
                         <div
                           className={cn(
-                            "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
-                            daysChip.tone === "soon" &&
-                              "bg-primary/10 text-primary border border-primary/20",
-                            daysChip.tone === "today" &&
-                              "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25",
-                            daysChip.tone === "late" &&
-                              "bg-destructive/15 text-destructive border border-destructive/25",
+                            "absolute top-3 z-10 flex items-center gap-1.5",
+                            goalIsRTL
+                              ? "left-3 flex-row"
+                              : "right-3 flex-row-reverse",
                           )}
-                          title={daysChip.title}
                         >
-                          {daysChip.text}
+                          {goal.is_pinned && (
+                            <div
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-chart-5/10"
+                              title={isArabic ? "هدف مثبّت" : "Pinned goal"}
+                            >
+                              <Pin
+                                className="h-3.5 w-3.5 rotate-45 text-chart-5"
+                                aria-hidden
+                              />
+                            </div>
+                          )}
+                          {daysChip && (
+                            <div
+                              className={cn(
+                                "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+                                daysChip.tone === "soon" &&
+                                  "bg-primary/10 text-primary border border-primary/20",
+                                daysChip.tone === "today" &&
+                                  "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25",
+                                daysChip.tone === "late" &&
+                                  "bg-destructive/15 text-destructive border border-destructive/25",
+                              )}
+                              title={daysChip.title}
+                            >
+                              {daysChip.text}
+                            </div>
+                          )}
+                          {stats && stats.total > 0 && (
+                            <div
+                              className="flex h-7 min-w-7 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
+                              title={
+                                isArabic
+                                  ? `${stats.completed} من ${stats.total} مهمة منجزة`
+                                  : `${stats.completed} of ${stats.total} tasks done`
+                              }
+                            >
+                              <ListChecks
+                                className="w-3 h-3 shrink-0"
+                                aria-hidden
+                              />
+                              <span dir="ltr">
+                                {stats.completed}/{stats.total}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
-                      {stats && stats.total > 0 && (
+                      <button
+                        onClick={() => onSelectGoal(goal.id)}
+                        className="w-full text-start"
+                        dir={goalIsRTL ? "rtl" : "ltr"}
+                      >
                         <div
-                          className="flex h-7 min-w-7 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
-                          title={
-                            isArabic
-                              ? `${stats.completed} من ${stats.total} مهمة منجزة`
-                              : `${stats.completed} of ${stats.total} tasks done`
-                          }
+                          className={cn(
+                            "flex w-full flex-col gap-2.5",
+                            (goal.is_pinned || daysChip) && "pt-2.5 sm:pt-3",
+                          )}
                         >
-                          <ListChecks
-                            className="w-3 h-3 shrink-0"
-                            aria-hidden
-                          />
-                          <span dir="ltr">
-                            {stats.completed}/{stats.total}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => onSelectGoal(goal.id)}
-                    className="w-full text-start"
-                    dir={goalIsRTL ? "rtl" : "ltr"}
-                  >
-                    <div
-                      className={cn(
-                        "flex w-full flex-col gap-2.5",
-                        (goal.is_pinned || daysChip) && "pt-2.5 sm:pt-3",
-                      )}
-                    >
-                      <div className="flex w-full items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12">
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                          <h3 className="truncate text-base font-bold leading-snug text-foreground sm:text-lg">
-                            {goal.title}
-                          </h3>
-                        </div>
-                      </div>
+                          <div className="flex w-full items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12">
+                              <Icon className="h-6 w-6" />
+                            </div>
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <h3 className="truncate text-base font-bold leading-snug text-foreground sm:text-lg">
+                                {goal.title}
+                              </h3>
+                            </div>
+                          </div>
 
-                      <GoalProgressBar
-                        currentPoints={currentPoints}
-                        targetPoints={targetPoints}
-                        progress={progress}
-                        className="mx-auto border-border/60 bg-muted/40 shadow-inner ring-1 ring-white/5"
-                        labelClassName="px-2.5 sm:px-5 text-[11px] sm:text-sm"
-                        percentClassName="text-sm sm:text-base"
-                      />
+                          <GoalProgressBar
+                            currentPoints={currentPoints}
+                            targetPoints={targetPoints}
+                            progress={progress}
+                            className="mx-auto border-border/60 bg-muted/40 shadow-inner ring-1 ring-white/5"
+                            labelClassName="px-2.5 sm:px-5 text-[11px] sm:text-sm"
+                            percentClassName="text-sm sm:text-base"
+                          />
+                        </div>
+                      </button>
                     </div>
-                  </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-border/80 bg-card/20 p-6 sm:p-10 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+                  <Target className="h-7 w-7" />
                 </div>
-              );
-            })}
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">
+                  {isArabic ? "لا توجد أهداف بعد" : "No goals yet"}
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {isArabic
+                    ? "ابدأ بإضافة هدفك الأول وسيظهر تقدمه هنا."
+                    : "Create your first goal and its progress will appear here."}
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="rounded-3xl border border-dashed border-border/80 bg-card/20 p-6 sm:p-10 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-            <Target className="h-7 w-7" />
+        </TabsContent>
+
+        <TabsContent value="notifications" className="-mt-5 pt-5">
+          <div className="overflow-y-auto h-[340px] sm:h-[440px] rounded-2xl border border-border/60 bg-card/30 p-3 sm:rounded-3xl sm:p-4 scrollbar-thin">
+            <div className="space-y-3">
+              {/* Example notification items - UI only */}
+              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    {isArabic ? "تم إنجاز مهمة" : "Task completed"}
+                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {isArabic
+                      ? "أحسنت! تم إكمال مهمة بنجاح في أحد أهدافك."
+                      : "Great job! A task in one of your goals has been completed successfully."}
+                  </p>
+                  <span className="mt-1 text-[11px] text-muted-foreground/60">
+                    {isArabic ? "منذ ٥ دقائق" : "5 min ago"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    {isArabic ? "موعد قريب" : "Deadline approaching"}
+                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {isArabic
+                      ? "لديك هدف يقترب موعد انتهائه، حافظ على وتيرتك!"
+                      : "You have a goal with an approaching deadline, keep up the pace!"}
+                  </p>
+                  <span className="mt-1 text-[11px] text-muted-foreground/60">
+                    {isArabic ? "منذ ساعة" : "1 hour ago"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    {isArabic ? "تقدم ملحوظ" : "Progress milestone"}
+                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {isArabic
+                      ? "وصلت إلى ٥٠٪ من أحد أهدافك، استمر!"
+                      : "You've reached 50% on one of your goals, keep going!"}
+                  </p>
+                  <span className="mt-1 text-[11px] text-muted-foreground/60">
+                    {isArabic ? "منذ ٣ ساعات" : "3 hours ago"}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-foreground">
-            {isArabic ? "لا توجد أهداف بعد" : "No goals yet"}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {isArabic
-              ? "ابدأ بإضافة هدفك الأول وسيظهر تقدمه هنا."
-              : "Create your first goal and its progress will appear here."}
-          </p>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

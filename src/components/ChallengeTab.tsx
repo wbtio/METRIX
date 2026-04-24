@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Swords } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import type { ChallengeSnapshot, ChallengeHistoryItem, ChallengeTabProps } from './challenge/challenge-types';
 import { EMPTY_SNAPSHOT, compactCopy } from './challenge/challenge-types';
@@ -30,6 +31,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
   const [confirmEndOpen, setConfirmEndOpen] = useState(false);
   const [history, setHistory] = useState<ChallengeHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [isChallengePanelCollapsed, setIsChallengePanelCollapsed] = useState(true);
   const actionLockRef = useRef<'create' | 'join' | 'end' | null>(null);
 
   const numberFormatter = useMemo(
@@ -247,28 +249,79 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
       <FeedbackBanner feedback={feedback} />
 
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 scrollbar-thin space-y-2.5">
-        <HeaderCard
-          snapshot={snapshot}
-          summaryText={summaryText}
-          statusLabel={statusLabel}
-          statusToneClass={statusToneClass}
-          leadText={leadText}
-          isPendingHost={isPendingHost}
-          isPendingGuest={isPendingGuest}
-          busyAction={busyAction}
-          joinCode={joinCode}
-          copied={copied}
-          locale={locale}
-          numberFormatter={numberFormatter}
-          ui={ui}
-          t={t}
-          onCreate={handleCreate}
-          onJoin={handleJoin}
-          onJoinCodeChange={setJoinCode}
-          onCopyInvite={handleCopyInvite}
-          onRequestEnd={() => setConfirmEndOpen(true)}
-          onCancelPending={handleEnd}
-        />
+        <section className="rounded-2xl border border-border/80 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm shadow-black/[0.03] dark:bg-card/50 dark:from-card/70 dark:via-card/60 dark:to-background/30 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-5/12 text-chart-5 ring-1 ring-chart-5/20">
+                <Swords className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-black text-foreground">{t.challengeTab}</div>
+                <div className="text-[11px] text-muted-foreground">{statusLabel}</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsChallengePanelCollapsed((prev) => !prev)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-[11px] font-black text-muted-foreground transition-colors hover:bg-muted dark:bg-background/20"
+              aria-expanded={!isChallengePanelCollapsed}
+            >
+              {isChallengePanelCollapsed ? (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  {isArabic ? 'إظهار' : 'Show'}
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  {isArabic ? 'إخفاء' : 'Hide'}
+                </>
+              )}
+            </button>
+          </div>
+
+          {!isChallengePanelCollapsed && (
+            <>
+              <div className="mt-3">
+                <HeaderCard
+                  snapshot={snapshot}
+                  summaryText={summaryText}
+                  statusLabel={statusLabel}
+                  statusToneClass={statusToneClass}
+                  leadText={leadText}
+                  isPendingHost={isPendingHost}
+                  isPendingGuest={isPendingGuest}
+                  busyAction={busyAction}
+                  joinCode={joinCode}
+                  copied={copied}
+                  locale={locale}
+                  numberFormatter={numberFormatter}
+                  ui={ui}
+                  t={t}
+                  onCreate={handleCreate}
+                  onJoin={handleJoin}
+                  onJoinCodeChange={setJoinCode}
+                  onCopyInvite={handleCopyInvite}
+                  onRequestEnd={() => setConfirmEndOpen(true)}
+                  onCancelPending={handleEnd}
+                  embedded
+                />
+              </div>
+
+              <div className="my-4 h-px bg-border/60" />
+
+              <HistoryCard
+                history={history}
+                historyLoading={historyLoading}
+                locale={locale}
+                ui={ui}
+                t={t}
+                embedded
+              />
+            </>
+          )}
+        </section>
 
         {hasHeadToHead && (
           <BoardCard
@@ -305,15 +358,6 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
           />
         )}
 
-        {(snapshot.status === 'none' || snapshot.status === 'pending' || snapshot.status === 'ended' || snapshot.status === 'active') && (
-          <HistoryCard
-            history={history}
-            historyLoading={historyLoading}
-            locale={locale}
-            ui={ui}
-            t={t}
-          />
-        )}
       </div>
 
       <EndChallengeDialog

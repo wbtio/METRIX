@@ -3,6 +3,7 @@
 import {
   CheckCircle2,
   Loader2,
+  Send,
   Sparkles,
   WandSparkles,
 } from 'lucide-react';
@@ -210,9 +211,9 @@ export default function DailyFocusPanel({
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <WandSparkles className="h-4 w-4" />
+                  <Send className="h-4 w-4" />
                 )}
-                {dailyFocus.answered_at ? t.updateSuggestions : t.generateSuggestions}
+                {t.submitAnswer}
               </button>
             </div>
           </div>

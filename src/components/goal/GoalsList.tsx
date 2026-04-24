@@ -17,6 +17,7 @@ import { getGoalEndDaysChip } from '@/lib/goal-dates';
 import { getIconComponent } from './IconPicker';
 import GoalEditDialog from './GoalEditDialog';
 import GoalProgressBar from '@/components/shared/GoalProgressBar';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 
 interface Goal {
     id: string;
@@ -47,14 +48,9 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
     const supabase = createClient();
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+    const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<{ id: string; title: string } | null>(null);
 
-    const handleDeleteGoal = async (goalId: string, goalTitle: string) => {
-        const confirmMessage = language === 'ar'
-            ? `هل أنت متأكد من حذف الهدف "${goalTitle}"؟`
-            : `Are you sure you want to delete "${goalTitle}"?`;
-
-        if (!confirm(confirmMessage)) return;
-
+    const handleDeleteGoal = async (goalId: string) => {
         setDeletingId(goalId);
 
         try {
@@ -111,7 +107,7 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
     }
 
     return (
-        <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="w-full max-w-4xl 2xl:max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-500">
             <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 lg:p-8 rounded-[20px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl space-y-4 sm:space-y-6">
                 <div className={isArabic ? 'text-right' : 'text-left'}>
                     <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-2">{t.myGoals}</h2>
@@ -204,7 +200,8 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <button
-                                                            className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                                                            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                                                            aria-label={language === 'ar' ? 'خيارات الهدف' : 'Goal options'}
                                                         >
                                                             <MoreVertical className="w-4 h-4" />
                                                         </button>
@@ -242,7 +239,7 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                                                             variant="destructive"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDeleteGoal(goal.id, goal.title);
+                                                                setConfirmDeleteGoal({ id: goal.id, title: goal.title });
                                                             }}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -282,6 +279,25 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                 onSaved={() => {
                     setEditingGoal(null);
                     if (onGoalChanged) onGoalChanged();
+                }}
+            />
+
+            <ConfirmModal
+                isOpen={!!confirmDeleteGoal}
+                title={isArabic ? 'حذف الهدف' : 'Delete Goal'}
+                message={
+                    confirmDeleteGoal
+                        ? isArabic
+                            ? `هل أنت متأكد من حذف الهدف "${confirmDeleteGoal.title}"؟ لا يمكن التراجع عن هذا الإجراء.`
+                            : `Are you sure you want to delete "${confirmDeleteGoal.title}"? This action cannot be undone.`
+                        : ''
+                }
+                confirmLabel={isArabic ? 'حذف' : 'Delete'}
+                variant="danger"
+                language={language}
+                onCancel={() => setConfirmDeleteGoal(null)}
+                onConfirm={() => {
+                    if (confirmDeleteGoal) handleDeleteGoal(confirmDeleteGoal.id);
                 }}
             />
         </div>

@@ -1121,13 +1121,7 @@ export default function Dashboard({
 
     if (nextSession) {
       showSuccessToast(
-        nextSession.suggestions_unlocked
-          ? isArabic
-            ? "تم حفظ تقييم اليوم وتحديث الاقتراحات"
-            : "Today's plan feedback was saved and suggestions were updated"
-          : isArabic
-            ? "تم حفظ تقييم اليوم"
-            : "Today's plan feedback was saved",
+        isArabic ? "تم حفظ جواب اليوم" : "Today's answer was saved",
       );
     }
   }, [
@@ -1278,24 +1272,26 @@ export default function Dashboard({
 
   return (
     <div
-      className="mx-auto flex w-full max-w-4xl flex-col gap-3 pb-2 sm:pb-4"
+      className="mx-auto flex h-full min-h-0 w-full max-w-4xl 2xl:max-w-5xl flex-col gap-3 overflow-hidden"
       dir={isArabic ? "rtl" : "ltr"}
     >
       {/* ===== Header Card ===== */}
-      <DashboardHeader
-        goal={goal}
-        progress={progress}
-        streak={streak}
-        taskCount={taskCount}
-        completedTaskCount={completedTaskCount}
-        language={language}
-        showGoalDetails={showGoalDetails}
-        onToggleDetails={() => setShowGoalDetails(!showGoalDetails)}
-        onTogglePin={handleTogglePin}
-        onEditGoal={() => setShowGoalEditDialog(true)}
-        onDeleteGoal={handleDeleteGoal}
-        onUpdateIcon={handleUpdateIcon}
-      />
+      <div className="shrink-0">
+        <DashboardHeader
+          goal={goal}
+          progress={progress}
+          streak={streak}
+          taskCount={taskCount}
+          completedTaskCount={completedTaskCount}
+          language={language}
+          showGoalDetails={showGoalDetails}
+          onToggleDetails={() => setShowGoalDetails(!showGoalDetails)}
+          onTogglePin={handleTogglePin}
+          onEditGoal={() => setShowGoalEditDialog(true)}
+          onDeleteGoal={handleDeleteGoal}
+          onUpdateIcon={handleUpdateIcon}
+        />
+      </div>
 
       <GoalEditDialog
         goal={goal}
@@ -1321,131 +1317,134 @@ export default function Dashboard({
         submitting={dailyFocusSubmitting}
         answer={dailyFocusAnswer}
         onAnswerChange={handleDailyFocusAnswerChange}
-        onAppendTranscript={handleAppendDailyFocusTranscript}
         onSubmit={handleSubmitDailyFocusAnswer}
       />
 
       {/* ===== Log Progress Button ===== */}
       <button
         onClick={() => setShowLogModal(true)}
-        className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:opacity-90"
       >
         <Flame className="w-4 h-4" />
         {t.logProgressButton}
       </button>
 
       {/* ===== Tabs ===== */}
-      <div className="flex gap-1 p-1 rounded-xl bg-muted/20 border border-border/60 overflow-x-auto">
+      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/20 p-1">
         {tabItems.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-1 py-2 px-1.5 rounded-lg text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap",
+              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap",
               activeTab === tab.key
                 ? "bg-white dark:bg-background text-foreground border border-border/70"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
             {tab.icon}
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="truncate">{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* ===== Tab Content ===== */}
-      {activeTab === "focus" && (
-        <FocusTab
-          language={language}
-          isArabic={isArabic}
-          dailyFocus={dailyFocus}
-          dailyFocusLoading={dailyFocusLoading}
-          dailyFocusSubmitting={dailyFocusSubmitting}
-          dailyFocusAddingSuggestionId={addingSuggestionId}
-          dailyFocusError={dailyFocusError}
-          dailyFocusAnswer={dailyFocusAnswer}
-          filteredHierarchy={filteredHierarchy}
-          hierarchy={hierarchy}
-          loadingTasks={loadingTasks}
-          focusStats={focusStats}
-          expandedMains={expandedMains}
-          addingMain={addingMain}
-          addingSubFor={addingSubFor}
-          newMainText={newMainText}
-          newMainFreq={newMainFreq}
-          newMainWeight={newMainWeight}
-          newMainColor={newMainColor}
-          newMainAccent={newMainAccent}
-          newSubText={newSubText}
-          newSubFreq={newSubFreq}
-          newSubWeight={newSubWeight}
-          editingTaskId={editingTaskId}
-          editingText={editingText}
-          isChecked={isChecked}
-          isCompletedToday={isCompletedToday}
-          shouldAnimateTask={shouldAnimateTask}
-          onToggleExpand={toggleExpand}
-          onToggleCheckin={toggleCheckin}
-          onOpenNewMainComposer={openNewMainComposer}
-          onCloseNewMainComposer={closeNewMainComposer}
-          onAddMain={handleAddMain}
-          onStartAddingSub={handleStartAddingSub}
-          onCancelAddingSub={() => setAddingSubFor(null)}
-          onAddSub={handleAddSub}
-          onStartEditingTask={handleStartEditingTask}
-          onCancelEditingTask={() => setEditingTaskId(null)}
-          onRenameTask={handleRenameTask}
-          onDeleteTask={handleDeleteTask}
-          onUpdateTaskIcon={handleUpdateTaskIcon}
-          onUpdateTaskColor={handleUpdateTaskColor}
-          onUpdateTaskWeight={handleUpdateTaskWeight}
-          onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
-          onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
-          onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
-          onRetryDailyFocus={handleRetryDailyFocus}
-          onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
-          onSetNewMainText={setNewMainText}
-          onSetNewMainFreq={setNewMainFreq}
-          onSetNewMainWeight={setNewMainWeight}
-          onSetNewMainColor={setNewMainColor}
-          onSetNewSubText={setNewSubText}
-          onSetNewSubFreq={setNewSubFreq}
-          onSetNewSubWeight={setNewSubWeight}
-          onSetEditingText={setEditingText}
-        />
-      )}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {activeTab === "focus" && (
+          <FocusTab
+            language={language}
+            isArabic={isArabic}
+            dailyFocus={dailyFocus}
+            dailyFocusLoading={dailyFocusLoading}
+            dailyFocusSubmitting={dailyFocusSubmitting}
+            dailyFocusAddingSuggestionId={addingSuggestionId}
+            dailyFocusError={dailyFocusError}
+            dailyFocusAnswer={dailyFocusAnswer}
+            filteredHierarchy={filteredHierarchy}
+            hierarchy={hierarchy}
+            loadingTasks={loadingTasks}
+            focusStats={focusStats}
+            expandedMains={expandedMains}
+            addingMain={addingMain}
+            addingSubFor={addingSubFor}
+            newMainText={newMainText}
+            newMainFreq={newMainFreq}
+            newMainWeight={newMainWeight}
+            newMainColor={newMainColor}
+            newMainAccent={newMainAccent}
+            newSubText={newSubText}
+            newSubFreq={newSubFreq}
+            newSubWeight={newSubWeight}
+            editingTaskId={editingTaskId}
+            editingText={editingText}
+            isChecked={isChecked}
+            isCompletedToday={isCompletedToday}
+            shouldAnimateTask={shouldAnimateTask}
+            onToggleExpand={toggleExpand}
+            onToggleCheckin={toggleCheckin}
+            onOpenNewMainComposer={openNewMainComposer}
+            onCloseNewMainComposer={closeNewMainComposer}
+            onAddMain={handleAddMain}
+            onStartAddingSub={handleStartAddingSub}
+            onCancelAddingSub={() => setAddingSubFor(null)}
+            onAddSub={handleAddSub}
+            onStartEditingTask={handleStartEditingTask}
+            onCancelEditingTask={() => setEditingTaskId(null)}
+            onRenameTask={handleRenameTask}
+            onDeleteTask={handleDeleteTask}
+            onUpdateTaskIcon={handleUpdateTaskIcon}
+            onUpdateTaskColor={handleUpdateTaskColor}
+            onUpdateTaskWeight={handleUpdateTaskWeight}
+            onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
+            onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
+            onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
+            onRetryDailyFocus={handleRetryDailyFocus}
+            onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
+            onSetNewMainText={setNewMainText}
+            onSetNewMainFreq={setNewMainFreq}
+            onSetNewMainWeight={setNewMainWeight}
+            onSetNewMainColor={setNewMainColor}
+            onSetNewSubText={setNewSubText}
+            onSetNewSubFreq={setNewSubFreq}
+            onSetNewSubWeight={setNewSubWeight}
+            onSetEditingText={setEditingText}
+          />
+        )}
 
-      {activeTab === "chart" && (
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <div className="w-full min-w-0 sm:flex sm:flex-1 sm:min-h-0">
-              <GrowthChart
-                data={chartData}
-                language={language}
-                fillHeight
-                className="w-full"
-              />
+        {activeTab === "chart" && (
+          <div className="scrollbar-thin h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem] md:items-stretch">
+              <div className="w-full min-w-0 md:flex md:min-h-0">
+                <GrowthChart
+                  data={chartData}
+                  language={language}
+                  fillHeight
+                  className="w-full"
+                />
+              </div>
+              <div className="w-full min-w-0 md:flex">
+                <DayCalendarGrid
+                  logs={logs}
+                  goalStartDate={goal.created_at}
+                  language={language}
+                />
+              </div>
             </div>
-            <div className="w-full min-w-0 sm:flex sm:w-[18rem] sm:flex-none">
-              <DayCalendarGrid
-                logs={logs}
-                goalStartDate={goal.created_at}
-                language={language}
-              />
-            </div>
+            <TaskInsights goalId={goal.id} tasks={tasks} language={language} />
           </div>
-          <TaskInsights goalId={goal.id} tasks={tasks} language={language} />
-        </div>
-      )}
+        )}
 
-      {activeTab === "challenge" && (
-        <ChallengeTab
-          goalId={goal.id}
-          currentPoints={goal.current_points}
-          targetPoints={goal.target_points}
-          language={language}
-        />
-      )}
+        {activeTab === "challenge" && (
+          <div className="h-full min-h-0 overflow-hidden">
+            <ChallengeTab
+              goalId={goal.id}
+              currentPoints={goal.current_points}
+              targetPoints={goal.target_points}
+              language={language}
+            />
+          </div>
+        )}
+      </div>
 
       {/* ===== Log Modal ===== */}
       {showLogModal && (

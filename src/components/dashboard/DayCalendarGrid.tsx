@@ -319,12 +319,12 @@ export default function DayCalendarGrid({
   return (
     <>
       <div
-        className="relative w-full flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 p-1.5 shadow-xl ring-1 ring-border/10 backdrop-blur-xl sm:p-2"
+        className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 p-1.5 shadow-xl ring-1 ring-border/10 backdrop-blur-xl sm:p-2"
         dir={isArabic ? "rtl" : "ltr"}
       >
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-        <div className="border-b border-border/60 pb-1.5 sm:pb-1">
+        <div className="border-b border-border/60 pb-1 sm:pb-1">
           <div className="flex items-center gap-0.5" dir="ltr">
             <button
               type="button"
@@ -333,7 +333,7 @@ export default function DayCalendarGrid({
                 setTooltip(null);
                 setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
               }}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground sm:h-7 sm:w-7"
               aria-label={isArabic ? "الشهر السابق" : "Previous month"}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -346,10 +346,10 @@ export default function DayCalendarGrid({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="group flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 py-2 sm:py-1 text-center transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                  className="group flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card sm:py-1"
                   aria-label={isArabic ? "اختيار شهر" : "Choose month"}
                 >
-                  <span className="truncate text-[14px] font-semibold tracking-tight text-foreground sm:text-[15px]">
+                  <span className="truncate text-[13px] font-semibold tracking-tight text-foreground sm:text-[15px]">
                     {monthLabel}
                   </span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
@@ -420,7 +420,7 @@ export default function DayCalendarGrid({
                 viewDate.getFullYear() === today.getFullYear() &&
                 viewDate.getMonth() === today.getMonth()
               }
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-30 sm:h-7 sm:w-7"
               aria-label={isArabic ? "الشهر التالي" : "Next month"}
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -428,12 +428,12 @@ export default function DayCalendarGrid({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-1 flex-col">
+        <div className="mt-1.5 flex flex-1 flex-col">
           <div className="mb-1 grid grid-cols-7 gap-0.5 px-0.5 sm:mb-1.5 sm:gap-1">
             {weekdayLabels.map((dayLabel, index) => (
               <div
                 key={`${dayLabel}-${index}`}
-                className="text-center text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75"
+                className="text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/75 sm:text-[9px] sm:tracking-[0.14em]"
               >
                 {dayLabel}
               </div>
@@ -446,7 +446,7 @@ export default function DayCalendarGrid({
                 return (
                   <div
                     key={`blank-${index}`}
-                    className="aspect-square rounded-md bg-transparent"
+                    className="h-8 rounded-md bg-transparent min-[380px]:h-9 md:aspect-square md:h-auto"
                   />
                 );
               }
@@ -482,7 +482,7 @@ export default function DayCalendarGrid({
                   }}
                   onMouseLeave={() => setTooltip(null)}
                   className={cn(
-                    "group relative aspect-square rounded-md border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                    "group relative h-8 rounded-md border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card min-[380px]:h-9 md:aspect-square md:h-auto",
                     day.isBeforeStart || day.isAfterToday
                       ? "border-dashed border-border/35 bg-muted/10 text-muted-foreground/35"
                       : heatClass(day.logCount),
@@ -504,7 +504,7 @@ export default function DayCalendarGrid({
                 >
                   <span
                     className={cn(
-                      "absolute left-1 top-1 text-[9px] font-semibold leading-none sm:left-1.5 sm:top-1.5 sm:text-[10px]",
+                      "absolute left-1 top-1 text-[8px] font-semibold leading-none sm:left-1.5 sm:top-1.5 sm:text-[10px]",
                       day.isBeforeStart || day.isAfterToday
                         ? "text-muted-foreground/40"
                         : day.hasLogs
@@ -533,7 +533,7 @@ export default function DayCalendarGrid({
           </div>
         </div>
 
-        <div className="mt-1.5 flex flex-col gap-1.5 border-t border-border/60 pt-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+        <div className="mt-1.5 flex flex-col gap-1.5 border-t border-border/60 pt-1.5 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between sm:gap-2">
           <div className="min-w-0 flex flex-1 items-center overflow-hidden">
             <div className="inline-flex max-w-full items-center gap-1 overflow-hidden rounded-full border border-border/70 bg-muted/15 px-1.5 py-0.5 text-[9px] font-medium leading-none whitespace-nowrap sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[10px]">
               {monthSummaryItems.map((item, index) => (
@@ -602,20 +602,20 @@ export default function DayCalendarGrid({
         >
           <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
           <div
-            className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-[22px] border border-border bg-card shadow-2xl"
+            className="relative flex max-h-[72dvh] w-[calc(100%-1rem)] max-w-sm flex-col overflow-hidden rounded-t-[20px] border border-border bg-card shadow-2xl sm:max-h-[85vh] sm:max-w-md sm:rounded-t-[22px]"
             onClick={(event) => event.stopPropagation()}
             dir={isArabic ? "rtl" : "ltr"}
           >
-            <div className="flex justify-center py-2.5">
+            <div className="flex justify-center py-2">
               <div className="h-1 w-9 rounded-full bg-muted-foreground/20" />
             </div>
 
-            <div className="flex items-start justify-between gap-3 border-b border-border px-4 pb-3">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-3 pb-2.5 sm:px-4 sm:pb-3">
               <div>
                 <p className="text-[10px] text-muted-foreground">
                   {labels.dayDetail}
                 </p>
-                <p className="mt-0.5 text-sm font-bold text-foreground">
+                <p className="mt-0.5 text-[13px] font-bold text-foreground sm:text-sm">
                   {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(
                     locale,
                     {
@@ -665,9 +665,9 @@ export default function DayCalendarGrid({
               </div>
             </div>
 
-            <div className="flex-1 space-y-2.5 overflow-y-auto p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
+            <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:space-y-2.5 sm:p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
               {selectedLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground sm:py-12">
                   <CalendarDays className="h-8 w-8 opacity-20" />
                   <span className="text-sm">{labels.noLogsForDay}</span>
                 </div>

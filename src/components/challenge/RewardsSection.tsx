@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Crown, LockKeyhole, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Crown, LockKeyhole, Star } from 'lucide-react';
 import Image from 'next/image';
 import type { Language } from '@/lib/translations';
 import { cn } from '@/lib/utils';
@@ -567,6 +567,7 @@ export function RewardsSection({
   const [storageReady, setStorageReady] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const mqlRef = useRef<MediaQueryList | null>(null);
 
   useEffect(() => {
@@ -670,63 +671,79 @@ export function RewardsSection({
           </div>
           <span className="text-sm font-black text-foreground">{t.challengeRewards}</span>
         </div>
-        <div className="rounded-full border border-chart-3/20 bg-chart-3/8 px-3 py-1 text-[11px] font-black text-chart-3">
-          {numberFormatter.format(rewards.length)} {t.challengeRewards}
+        <div className="flex items-center gap-2">
+          <div className="rounded-full border border-chart-3/20 bg-chart-3/8 px-3 py-1 text-[11px] font-black text-chart-3">
+            {numberFormatter.format(rewards.length)} {t.challengeRewards}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-[11px] font-black text-muted-foreground transition-colors hover:bg-muted dark:bg-background/20"
+            aria-expanded={!isCollapsed}
+          >
+            {isCollapsed ? (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                {language === 'ar' ? 'إظهار' : 'Show'}
+              </>
+            ) : (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                {language === 'ar' ? 'إخفاء' : 'Hide'}
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* ══ Deck ══ */}
-      <div className="relative z-10 mt-2 w-full overflow-visible">
+      {!isCollapsed && (
+        <div className="relative z-10 mt-2 w-full overflow-visible">
+          {/* Row 1 */}
+          <DeckRow
+            rewards={row1}
+            startIndex={0}
+            topPad={isMobile ? 28 : 32}
+            {...sharedRowProps}
+          />
 
-        {/* Row 1 */}
-        <DeckRow
-          rewards={row1}
-          startIndex={0}
-          topPad={isMobile ? 28 : 32}
-          {...sharedRowProps}
-        />
-
-        {/* Row 2 — mobile only, overlaps row 1 slightly */}
-        {row2.length > 0 && (
-          /*
-            marginTop: negative value pulls row 2 up so it visually
-            overlaps the bottom of row 1 — saves height, looks stacked.
-          */
-          <div
-            className="flex justify-center overflow-visible"
-            style={{ marginTop: '-12px' }}
-          >
+          {/* Row 2 — mobile only, overlaps row 1 slightly */}
+          {row2.length > 0 && (
             <div
-              className="flex items-end justify-center overflow-visible"
-              style={{
-                width: `${(row2.length / row1.length) * 100}%`,
-                paddingTop: '28px',
-                paddingBottom: '8px',
-                gap: '0px',
-              }}
+              className="flex justify-center overflow-visible"
+              style={{ marginTop: '-12px' }}
             >
-              {row2.map((reward, i) => (
-                <RewardCard
-                  key={reward.id}
-                  reward={reward}
-                  index={row1.length + i}
-                  isOpened={reward.isUnlocked && openedRewardSet.has(reward.id)}
-                  isOpening={openingRewardId === reward.id}
-                  activeId={activeId}
-                  isMobile={isMobile}
-                  numberFormatter={numberFormatter}
-                  t={t}
-                  language={language}
-                  logoSize={logoSize}
-                  onOpen={handleOpenReward}
-                  onActivate={(id) => setActiveId(id)}
-                  onDeactivate={() => setActiveId(null)}
-                />
-              ))}
+              <div
+                className="flex items-end justify-center overflow-visible"
+                style={{
+                  width: `${(row2.length / row1.length) * 100}%`,
+                  paddingTop: '28px',
+                  paddingBottom: '8px',
+                  gap: '0px',
+                }}
+              >
+                {row2.map((reward, i) => (
+                  <RewardCard
+                    key={reward.id}
+                    reward={reward}
+                    index={row1.length + i}
+                    isOpened={reward.isUnlocked && openedRewardSet.has(reward.id)}
+                    isOpening={openingRewardId === reward.id}
+                    activeId={activeId}
+                    isMobile={isMobile}
+                    numberFormatter={numberFormatter}
+                    t={t}
+                    language={language}
+                    logoSize={logoSize}
+                    onOpen={handleOpenReward}
+                    onActivate={(id) => setActiveId(id)}
+                    onDeactivate={() => setActiveId(null)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

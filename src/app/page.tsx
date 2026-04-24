@@ -238,13 +238,17 @@ export default function Home() {
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
   const shouldCenterMainContent =
     currentView === 'home' ||
-    (currentView === 'goals' && goals.length === 0);
+    currentView === 'goals';
+  const isDashboardView = currentView === 'dashboard' && !!selectedGoal;
 
   return (
     <OrbitShell user={user}>
       <div
-        className={`mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col items-center px-3 pt-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] transition-all duration-300 sm:px-6 sm:pt-6 sm:pb-28 lg:px-12 lg:pt-8 lg:pb-12 lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
-          ${shouldCenterMainContent ? 'justify-center' : 'justify-start'}`}
+        className={`mx-auto flex min-h-0 w-full max-w-7xl 2xl:max-w-[1600px] flex-col items-center px-3 pt-3 transition-all duration-300 sm:px-6 sm:pt-6 lg:px-12 lg:pt-8 lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
+          ${isDashboardView
+            ? 'h-[calc(100dvh_-_5.75rem_-_env(safe-area-inset-bottom))] shrink-0 overflow-hidden pb-0 sm:h-[calc(100dvh_-_7rem)] lg:h-[100dvh] lg:pb-12'
+            : 'flex-1 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:pb-28 lg:pb-12'}
+          ${shouldCenterMainContent && !isDashboardView ? 'justify-center' : 'justify-start'}`}
       >
 
         {loading ? (
@@ -337,7 +341,7 @@ export default function Home() {
             }}
           />
         ) : currentView === 'dashboard' && selectedGoal ? (
-          <div className="w-full min-h-0 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="flex min-h-0 w-full flex-1 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <Dashboard
               goal={selectedGoal}
               language={language}

@@ -22,9 +22,36 @@ import {
 import { translations, type Language } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 
-type TimeRange = "week" | "month" | "year" | "all";
+type TimeRange = "7d" | "30d" | "60d" | "90d" | "120d" | "year" | "all";
 type ChartType = "bar" | "line" | "area";
 type BucketMode = "day" | "month";
+
+/**
+ * Maps every time range to the number of trailing days it represents, or
+ * `null` when the range has no cutoff (e.g. "all time"). A single source of
+ * truth keeps the filter + the empty-day pre-fill perfectly aligned.
+ */
+const RANGE_TO_DAYS: Record<TimeRange, number | null> = {
+  "7d": 7,
+  "30d": 30,
+  "60d": 60,
+  "90d": 90,
+  "120d": 120,
+  year: 365,
+  all: null,
+};
+
+/**
+ * Ranges that should render bars/dots per-day. Longer ranges ("year", "all")
+ * switch to monthly buckets so the chart stays readable.
+ */
+const DAY_BUCKET_RANGES: ReadonlySet<TimeRange> = new Set<TimeRange>([
+  "7d",
+  "30d",
+  "60d",
+  "90d",
+  "120d",
+]);
 
 interface GrowthChartProps {
   data: { date: string; points: number }[];
@@ -56,7 +83,7 @@ export default function GrowthChart({
 }: GrowthChartProps) {
   const t = translations[language];
   const isArabic = language === "ar";
-  const [timeRange, setTimeRange] = useState<TimeRange>("month");
+  const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [chartType, setChartType] = useState<ChartType>("bar");
   const gradientId = useId().replace(/:/g, "");
 
@@ -127,6 +154,8 @@ export default function GrowthChart({
   );
   const chartMargin = { top: 6, right: 4, left: -8, bottom: 0 };
 
+  const rangeDays = RANGE_TO_DAYS[timeRange];
+
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) {
       return [];
@@ -136,17 +165,9 @@ export default function GrowthChart({
     now.setHours(23, 59, 59, 999);
 
     let cutoffDate = new Date(0);
-    if (timeRange === "week") {
+    if (rangeDays !== null) {
       cutoffDate = new Date(now);
-      cutoffDate.setDate(now.getDate() - 6);
-      cutoffDate.setHours(0, 0, 0, 0);
-    } else if (timeRange === "month") {
-      cutoffDate = new Date(now);
-      cutoffDate.setDate(now.getDate() - 29);
-      cutoffDate.setHours(0, 0, 0, 0);
-    } else if (timeRange === "year") {
-      cutoffDate = new Date(now);
-      cutoffDate.setDate(now.getDate() - 364);
+      cutoffDate.setDate(now.getDate() - (rangeDays - 1));
       cutoffDate.setHours(0, 0, 0, 0);
     }
 
@@ -154,10 +175,11 @@ export default function GrowthChart({
       const entryDate = parseLocalDay(entry.date);
       return entryDate >= cutoffDate && entryDate <= now;
     });
-  }, [data, timeRange]);
+  }, [data, rangeDays]);
 
-  const bucketMode: BucketMode =
-    timeRange === "year" || timeRange === "all" ? "month" : "day";
+  const bucketMode: BucketMode = DAY_BUCKET_RANGES.has(timeRange)
+    ? "day"
+    : "month";
 
   const chartData = useMemo(() => {
     if (filteredData.length === 0) {
@@ -170,10 +192,30 @@ export default function GrowthChart({
     if (bucketMode === "day") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const daysBack = timeRange === "week" ? 6 : 29;
-      for (let i = daysBack; i >= 0; i--) {
+      const totalDays = rangeDays ?? 30;
+      for (let i = totalDays - 1; i >= 0; i--) {
         const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        buckets.set(key, { rawDate: key, points: 0 });
+      }
+    } else {
+      const today = new Date();
+      const endMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const firstEntryDate = filteredData.reduce((earliest, entry) => {
+        const entryDate = parseLocalDay(entry.date);
+        return entryDate < earliest ? entryDate : earliest;
+      }, parseLocalDay(filteredData[0].date));
+      const startMonth =
+        timeRange === "all"
+          ? new Date(firstEntryDate.getFullYear(), firstEntryDate.getMonth(), 1)
+          : new Date(endMonth.getFullYear(), endMonth.getMonth() - 11, 1);
+
+      for (
+        const month = new Date(startMonth);
+        month <= endMonth;
+        month.setMonth(month.getMonth() + 1)
+      ) {
+        const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-01`;
         buckets.set(key, { rawDate: key, points: 0 });
       }
     }
@@ -203,7 +245,7 @@ export default function GrowthChart({
             ? timeRange === "all"
               ? shortMonthYearFormatter.format(entryDate)
               : shortMonthFormatter.format(entryDate)
-            : timeRange === "week"
+            : timeRange === "7d"
               ? weekDayFormatter.format(entryDate)
               : shortDayFormatter.format(entryDate);
 
@@ -224,6 +266,7 @@ export default function GrowthChart({
     filteredData,
     longDayFormatter,
     longMonthYearFormatter,
+    rangeDays,
     shortDayFormatter,
     shortMonthFormatter,
     shortMonthYearFormatter,
@@ -232,13 +275,26 @@ export default function GrowthChart({
   ]);
 
   const maxBarSize =
-    chartData.length <= 7 ? 40 : chartData.length <= 12 ? 28 : 18;
+    chartData.length <= 7
+      ? 40
+      : chartData.length <= 12
+        ? 28
+        : chartData.length <= 30
+          ? 18
+          : chartData.length <= 60
+            ? 12
+            : chartData.length <= 90
+              ? 8
+              : 6;
   const showDots = chartData.length <= 18;
+  const xAxisMinTickGap =
+    chartData.length > 60 ? 36 : chartData.length > 30 ? 28 : isArabic ? 28 : 24;
+  const yAxisWidth = isArabic ? 38 : 30;
   const chartViewportClass = fillHeight
-    ? "aspect-auto h-full min-h-[200px] w-full flex-1 sm:min-h-[240px] lg:min-h-[262px]"
+    ? "aspect-auto h-full min-h-[158px] w-full flex-1 sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
     : "aspect-auto h-[180px] w-full sm:h-[196px] lg:h-[208px]";
   const emptyStateClass = fillHeight
-    ? "h-full min-h-[200px] sm:min-h-[240px] lg:min-h-[262px]"
+    ? "h-full min-h-[158px] sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
     : "h-[180px] sm:h-[196px] lg:h-[208px]";
 
   const containerClass = cn(
@@ -250,8 +306,11 @@ export default function GrowthChart({
   );
 
   const timeRangeOptions: { key: TimeRange; label: string }[] = [
-    { key: "week", label: t.thisWeek },
-    { key: "month", label: t.thisMonth },
+    { key: "7d", label: t.thisWeek },
+    { key: "30d", label: t.thisMonth },
+    { key: "60d", label: t.sixtyDays },
+    { key: "90d", label: t.ninetyDays },
+    { key: "120d", label: t.oneTwentyDays },
     { key: "year", label: t.thisYear },
     { key: "all", label: t.allTime },
   ];
@@ -293,7 +352,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={24}
+              minTickGap={xAxisMinTickGap}
               height={34}
               className="text-[11px] fill-muted-foreground"
             />
@@ -301,7 +360,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={6}
-              width={30}
+              width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
               className="text-[11px] fill-muted-foreground"
@@ -368,7 +427,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={24}
+              minTickGap={xAxisMinTickGap}
               height={34}
               className="text-[11px] fill-muted-foreground"
             />
@@ -376,7 +435,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={6}
-              width={30}
+              width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
               className="text-[11px] fill-muted-foreground"
@@ -425,7 +484,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={24}
+              minTickGap={xAxisMinTickGap}
               height={34}
               className="text-[11px] fill-muted-foreground"
             />
@@ -433,7 +492,7 @@ export default function GrowthChart({
               tickLine={false}
               axisLine={false}
               tickMargin={6}
-              width={30}
+              width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
               className="text-[11px] fill-muted-foreground"
@@ -460,28 +519,38 @@ export default function GrowthChart({
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       )}
 
-      <div className="border-b border-border/60 pb-1.5 sm:pb-1">
-        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-1">
-          <div className="inline-flex rounded-[13px] border border-border/70 bg-background/60 p-[2px] shadow-sm">
-            {timeRangeOptions.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setTimeRange(option.key)}
-                aria-pressed={timeRange === option.key}
-                className={cn(
-                  "h-[26px] rounded-[10px] px-1.5 text-[10px] font-semibold transition-all min-w-[2.1rem] sm:min-w-[2.75rem] sm:px-2",
-                  timeRange === option.key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+      <div className="border-b border-border/60 pb-2 sm:pb-1">
+        <div className="flex items-center gap-2">
+          <div
+            className="-my-0.5 flex min-w-0 flex-1 snap-x overflow-x-auto py-0.5 scrollbar-thin"
+            role="tablist"
+            aria-label={isArabic ? "النطاق الزمني" : "Time range"}
+          >
+            <div className="inline-flex shrink-0 gap-0.5 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm">
+              {timeRangeOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="tab"
+                  onClick={() => setTimeRange(option.key)}
+                  aria-selected={timeRange === option.key}
+                  className={cn(
+                    "h-8 snap-start whitespace-nowrap rounded-full px-2.5 text-[11px] font-bold leading-none transition-all sm:h-[28px] sm:px-2.5 sm:font-semibold",
+                    isArabic
+                      ? "min-w-[3rem] tracking-normal"
+                      : "min-w-[2.75rem] tabular-nums",
+                    timeRange === option.key
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="inline-flex rounded-[13px] border border-border/70 bg-background/60 p-[2px] shadow-sm">
+          <div className="inline-flex shrink-0 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm sm:p-[2px]">
             {chartTypeOptions.map((option) => (
               <button
                 key={option.key}
@@ -490,7 +559,7 @@ export default function GrowthChart({
                 aria-pressed={chartType === option.key}
                 aria-label={option.label}
                 className={cn(
-                  "flex h-[26px] w-[26px] items-center justify-center rounded-[10px] transition-all",
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-all sm:h-[28px] sm:w-[28px] sm:rounded-[10px]",
                   chartType === option.key
                     ? "bg-chart-1 text-white shadow-sm"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",

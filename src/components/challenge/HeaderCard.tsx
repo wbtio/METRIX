@@ -63,6 +63,7 @@ interface HeaderCardProps {
   onCopyInvite: () => void;
   onRequestEnd: () => void;
   onCancelPending: () => void;
+  embedded?: boolean;
 }
 
 export function HeaderCard({
@@ -71,7 +72,6 @@ export function HeaderCard({
   statusLabel,
   statusToneClass,
   leadText,
-  isPendingHost: _isPendingHost,
   isPendingGuest,
   busyAction,
   joinCode,
@@ -86,31 +86,49 @@ export function HeaderCard({
   onCopyInvite,
   onRequestEnd,
   onCancelPending,
+  embedded = false,
 }: HeaderCardProps) {
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const shellClass =
+    'overflow-hidden border-border/80 bg-gradient-to-br from-white via-white to-muted/20 shadow-sm shadow-black/[0.03] dark:from-card/70 dark:via-card/60 dark:to-background/30';
+  const innerPanelClass =
+    cn(
+      'mt-3 rounded-2xl border border-border/60 bg-background/75 dark:bg-background/20',
+      embedded ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4',
+    );
 
   return (
-    <section className={cardClass}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-5/12 text-chart-5 ring-1 ring-chart-5/20">
+    <section className={cn(!embedded && cardClass, !embedded && shellClass)}>
+      <div className={cn('flex flex-col sm:flex-row sm:items-start sm:justify-between', embedded ? 'gap-2.5' : 'gap-3')}>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-chart-5/12 text-chart-5 ring-1 ring-chart-5/20">
               <Swords className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-black text-foreground">{t.challengeTab}</div>
-              <div className="text-[12px] leading-5 text-muted-foreground">{summaryText}</div>
+              <div className="truncate text-base font-black text-foreground">{t.challengeTab}</div>
+              <div className="mt-1 text-[12px] leading-5 text-muted-foreground sm:text-sm">{summaryText}</div>
             </div>
           </div>
         </div>
 
-        <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-black', statusToneClass)}>
+        <span
+          className={cn(
+            'inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[11px] font-black',
+            statusToneClass,
+          )}
+        >
           {statusLabel}
         </span>
       </div>
 
       {snapshot.status === 'none' && (
-        <div className="mt-3 space-y-2">
+        <div className={innerPanelClass}>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="text-sm font-black text-foreground">{t.challengeTab}</div>
+            <div className="text-[11px] text-muted-foreground">{ui.inviteLabel}</div>
+          </div>
+
           <button
             onClick={onCreate}
             disabled={busyAction !== null}
@@ -120,7 +138,7 @@ export function HeaderCard({
             {t.createChallenge}
           </button>
 
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <input
               value={joinCode}
               onChange={(event) => onJoinCodeChange(event.target.value.toUpperCase())}
@@ -142,19 +160,19 @@ export function HeaderCard({
       )}
 
       {snapshot.status === 'pending' && (
-        <div className="mt-3 space-y-2">
-          <div className="rounded-xl border border-border/60 bg-background/60 p-3 dark:bg-background/20">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className={innerPanelClass}>
+          <div className="rounded-2xl border border-border/60 bg-background/60 p-3 sm:p-4 dark:bg-background/20">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{ui.inviteLabel}</div>
                 <div
-                  className="mt-1 text-base font-black tracking-[0.22em] text-foreground"
+                  className="mt-1 text-base font-black tracking-[0.22em] text-foreground sm:text-lg"
                   dir="ltr"
                 >
                   {snapshot.inviteCode || ui.noCode}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <button
                   onClick={onCopyInvite}
                   disabled={!snapshot.inviteCode}
@@ -180,10 +198,10 @@ export function HeaderCard({
           </div>
 
           {confirmCancel && (
-            <div className="rounded-xl border border-destructive/25 bg-destructive/6 px-3 py-2.5">
+            <div className="mt-2 rounded-2xl border border-destructive/25 bg-destructive/6 px-3 py-3">
               <p className="text-[12px] font-bold text-destructive">{t.cancelChallengeConfirmTitle}</p>
               <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">{t.cancelChallengeConfirmDesc}</p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <button
                   onClick={() => { setConfirmCancel(false); onCancelPending(); }}
                   disabled={busyAction !== null}
@@ -203,7 +221,7 @@ export function HeaderCard({
           )}
 
           {!confirmCancel && (
-            <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-3 py-2.5 text-[12px] leading-5 text-muted-foreground dark:bg-background/15">
+            <div className="mt-2 rounded-2xl border border-dashed border-border/70 bg-background/40 px-3 py-3 text-[12px] leading-5 text-muted-foreground dark:bg-background/15">
               {ui.inviteReady}
             </div>
           )}
@@ -211,14 +229,14 @@ export function HeaderCard({
       )}
 
       {snapshot.status === 'active' && (
-        <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+        <div className={innerPanelClass}>
+          <div className={cn('grid gap-2', embedded ? 'grid-cols-2' : 'grid-cols-1 min-[420px]:grid-cols-3')}>
             <MetricBox label={ui.total} value={numberFormatter.format(snapshot.scoreboard.me.total)} toneClass="text-chart-2" />
             <MetricBox label={ui.total} value={numberFormatter.format(snapshot.scoreboard.opponent.total)} toneClass="text-chart-5" />
-            <MetricBox label={ui.lead} value={leadText} />
+            {!embedded && <MetricBox label={ui.lead} value={leadText} />}
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between', embedded ? 'mt-2.5' : 'mt-3')}>
             <div className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2 text-[12px] text-muted-foreground dark:bg-background/20">
               <Zap className="h-3.5 w-3.5 text-chart-3" />
               {t.challengeLiveNow}
@@ -236,17 +254,20 @@ export function HeaderCard({
       )}
 
       {snapshot.status === 'ended' && (
-        <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+        <div className={innerPanelClass}>
+          <div className={cn('grid gap-2', embedded ? 'grid-cols-2' : 'grid-cols-1 min-[420px]:grid-cols-3')}>
             <MetricBox label={ui.total} value={numberFormatter.format(snapshot.scoreboard.me.total)} toneClass="text-chart-2" />
             <MetricBox label={ui.total} value={numberFormatter.format(snapshot.scoreboard.opponent.total)} toneClass="text-chart-5" />
-            <MetricBox label={ui.endedAt} value={formatDate(snapshot.endedAt, locale)} />
+            {!embedded && <MetricBox label={ui.endedAt} value={formatDate(snapshot.endedAt, locale)} />}
           </div>
 
           <button
             onClick={onCreate}
             disabled={busyAction !== null}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-black text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+            className={cn(
+              'flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-black text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60',
+              embedded ? 'mt-2.5 h-9' : 'mt-3 h-10',
+            )}
           >
             {busyAction === 'create' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {ui.rematch}
