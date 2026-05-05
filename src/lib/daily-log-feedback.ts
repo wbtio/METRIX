@@ -47,6 +47,12 @@ export interface DailyLogBreakdownPayload {
   version: number;
   items: DailyLogBreakdownItem[];
   meta?: DailyLogPerformanceMeta;
+  milestone?: {
+    tier: 'minor' | 'major' | 'legendary';
+    imageUrl: string;
+    name: string;
+    description: string;
+  };
 }
 
 export interface DailyPerformanceCopy {
@@ -215,12 +221,14 @@ export function parseDailyLogBreakdown(value: unknown): DailyLogBreakdownPayload
       .map(normalizeBreakdownItem)
       .filter((item): item is DailyLogBreakdownItem => Boolean(item)),
     meta: normalizePerformanceMeta(row.meta),
+    milestone: row.milestone as DailyLogBreakdownPayload['milestone'],
   };
 }
 
 export function buildDailyLogBreakdown(
   items: DailyLogBreakdownItem[],
   meta?: DailyLogPerformanceMeta,
+  milestone?: DailyLogBreakdownPayload['milestone'],
 ): DailyLogBreakdownPayload {
   return {
     version: 2,
@@ -228,6 +236,7 @@ export function buildDailyLogBreakdown(
       .map(normalizeBreakdownItem)
       .filter((item): item is DailyLogBreakdownItem => Boolean(item)),
     meta,
+    milestone,
   };
 }
 

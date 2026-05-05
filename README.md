@@ -550,7 +550,7 @@ dailyCap = max(5, sum(scorableTaskWeights) + 5)
 | `VoiceRecorder.tsx` | 5.6 KB | **Active** | تسجيل صوتي → `/api/transcribe` |
 | `TaskAppearancePicker.tsx` | 9.5 KB | **Active** | تغيير مظهر المهمة — إيموجي + لون |
 | `TaskColorPicker.tsx` | 4 KB | **Active** | اختيار لون المهمة |
-| `FullEmojiPicker.tsx` | 935 B | **Active** | emoji picker مدمج |
+| `FullEmojiPicker.tsx` | 108 سطر | **Active** | emoji picker مدمج — تصفح حسب الفئة |
 | `ThemeToggle.tsx` | 1.7 KB | **غير موصول** | toggle منفصل غير مستخدم |
 | `StreakFlame.tsx` | 1.5 KB | **غير موصول** | widget streak قديم |
 
@@ -562,15 +562,15 @@ dailyCap = max(5, sum(scorableTaskWeights) + 5)
 
 | الملف | الحجم | المحتوى |
 | --- | --- | --- |
-| `gemini.ts` | 38.6 KB / 1048 سطر | منطق Gemini الكامل — 4 خدمات، fallback chain، safety، JSON extraction |
-| `translations.ts` | 32 KB / 679 سطر | قاموس EN/AR المركزي — كل النصوص |
+| `gemini.ts` | 38.6 KB / 1064 سطر | منطق Gemini الكامل — 4 خدمات، fallback chain، safety، JSON extraction، `evaluateDailyLog` مع `deriveMainBreakdown` + `analyzeDailyPerformance` |
+| `translations.ts` | 32 KB / 711 سطر | قاموس EN/AR المركزي — كل النصوص + `getTranslation()` + `Language` type |
 | `daily-log-feedback.ts` | 19.8 KB / 562 سطر | تحليل أداء السجل — tier, trend, badge, warning, evidence |
 | `task-hierarchy.ts` | 6.7 KB / 239 سطر | بناء hierarchy، daily cap، main breakdown، getScorableTasks |
-| `daily-focus.ts` | 9.3 KB / 316 سطر | أنواع وثوابت التركيز اليومي |
-| `task-colors.ts` | 2.8 KB / 101 سطر | 6 ألوان accent (sky, emerald, amber, orange, pink, violet) + hash selection |
+| `daily-focus.ts` | 9.3 KB / 331 سطر | أنواع وثوابت التركيز اليومي — `normalizeDailyFocusResult`, `buildDailyFocusSessionFromRow`, `buildDailyFocusHistory`, `compactDailyFocusLogs` |
+| `task-colors.ts` | 2.8 KB / 196 سطر | 6 ألوان accent (sky, emerald, amber, orange, pink, violet) + hash selection + `normalizeTaskColorKey` + `getTaskAccent` |
 | `goal-dates.ts` | 2 KB / 64 سطر | حساب الأيام المتبقية/المتأخرة |
 | `task-periods.ts` | 1.1 KB / 32 سطر | حساب الفترات — daily/week keys، بداية الأسبوع Monday |
-| `utils.ts` | 166 B / 7 سطر | `cn()` — clsx + tailwind-merge |
+| `utils.ts` | 24 سطر | `cn()`, `hasArabicText`, `textDirectionFor`, `formatNumberEn`, `localeWithEnglishDigits` |
 
 ### 11.15 Supabase Utils (2 ملف)
 
@@ -683,6 +683,9 @@ dailyCap = max(5, sum(scorableTaskWeights) + 5)
 | `NEXT_PUBLIC_SUPABASE_URL` | نعم | Supabase URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | نعم | Supabase anon key |
 | `GEMINI_API_KEY` | نعم | Gemini investigate/plan/evaluate/daily-focus |
+| `GEMINI_IMAGE_API_KEY` | نعم لصور الإنجازات | Google image generation key |
+| `GEMINI_IMAGE_MODEL` / `IMAGEN_MODEL` | اختياري | Preferred image model, default `imagen-4.0-fast-generate-001` |
+| `GEMINI_IMAGE_MODELS` / `IMAGEN_MODELS` | اختياري | Comma-separated fallback chain for image models |
 | `MISTRAL_API_KEY` | اختياري (مهم عملياً) | Transcription API |
 
 ```bash
@@ -690,6 +693,9 @@ dailyCap = max(5, sum(scorableTaskWeights) + 5)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 GEMINI_API_KEY=your-gemini-api-key
+GEMINI_IMAGE_API_KEY=your-google-image-api-key
+GEMINI_IMAGE_MODEL=imagen-4.0-fast-generate-001
+GEMINI_IMAGE_MODELS=imagen-4.0-fast-generate-001,imagen-4.0-generate-001,imagen-4.0-ultra-generate-001,gemini-3.1-flash-image-preview,gemini-2.5-flash-image
 MISTRAL_API_KEY=your-mistral-api-key
 ```
 

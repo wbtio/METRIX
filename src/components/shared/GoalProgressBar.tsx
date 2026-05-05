@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn, formatNumberEn } from '@/lib/utils';
 
 interface GoalProgressBarProps {
   currentPoints: number;
@@ -23,7 +23,7 @@ export default function GoalProgressBar({
   currentClassName,
   percentClassName = 'text-xs sm:text-base',
   targetClassName,
-  showXpLabel = true,
+  showXpLabel = false,
 }: GoalProgressBarProps) {
   const fillWidth = Math.max(0, Math.min(100, progress));
 
@@ -37,7 +37,7 @@ export default function GoalProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(fillWidth)}
-      aria-label={`${currentPoints.toLocaleString()} of ${targetPoints.toLocaleString()} XP`}
+      aria-label={`${formatNumberEn(currentPoints)} of ${formatNumberEn(targetPoints)}`}
     >
       <div
         aria-hidden
@@ -74,7 +74,7 @@ export default function GoalProgressBar({
             currentClassName
           )}
         >
-          <span className="truncate">{currentPoints.toLocaleString()}</span>
+          <span className="truncate">{formatNumberEn(currentPoints)}</span>
           {showXpLabel && (
             <span className="shrink-0 text-[9px] sm:text-[10px] font-medium opacity-70">XP</span>
           )}
@@ -94,7 +94,7 @@ export default function GoalProgressBar({
           )}
         >
           <span className="shrink-0 text-[9px] sm:text-[10px] opacity-60">/</span>
-          <span className="truncate">{targetPoints.toLocaleString()}</span>
+          <span className="truncate">{formatNumberEn(targetPoints)}</span>
         </span>
       </div>
     </div>

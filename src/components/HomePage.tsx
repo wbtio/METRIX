@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import {
   Mic,
   StopCircle,
@@ -12,9 +12,7 @@ import {
   CircleAlert,
   ListChecks,
   Bell,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
+  Clock,
 } from "lucide-react";
 import { type Language } from "@/lib/translations";
 import type { GoalTaskStats } from "@/app/page";
@@ -23,10 +21,16 @@ import { getIconComponent } from "./goal/IconPicker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getGoalEndDaysChip } from "@/lib/goal-dates";
-import { useIsMobile } from "@/hooks/use-mobile";
 import GoalProgressBar from "@/components/shared/GoalProgressBar";
+import { createClient } from "@/utils/supabase/client";
+import { getLocalDateKey } from "@/lib/task-periods";
+import {
+  useNotifications,
+  type UserGoalContext,
+} from "@/hooks/useNotifications";
+import NotificationsSection from "@/components/notifications/NotificationsSection";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Goal {
   id: string;
@@ -49,6 +53,10 @@ interface HomePageProps {
   recentGoalsLimit?: number;
 }
 
+/* ------------------------------------------------------------------ */
+/*  HomePage component                                                 */
+/* ------------------------------------------------------------------ */
+
 export default function HomePage({
   goals,
   taskStatsMap = {},
@@ -61,19 +69,149 @@ export default function HomePage({
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAIDetailPrompt, setShowAIDetailPrompt] = useState(false);
+  const [selectedCreationMode, setSelectedCreationMode] =
+    useState<"ai" | "manual">("ai");
+  const goalTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const isMobile = useIsMobile();
-
   const isArabic = language === "ar";
-  const safeRecentGoalsLimit = Math.max(
-    1,
-    isMobile ? Math.min(recentGoalsLimit, 2) : recentGoalsLimit,
-  );
+  const safeRecentGoalsLimit = Math.max(1, recentGoalsLimit);
   const recentGoals = goals.slice(0, safeRecentGoalsLimit);
 
-  const isRTL = (text: string) => {
+  /* ---- Pick primary goal for notifications ---- */
+  const primaryGoal = useMemo(() => {
+    const pinned = goals.find((g) => g.is_pinned);
+    return pinned || goals[0] || null;
+  }, [goals]);
+
+  /* ---- Fetch notification context ---- */
+  const supabase = createClient();
+  const [contextReady, setContextReady] = useState(false);
+  const [notifContext, setNotifContext] = useState<UserGoalContext | null>(null);
+
+  const fetchNotifContext = useCallback(async () => {
+    if (!primaryGoal) {
+      setContextReady(true);
+      return;
+    }
+    const goal = primaryGoal;
+    const todayKey = getLocalDateKey();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    const { data: logs } = await supabase
+      .from("daily_logs")
+      .select("created_at, ai_score")
+      .eq("goal_id", goal.id)
+      .order("created_at", { ascending: false })
+      .limit(365);
+
+    let streak = 0;
+    let loggedToday = false;
+    let todayPts = 0;
+
+    if (logs && logs.length > 0) {
+      const loggedDateKeys = new Set<string>();
+      for (const log of logs) {
+        if (log.created_at) {
+          loggedDateKeys.add(getLocalDateKey(new Date(log.created_at)));
+        }
+      }
+      const now = new Date();
+      for (let i = 0; i < 365; i++) {
+        const checkDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const key = getLocalDateKey(checkDate);
+        if (loggedDateKeys.has(key)) {
+          if (i === 0) loggedToday = true;
+          streak++;
+        } else if (i > 0) {
+          break;
+        }
+      }
+    }
+
+    const { data: todayLogs } = await supabase
+      .from("daily_logs")
+      .select("ai_score")
+      .eq("goal_id", goal.id)
+      .gte("created_at", todayStart.toISOString())
+      .lt("created_at", todayEnd.toISOString());
+
+    todayPts = (todayLogs || []).reduce((sum, log) => sum + (log.ai_score || 0), 0);
+    loggedToday = (todayLogs || []).length > 0;
+
+    let sStatus: "safe" | "at_risk" | "broken" = "safe";
+    if (!loggedToday && streak > 0) sStatus = "at_risk";
+    else if (!loggedToday && streak === 0) sStatus = "broken";
+
+    const { data: challengeRoom } = await supabase
+      .from("challenge_rooms")
+      .select("id, ended_at")
+      .eq("goal_id", goal.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let cStatus: "none" | "pending" | "active" | "ended" = "none";
+    if (challengeRoom) {
+      if (challengeRoom.ended_at) {
+        cStatus = "ended";
+      } else {
+        const { count: participantCount } = await supabase
+          .from("challenge_participants")
+          .select("id", { count: "exact", head: true })
+          .eq("room_id", challengeRoom.id);
+        cStatus = (participantCount ?? 0) >= 2 ? "active" : "pending";
+      }
+    }
+
+    const { data: focusRow } = await supabase
+      .from("daily_focus_answers")
+      .select("answer, answered_at")
+      .eq("goal_id", goal.id)
+      .eq("prompt_date", todayKey)
+      .maybeSingle();
+
+    let fStatus: "none" | "unanswered" | "answered" = "none";
+    if (focusRow) {
+      fStatus = focusRow.answer && focusRow.answered_at ? "answered" : "unanswered";
+    }
+
+    setNotifContext({
+      goalId: goal.id,
+      goalTitle: goal.title,
+      goalIcon: goal.icon || "Target",
+      streakStatus: sStatus,
+      streakDays: streak,
+      hasLoggedToday: loggedToday,
+      challengeStatus: cStatus,
+      dailyFocusStatus: fStatus,
+      todaysPoints: todayPts,
+    });
+    setContextReady(true);
+  }, [primaryGoal, supabase]);
+
+  useEffect(() => {
+    fetchNotifContext();
+  }, [fetchNotifContext]);
+
+  const {
+    notifications,
+    loading: notifLoading,
+    error: notifError,
+    refresh,
+  } = useNotifications(notifContext ?? { goalId: "", goalTitle: "", goalIcon: "Target", streakStatus: "safe", streakDays: 0, hasLoggedToday: false, challengeStatus: "none", dailyFocusStatus: "none" }, isArabic ? "ar" : "en");
+
+  const handleRefreshNotifs = useCallback(async () => {
+    await fetchNotifContext();
+    refresh();
+  }, [fetchNotifContext, refresh]);
+
+  /* ---- RTL helper ---- */
+  const isRTLText = (text: string) => {
     const rtlChar = /[\u0591-\u07ff\uFB1D-\uFDFD\uFE70-\uFEFC]/;
     const ltrChar = /[A-Za-z\u00C0-\u024F]/;
     for (const char of text.trim()) {
@@ -83,6 +221,7 @@ export default function HomePage({
     return isArabic;
   };
 
+  /* ---- Goal input helpers ---- */
   const minimumGoalWords = 15;
 
   const analyzeGoalInput = (value: string) => {
@@ -92,26 +231,20 @@ export default function HomePage({
       normalized.length > 0 && wordCount < minimumGoalWords;
     const detailProgress =
       normalized.length > 0 ? Math.min(wordCount / minimumGoalWords, 1) : 0;
-
-    return {
-      normalized,
-      wordCount,
-      needsMoreDetail,
-      detailProgress,
-    };
+    return { normalized, wordCount, needsMoreDetail, detailProgress };
   };
 
   const handleAICreate = () => {
+    setSelectedCreationMode("ai");
     const trimmedGoal = normalizedGoalInput;
     if (!trimmedGoal) {
+      goalTextareaRef.current?.focus();
       return;
     }
-
     if (goalNeedsMoreDetail) {
       setShowAIDetailPrompt(true);
       return;
     }
-
     setShowAIDetailPrompt(false);
     onNavigateToCreate?.(trimmedGoal, "ai");
   };
@@ -128,51 +261,27 @@ export default function HomePage({
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
       });
       streamRef.current = stream;
       audioChunksRef.current = [];
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
-
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
-
       mediaRecorder.onstop = async () => {
         setIsProcessing(true);
         try {
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: mimeType,
-          });
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
           const formData = new FormData();
-          formData.append(
-            "audio",
-            audioBlob,
-            `recording.${mimeType.split("/")[1]}`,
-          );
+          formData.append("audio", audioBlob, `recording.${mimeType.split("/")[1]}`);
           formData.append("language", language === "ar" ? "ar" : "en");
-
-          const response = await fetch("/api/transcribe", {
-            method: "POST",
-            body: formData,
-          });
+          const response = await fetch("/api/transcribe", { method: "POST", body: formData });
           const data = await response.json();
-          console.log("Transcribe response:", response.status, data);
-
           if (response.ok && !data.fallback && data.text) {
             setGoalInput((prev) => (prev ? prev + " " + data.text : data.text));
-          } else {
-            console.warn("Transcription failed or empty:", data);
           }
         } catch (err) {
           console.error("Transcription error:", err);
@@ -181,7 +290,6 @@ export default function HomePage({
           cleanupStream();
         }
       };
-
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
@@ -189,17 +297,14 @@ export default function HomePage({
       alert(
         language === "ar"
           ? "فشل الوصول إلى الميكروفون. يرجى السماح بالوصول من إعدادات المتصفح."
-          : "Failed to access microphone. Please allow access in browser settings.",
+          : "Failed to access microphone. Please allow access in browser settings."
       );
       setIsRecording(false);
     }
   }, [language, cleanupStream]);
 
   const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
@@ -218,6 +323,7 @@ export default function HomePage({
   } = analyzeGoalInput(goalInput);
   const hasGoalInput = normalizedGoalInput.length > 0;
   const aiPromptVisible = showAIDetailPrompt && goalNeedsMoreDetail;
+
   const promptColorStage = !goalNeedsMoreDetail
     ? 0
     : goalWordCount < 3
@@ -229,6 +335,7 @@ export default function HomePage({
           : goalWordCount < 12
             ? 2
             : 1;
+
   const promptToneClasses =
     promptColorStage === 5
       ? "border-amber-500/45 bg-gradient-to-b from-amber-500/24 via-amber-300/30 to-background"
@@ -239,6 +346,7 @@ export default function HomePage({
           : promptColorStage === 2
             ? "border-amber-200/30 bg-gradient-to-b from-amber-200/10 via-amber-50/18 to-background"
             : "border-amber-100/24 bg-gradient-to-b from-amber-100/10 via-background/96 to-background";
+
   const promptCardClasses =
     promptColorStage === 5
       ? "border-amber-500/60 bg-amber-500/[0.05]"
@@ -249,6 +357,7 @@ export default function HomePage({
           : promptColorStage === 2
             ? "border-amber-200/38 bg-amber-500/[0.022]"
             : "border-amber-100/28 bg-amber-500/[0.015]";
+
   const promptMessages = {
     ar: {
       5: "وضّح النتيجة التي تريد الوصول لها وما الذي تريد تغييره فعلاً.",
@@ -265,11 +374,13 @@ export default function HomePage({
       1: "One small clarification will help us start with a clearer plan.",
     },
   } as const;
+
   const goalPromptMessage = goalNeedsMoreDetail
     ? isArabic
       ? promptMessages.ar[promptColorStage as 1 | 2 | 3 | 4 | 5]
       : promptMessages.en[promptColorStage as 1 | 2 | 3 | 4 | 5]
     : null;
+
   const goalInputPlaceholder = isProcessing
     ? isArabic
       ? "جارِ المعالجة..."
@@ -283,40 +394,39 @@ export default function HomePage({
         : "Write your goal here...";
 
   const handleManualCreate = () => {
+    setSelectedCreationMode("manual");
     if (!hasGoalInput) {
+      goalTextareaRef.current?.focus();
       return;
     }
-
     setShowAIDetailPrompt(false);
     onNavigateToCreate?.(normalizedGoalInput, "manual");
   };
 
   const resizeGoalTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = "0px";
-
     const computedStyle = window.getComputedStyle(textarea);
     const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 28;
     const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
     const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
-
     const minHeight = lineHeight + paddingTop + paddingBottom;
     const maxHeight = lineHeight * 4 + paddingTop + paddingBottom;
-    const nextHeight = Math.min(
-      Math.max(textarea.scrollHeight, minHeight),
-      maxHeight,
-    );
-
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
     textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY =
-      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   };
+
+  /* ------------------------------------------------------------------ */
+  /*  JSX                                                                */
+  /* ------------------------------------------------------------------ */
 
   return (
     <div
-      className="mx-auto w-full max-w-3xl space-y-5 px-4 animate-in fade-in slide-in-from-bottom-8 duration-500 sm:space-y-8 sm:px-6"
+      className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col gap-3 overflow-hidden px-4 animate-in fade-in slide-in-from-bottom-8 duration-500 sm:gap-4 sm:px-6"
       dir={isArabic ? "rtl" : "ltr"}
     >
-      <div className="mb-3 flex flex-col items-center justify-center text-center sm:mb-8">
+      {/* Logo */}
+      <div className="flex shrink-0 flex-col items-center justify-center gap-2.5 text-center sm:gap-3">
         <Image
           src="/logo1.svg"
           alt="METRIX Logo"
@@ -338,7 +448,7 @@ export default function HomePage({
           priority
         />
         <p
-          className="-mt-2 max-w-[19rem] text-sm font-medium leading-6 text-muted-foreground sm:-mt-1 sm:max-w-[24rem] sm:text-base"
+          className="max-w-[19rem] text-sm font-medium leading-6 text-muted-foreground sm:max-w-[24rem] sm:text-base sm:leading-7"
           dir={isArabic ? "rtl" : "ltr"}
           lang={isArabic ? "ar" : "en"}
         >
@@ -348,33 +458,27 @@ export default function HomePage({
         </p>
       </div>
 
+      {/* Goal Input */}
       <div
         className={cn(
-          "relative transition-all duration-300",
-          aiPromptVisible ? "pt-10 sm:pt-11" : "pt-0",
+          "relative shrink-0 transition-all duration-300",
+          aiPromptVisible ? "pt-10 sm:pt-11" : "pt-0"
         )}
         dir={isArabic ? "rtl" : "ltr"}
       >
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden transition-all duration-300",
-            aiPromptVisible
-              ? "h-[4.75rem] opacity-100 sm:h-[5.75rem]"
-              : "h-0 opacity-0",
+            aiPromptVisible ? "h-[4.75rem] opacity-100 sm:h-[5.75rem]" : "h-0 opacity-0"
           )}
         >
-          <div
-            className={cn(
-              "rounded-t-[22px] border border-b-0 px-4 pt-1 pb-6 sm:px-5 sm:pt-1.5 sm:pb-9",
-              promptToneClasses,
-            )}
-          >
+          <div className={cn("rounded-t-[22px] border border-b-0 px-4 pt-1 pb-6 sm:px-5 sm:pt-1.5 sm:pb-9", promptToneClasses)}>
             <div
               role="status"
               aria-live="polite"
               className={cn(
                 "flex items-center gap-3 text-sm font-medium leading-6 text-amber-950 dark:text-amber-100",
-                isArabic ? "flex-row-reverse text-right" : "text-left",
+                isArabic ? "flex-row-reverse text-right" : "text-left"
               )}
             >
               <div className="shrink-0 rounded-full border border-amber-500/25 bg-background/70 p-1.5 backdrop-blur">
@@ -395,70 +499,46 @@ export default function HomePage({
             "relative z-20 overflow-hidden rounded-[22px] border bg-background/92 backdrop-blur-xl",
             "shadow-lg shadow-black/5 transition-all duration-300 dark:shadow-black/20",
             "focus-within:border-primary/35 focus-within:shadow-xl focus-within:shadow-black/5",
-            isRecording
-              ? "border-red-400/40 bg-red-500/[0.03]"
-              : isProcessing
-                ? "border-amber-300/50 bg-amber-500/[0.03]"
-                : aiPromptVisible
-                  ? promptCardClasses
-                  : "border-border/70",
+            isRecording ? "border-red-400/40 bg-red-500/[0.03]" : isProcessing ? "border-amber-300/50 bg-amber-500/[0.03]" : aiPromptVisible ? promptCardClasses : "border-border/70"
           )}
         >
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
-              isRecording
-                ? "from-red-500/[0.08] via-red-500/[0.03]"
-                : isProcessing
-                  ? "from-amber-500/[0.08] via-amber-500/[0.03]"
-                  : aiPromptVisible
-                    ? "from-amber-500/[0.08] via-amber-500/[0.02]"
-                    : "from-primary/[0.07] via-primary/[0.02]",
+              isRecording ? "from-red-500/[0.08] via-red-500/[0.03]" : isProcessing ? "from-amber-500/[0.08] via-amber-500/[0.03]" : aiPromptVisible ? "from-amber-500/[0.08] via-amber-500/[0.02]" : "from-primary/[0.07] via-primary/[0.02]"
             )}
           />
-
           <div className="relative px-2 pt-2 pb-1.5 sm:px-3 sm:pt-2.5 sm:pb-2.5">
             <Textarea
+              ref={goalTextareaRef}
               rows={1}
               value={goalInput}
               onChange={(e) => {
-                const nextValue = e.target.value;
-                const nextAnalysis = analyzeGoalInput(nextValue);
-
-                setGoalInput(nextValue);
-                if (!nextAnalysis.needsMoreDetail) {
-                  setShowAIDetailPrompt(false);
-                }
+                setGoalInput(e.target.value);
+                if (!analyzeGoalInput(e.target.value).needsMoreDetail) setShowAIDetailPrompt(false);
                 resizeGoalTextarea(e.currentTarget);
               }}
               onInput={(e) => resizeGoalTextarea(e.currentTarget)}
               placeholder={goalInputPlaceholder}
-              aria-describedby={
-                aiPromptVisible ? "goal-ai-detail-prompt" : undefined
-              }
+              aria-describedby={aiPromptVisible ? "goal-ai-detail-prompt" : undefined}
               className={cn(
-                "min-h-[44px] max-h-[132px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none",
-                "scrollbar-thin",
+                "min-h-[44px] max-h-[132px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none scrollbar-thin",
                 "text-sm font-medium leading-6 text-foreground sm:text-base sm:leading-7 md:text-base",
                 "placeholder:text-muted-foreground/50",
                 "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
                 "dark:bg-transparent",
                 isArabic ? "text-right" : "text-left",
-                isRecording && "placeholder:text-red-500/60 caret-red-500",
+                isRecording && "placeholder:text-red-500/60 caret-red-500"
               )}
               dir={isArabic ? "rtl" : "auto"}
             />
           </div>
-
           <div
             className={cn(
-              // Mobile: single row, reversed so Voice sits at the visual end
-              // (right in LTR/EN, left in RTL/AR). Desktop keeps existing behavior.
               "flex flex-row-reverse items-center gap-2 px-2 pb-2 pt-0 sm:items-center sm:justify-between sm:px-3 sm:pb-3",
-              isArabic ? "sm:flex-row-reverse" : "sm:flex-row",
+              isArabic ? "sm:flex-row-reverse" : "sm:flex-row"
             )}
           >
-            {/* Voice button — icon-only on mobile, icon + label on sm+ */}
             <Button
               type="button"
               variant="outline"
@@ -466,43 +546,20 @@ export default function HomePage({
               onClick={toggleRecording}
               disabled={isProcessing}
               aria-pressed={isRecording}
-              aria-label={
-                isProcessing
-                  ? isArabic
-                    ? "جارِ معالجة التسجيل الصوتي"
-                    : "Processing voice recording"
-                  : isRecording
-                    ? isArabic
-                      ? "إيقاف التسجيل الصوتي"
-                      : "Stop voice recording"
-                    : isArabic
-                      ? "بدء التسجيل الصوتي"
-                      : "Start voice recording"
-              }
               className={cn(
-                // icon-only button (no text label)
                 "h-9 w-9 shrink-0 rounded-full px-0 shadow-none sm:w-9 sm:px-0",
                 isProcessing
                   ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                   : isRecording
                     ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
-                    : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               )}
             >
-              {isProcessing ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : isRecording ? (
-                <StopCircle className="size-4" />
-              ) : (
-                <Mic className="size-4" />
-              )}
+              {isProcessing ? <Loader2 className="size-4 animate-spin" /> : isRecording ? <StopCircle className="size-4" /> : <Mic className="size-4" />}
             </Button>
-
-            {/* Manual + AI — fill remaining width equally on mobile */}
             <div
               className={cn(
-                // Mobile: take remaining space next to Voice (flex-1). Desktop: keep fixed width.
-                "grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:w-auto sm:flex-none sm:gap-2 sm:min-w-[280px]",
+                "grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:w-auto sm:flex-none sm:gap-2 sm:min-w-[280px]"
               )}
               dir={isArabic ? "rtl" : "ltr"}
             >
@@ -510,30 +567,29 @@ export default function HomePage({
                 type="button"
                 variant="outline"
                 onClick={handleManualCreate}
-                disabled={!hasGoalInput}
+                aria-pressed={selectedCreationMode === "manual"}
                 className={cn(
-                  "w-full h-9 min-w-0 rounded-full px-2 text-xs font-semibold shadow-none sm:h-10 sm:px-4 sm:text-sm",
-                  hasGoalInput
-                    ? "border-border/70 bg-background/70 text-foreground hover:bg-muted/60"
-                    : "border border-border/70 bg-muted/40 text-muted-foreground",
+                  "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-200 sm:h-10 sm:px-4 sm:text-sm",
+                  selectedCreationMode === "manual"
+                    ? "border-foreground/20 bg-foreground/[0.06] text-foreground ring-1 ring-foreground/10"
+                    : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
                 )}
               >
                 <PenLine className="size-4 shrink-0" />
                 <span className="truncate">{isArabic ? "يدوي" : "Manual"}</span>
               </Button>
-
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAICreate}
-                disabled={!hasGoalInput}
+                aria-pressed={selectedCreationMode === "ai"}
                 className={cn(
-                  "w-full h-9 min-w-0 rounded-full px-2 text-xs font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4 sm:text-sm",
+                  "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4 sm:text-sm",
                   aiPromptVisible
                     ? "border-amber-300/60 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200"
-                    : hasGoalInput
-                      ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
-                      : "border border-border/70 bg-muted/40 text-muted-foreground",
+                    : selectedCreationMode === "ai"
+                      ? "border-primary/35 bg-primary/10 text-primary ring-1 ring-primary/15 hover:bg-primary/15"
+                      : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
                 )}
               >
                 <Sparkles className="size-4 shrink-0" />
@@ -544,235 +600,131 @@ export default function HomePage({
         </div>
       </div>
 
-      <Tabs defaultValue="goals" dir={isArabic ? "rtl" : "ltr"} className="relative">
-        {/* Tab bar — overlaps the content box below */}
-        <TabsList className="relative z-10 mx-auto w-full max-w-[calc(100%-1rem)] rounded-2xl border border-border/50 bg-muted/50 backdrop-blur-sm px-2.5 py-3 gap-1.5 sm:max-w-[calc(100%-2rem)]">
-          <TabsTrigger
-            value="goals"
-            className={cn(
-              "gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all flex-1",
-              "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground/70",
-              "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50",
-            )}
-          >
-            <Target className="size-5" />
+      <Tabs
+        defaultValue={primaryGoal ? "notifications" : "goals"}
+        className="flex-1 min-h-0 flex flex-col"
+        dir={isArabic ? "rtl" : "ltr"}
+      >
+        <TabsList className="w-full shrink-0 mb-2">
+          {primaryGoal && (
+            <TabsTrigger value="notifications" className="flex-1 gap-1.5">
+              <Bell className="h-4 w-4" />
+              {isArabic ? "الإشعارات" : "Notifications"}
+              {notifications.length > 0 && (
+                <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                  {notifications.length}
+                </span>
+              )}
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="goals" className={cn("flex-1 gap-1.5", !primaryGoal && "w-full")}>
+            <Target className="h-4 w-4" />
             {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary tabular-nums">
+            <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
               {recentGoals.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger
-            value="notifications"
-            className={cn(
-              "gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all flex-1",
-              "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground/70",
-              "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50",
-            )}
-          >
-            <Bell className="size-5" />
-            {isArabic ? "الإشعارات" : "Notifications"}
-          </TabsTrigger>
         </TabsList>
 
-        {/* Content box — fixed height with scroll, sits under the tab bar */}
-        <TabsContent value="goals" className="-mt-5 pt-5">
-          <div className="overflow-y-auto h-[340px] sm:h-[440px] rounded-2xl border border-border/60 bg-card/30 p-3 sm:rounded-3xl sm:p-4 scrollbar-thin">
-            {recentGoals.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {recentGoals.map((goal) => {
-                  const currentPoints = goal.current_points ?? 0;
-                  const targetPoints = goal.target_points ?? 0;
-                  const progress =
-                    targetPoints > 0
-                      ? Math.round((currentPoints / targetPoints) * 100)
-                      : 0;
-                  const Icon = getIconComponent(goal.icon || "Target");
-                  const goalIsRTL = isArabic || isRTL(goal.title);
-                  const daysChip = getGoalEndDaysChip(
-                    goal.estimated_completion_date,
-                    isArabic,
-                  );
-                  const stats = taskStatsMap[goal.id];
+        {primaryGoal && (
+          <TabsContent value="notifications" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
+            <NotificationsSection
+              primaryGoal={primaryGoal}
+              isArabic={isArabic}
+              notifications={notifications}
+              notifLoading={notifLoading}
+              notifError={notifError}
+              contextReady={contextReady}
+              onRefresh={handleRefreshNotifs}
+            />
+          </TabsContent>
+        )}
 
-                  return (
-                    <div
-                      key={goal.id}
-                      className="group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card/45 p-3 transition-all hover:border-primary/30 hover:bg-card/60 hover:shadow-md sm:rounded-3xl sm:p-5"
+        <TabsContent value="goals" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-2xl border border-border/50 bg-card/30 p-3 pt-3.5 scrollbar-thin sm:rounded-3xl sm:p-4 sm:pt-4">
+          {recentGoals.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {recentGoals.map((goal) => {
+                const currentPoints = goal.current_points ?? 0;
+                const targetPoints = goal.target_points ?? 0;
+                const progress = targetPoints > 0 ? Math.round((currentPoints / targetPoints) * 100) : 0;
+                const Icon = getIconComponent(goal.icon || "Target");
+                const goalIsRTL = isArabic || isRTLText(goal.title);
+                const daysChip = getGoalEndDaysChip(goal.estimated_completion_date, isArabic);
+                const stats = taskStatsMap[goal.id];
+                const hasStatsBadge = !!stats && stats.total > 0;
+                const hasGoalBadges = goal.is_pinned || !!daysChip || hasStatsBadge;
+
+                return (
+                  <div
+                    key={goal.id}
+                    className="group relative w-full rounded-2xl border border-border/80 bg-white p-3 shadow-sm transition-all hover:border-primary/35 hover:shadow-md dark:bg-card/50 sm:p-4"
+                  >
+                    <button
+                      onClick={() => onSelectGoal(goal.id)}
+                      className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl text-start outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      dir={goalIsRTL ? "rtl" : "ltr"}
                     >
-                      {(goal.is_pinned || daysChip || stats) && (
-                        <div
-                          className={cn(
-                            "absolute top-3 z-10 flex items-center gap-1.5",
-                            goalIsRTL
-                              ? "left-3 flex-row"
-                              : "right-3 flex-row-reverse",
-                          )}
-                        >
-                          {goal.is_pinned && (
-                            <div
-                              className="flex h-7 w-7 items-center justify-center rounded-full bg-chart-5/10"
-                              title={isArabic ? "هدف مثبّت" : "Pinned goal"}
-                            >
-                              <Pin
-                                className="h-3.5 w-3.5 rotate-45 text-chart-5"
-                                aria-hidden
-                              />
-                            </div>
-                          )}
-                          {daysChip && (
-                            <div
-                              className={cn(
-                                "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
-                                daysChip.tone === "soon" &&
-                                  "bg-primary/10 text-primary border border-primary/20",
-                                daysChip.tone === "today" &&
-                                  "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25",
-                                daysChip.tone === "late" &&
-                                  "bg-destructive/15 text-destructive border border-destructive/25",
-                              )}
-                              title={daysChip.title}
-                            >
-                              {daysChip.text}
-                            </div>
-                          )}
-                          {stats && stats.total > 0 && (
-                            <div
-                              className="flex h-7 min-w-7 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
-                              title={
-                                isArabic
-                                  ? `${stats.completed} من ${stats.total} مهمة منجزة`
-                                  : `${stats.completed} of ${stats.total} tasks done`
-                              }
-                            >
-                              <ListChecks
-                                className="w-3 h-3 shrink-0"
-                                aria-hidden
-                              />
-                              <span dir="ltr">
-                                {stats.completed}/{stats.total}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <button
-                        onClick={() => onSelectGoal(goal.id)}
-                        className="w-full text-start"
-                        dir={goalIsRTL ? "rtl" : "ltr"}
-                      >
-                        <div
-                          className={cn(
-                            "flex w-full flex-col gap-2.5",
-                            (goal.is_pinned || daysChip) && "pt-2.5 sm:pt-3",
-                          )}
-                        >
-                          <div className="flex w-full items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12">
-                              <Icon className="h-6 w-6" />
-                            </div>
-                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                              <h3 className="truncate text-base font-bold leading-snug text-foreground sm:text-lg">
-                                {goal.title}
-                              </h3>
-                            </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary shadow-sm transition-colors group-hover:bg-primary/15 sm:h-12 sm:w-12 sm:rounded-2xl">
+                            <Icon className="h-6 w-6" />
                           </div>
-
-                          <GoalProgressBar
-                            currentPoints={currentPoints}
-                            targetPoints={targetPoints}
-                            progress={progress}
-                            className="mx-auto border-border/60 bg-muted/40 shadow-inner ring-1 ring-white/5"
-                            labelClassName="px-2.5 sm:px-5 text-[11px] sm:text-sm"
-                            percentClassName="text-sm sm:text-base"
-                          />
+                          <div className="min-w-0 flex-1">
+                            <h3 className={cn("line-clamp-2 text-base font-black text-foreground transition-colors sm:text-lg", goalIsRTL ? "text-right" : "text-left")}>
+                              {goal.title}
+                            </h3>
+                            {hasGoalBadges && (
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                {goal.is_pinned && (
+                                  <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                    <Pin className="h-3 w-3" />
+                                    {isArabic ? "مثبت" : "Pinned"}
+                                  </span>
+                                )}
+                                {daysChip && (
+                                  <span className={cn("flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums", daysChip.tone === "soon" && "bg-primary/10 text-primary", daysChip.tone === "today" && "bg-amber-500/10 text-amber-700 dark:text-amber-400", daysChip.tone === "late" && "bg-destructive/10 text-destructive")} title={daysChip.title}>
+                                    <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                    {daysChip.text}
+                                  </span>
+                                )}
+                                {hasStatsBadge && (
+                                  <span className="flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary tabular-nums" title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}>
+                                    <ListChecks className="h-3 w-3 shrink-0" aria-hidden />
+                                    <span dir="ltr">{stats.completed}/{stats.total}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-dashed border-border/80 bg-card/20 p-6 sm:p-10 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-                  <Target className="h-7 w-7" />
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold text-foreground">
-                  {isArabic ? "لا توجد أهداف بعد" : "No goals yet"}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {isArabic
-                    ? "ابدأ بإضافة هدفك الأول وسيظهر تقدمه هنا."
-                    : "Create your first goal and its progress will appear here."}
-                </p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="-mt-5 pt-5">
-          <div className="overflow-y-auto h-[340px] sm:h-[440px] rounded-2xl border border-border/60 bg-card/30 p-3 sm:rounded-3xl sm:p-4 scrollbar-thin">
-            <div className="space-y-3">
-              {/* Example notification items - UI only */}
-              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {isArabic ? "تم إنجاز مهمة" : "Task completed"}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {isArabic
-                      ? "أحسنت! تم إكمال مهمة بنجاح في أحد أهدافك."
-                      : "Great job! A task in one of your goals has been completed successfully."}
-                  </p>
-                  <span className="mt-1 text-[11px] text-muted-foreground/60">
-                    {isArabic ? "منذ ٥ دقائق" : "5 min ago"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {isArabic ? "موعد قريب" : "Deadline approaching"}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {isArabic
-                      ? "لديك هدف يقترب موعد انتهائه، حافظ على وتيرتك!"
-                      : "You have a goal with an approaching deadline, keep up the pace!"}
-                  </p>
-                  <span className="mt-1 text-[11px] text-muted-foreground/60">
-                    {isArabic ? "منذ ساعة" : "1 hour ago"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/45 p-4 transition-all hover:bg-card/60 sm:rounded-3xl sm:p-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {isArabic ? "تقدم ملحوظ" : "Progress milestone"}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {isArabic
-                      ? "وصلت إلى ٥٠٪ من أحد أهدافك، استمر!"
-                      : "You've reached 50% on one of your goals, keep going!"}
-                  </p>
-                  <span className="mt-1 text-[11px] text-muted-foreground/60">
-                    {isArabic ? "منذ ٣ ساعات" : "3 hours ago"}
-                  </span>
-                </div>
-              </div>
+                      </div>
+                      <GoalProgressBar currentPoints={currentPoints} targetPoints={targetPoints} progress={progress} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-border/80 bg-card/20 p-6 sm:p-10 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+                <Target className="h-7 w-7" />
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">
+                {isArabic ? "لا توجد أهداف بعد" : "No goals yet"}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isArabic ? "ابدأ بإضافة هدفك الأول وسيظهر تقدمه هنا." : "Create your first goal and its progress will appear here."}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      </TabsContent>
+    </Tabs>
+
+
     </div>
   );
 }

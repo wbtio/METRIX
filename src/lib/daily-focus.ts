@@ -43,14 +43,18 @@ export interface DailyFocusEntryRow {
   answered_at?: string | null;
 }
 
+export type DailyFocusSupportType = 'goal_task' | 'external_booster';
+
 export interface DailyFocusSuggestion {
   id: string;
   title: string;
   reason: string;
+  emoji: string;
   frequency: 'daily' | 'weekly';
   impact_weight: number;
   target_type: DailyFocusSuggestionTarget;
   parent_task_id: string | null;
+  support_type: DailyFocusSupportType;
 }
 
 export interface DailyFocusResult {
@@ -88,7 +92,7 @@ export interface DailyFocusRequestPayload {
 }
 
 const DAILY_FOCUS_ID_PREFIX = 'daily-focus';
-export const DAILY_FOCUS_REQUIRED_DAYS = 5;
+export const DAILY_FOCUS_REQUIRED_DAYS = 1;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -124,6 +128,10 @@ function normalizeSuggestion(
   const rawWeight = Number(value.impact_weight) || Number(value.weight) || 1;
   const maxWeight = targetType === 'sub' ? 5 : 10;
 
+  const rawSupport = value.support_type;
+  const supportType: DailyFocusSupportType =
+    rawSupport === 'external_booster' ? 'external_booster' : 'goal_task';
+
   return {
     id:
       typeof value.id === 'string' && value.id.trim()
@@ -136,13 +144,20 @@ function normalizeSuggestion(
         : typeof value.why === 'string'
           ? value.why.trim()
           : '',
+    emoji:
+      typeof value.emoji === 'string' && value.emoji.trim()
+        ? value.emoji.trim()
+        : supportType === 'external_booster' ? '⚡' : '🎯',
     frequency: normalizeFrequency(value.frequency),
     impact_weight: clamp(rawWeight, 1, maxWeight),
-    target_type: targetType,
+    target_type: supportType === 'external_booster' ? 'main' : targetType,
     parent_task_id:
-      targetType === 'sub' && typeof value.parent_task_id === 'string'
-        ? value.parent_task_id
-        : null,
+      supportType === 'external_booster'
+        ? null
+        : targetType === 'sub' && typeof value.parent_task_id === 'string'
+          ? value.parent_task_id
+          : null,
+    support_type: supportType,
   };
 }
 

@@ -5,19 +5,17 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { type Language } from '@/lib/translations';
+import { parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
+import { getScorableTasks, type TaskRow } from '@/lib/task-hierarchy';
+import { getTaskAccent } from '@/lib/task-colors';
+import { cn, formatNumberEn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { type Language } from '@/lib/translations';
-import { getLocalDateKey } from '@/lib/task-periods';
-import { parseDailyLogBreakdown } from '@/lib/daily-log-feedback';
-import { getScorableTasks, type TaskRow } from '@/lib/task-hierarchy';
-import { getTaskAccent, type TaskAccent } from '@/lib/task-colors';
-import { cn } from '@/lib/utils';
 
 interface TaskInsightsProps {
   goalId: string;
@@ -55,49 +53,16 @@ interface TaskAggregate {
   recentCount: number;
 }
 
-interface TopTaskDatum {
-  id: string;
-  rankLabel: string;
-  fullName: string;
-  icon: string;
-  completions: number;
-  points: number;
-  mainTaskLabel: string | null;
-  accent: TaskAccent;
-}
-
 const copy = {
-        en: {
-          title: 'Task Radar',
-          loading: 'Loading task insights...',
-          empty: 'Complete a few tasks and this panel will start mapping your strongest patterns.',
-          topTasks: 'Top tasks by completions',
-          weeklyPulse: 'Weekly Summary',
-          activeDays: 'active days',
-          chartHint: 'Tap a task to view details.',
-          completions: 'completions',
-          points: 'pts',
-          last7Days: 'last 7 days',
-          completedTimes: 'times',
-          rank: 'Rank',
-          mainTask: 'Main task',
-          dialogHint: 'The bar color follows the same main-task lane shown in the tasks tab.',
-        },
+  en: {
+    title: 'Task Radar',
+    loading: 'Loading task insights...',
+    empty: 'Complete a few tasks and this panel will start mapping your strongest patterns.',
+  },
   ar: {
     title: 'رادار المهام',
     loading: 'جارِ تحميل إحصائيات المهام...',
     empty: 'أنجز كم مهمة بالبداية، وهنا راح يظهر نمط المهام الأقوى عندك.',
-    topTasks: 'أقوى المهام حسب التكرار',
-    weeklyPulse: 'نشاط الأسبوع',
-    activeDays: 'أيام نشطة',
-    chartHint: 'اضغط على أي مهمة لعرض التفاصيل.',
-    completions: 'إنجازات',
-    points: 'نقطة',
-    last7Days: 'آخر 7 أيام',
-    completedTimes: 'مرات',
-    rank: 'الترتيب',
-    mainTask: 'المهمة الرئيسية',
-    dialogHint: 'لون العمود يطابق نفس مسار المهمة الرئيسية الظاهر في تبويب المهام.',
   },
 } as const;
 
@@ -107,7 +72,7 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
   const text = copy[language];
   const [history, setHistory] = useState<TaskCheckinRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<TopTaskDatum | null>(null);
+  const [taskNameDialog, setTaskNameDialog] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -222,82 +187,40 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
       });
     }
 
-    const now = new Date();
-    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgoLocal = new Date(todayLocal.getTime() - 6 * 86400000);
-    const pulseDays = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(todayLocal.getTime() - (6 - index) * 86400000);
-      const key = getLocalDateKey(date);
-      return {
-        key,
-        label: date.toLocaleDateString(isArabic ? 'ar-IQ' : 'en-US', { weekday: 'short' }),
-        total: 0,
-      };
-    });
-    const pulseMap = new Map(pulseDays.map((day) => [day.key, day]));
-
     for (const row of history) {
       const aggregate = baseAggregates.get(row.task_id);
       if (!aggregate) continue;
 
       const stamp = row.completed_at || `${row.period_start}T00:00:00.000Z`;
-      const completedDate = new Date(stamp);
       aggregate.completionCount += 1;
       aggregate.totalPoints += row.points ?? aggregate.impactWeight;
 
       if (!aggregate.lastCompletedAt || stamp > aggregate.lastCompletedAt) {
         aggregate.lastCompletedAt = stamp;
       }
-
-      if (completedDate >= weekAgoLocal) {
-        aggregate.recentCount += 1;
-      }
-
-      const pulseKey = getLocalDateKey(completedDate);
-      if (pulseMap.has(pulseKey)) {
-        pulseMap.get(pulseKey)!.total += 1;
-      }
     }
 
     const aggregates = Array.from(baseAggregates.values());
     const completedTasks = aggregates.filter((item) => item.completionCount > 0);
 
-    // Weekly stats: count completions and points from the last 7 days only
-    const weeklyCompleted = history.filter((row) => {
-      const stamp = row.completed_at || `${row.period_start}T00:00:00.000Z`;
-      return new Date(stamp) >= weekAgoLocal;
-    }).length;
-    const weeklyPoints = history
-      .filter((row) => {
-        const stamp = row.completed_at || `${row.period_start}T00:00:00.000Z`;
-        return new Date(stamp) >= weekAgoLocal;
-      })
-      .reduce((sum, row) => sum + (row.points ?? 0), 0);
-
     const topTasks = [...completedTasks]
       .sort((a, b) => b.completionCount - a.completionCount || b.totalPoints - a.totalPoints)
       .slice(0, 6)
-      .map((item, index) => {
+      .map((item) => {
         const source = taskMap.get(item.id);
         const accentSeed = source?.parentTaskId || item.id;
         const mainTaskMeta = source?.parentTaskId
           ? mainTaskMap.get(source.parentTaskId) || null
           : mainTaskMap.get(item.id) || null;
-        const mainTaskLabel = source?.parentTaskId
-          ? mainTaskMeta?.label || null
-          : mainTaskMeta?.label || null;
         const accentColor = source?.parentTaskId
           ? mainTaskMeta?.accentColor || source?.accentColor || null
           : source?.accentColor || mainTaskMeta?.accentColor || null;
 
         return {
           id: item.id,
-          rankLabel: `#${new Intl.NumberFormat(isArabic ? 'ar-IQ' : 'en-US').format(index + 1)}`,
           fullName: item.label,
           icon: item.icon,
           completions: item.completionCount,
-          points: item.totalPoints,
-          mainTaskLabel,
           accent: getTaskAccent(accentSeed, accentColor),
         };
       });
@@ -305,13 +228,9 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
     return {
       aggregates,
       topTasks,
-      pulseDays,
-      activeDays: pulseDays.filter((day) => day.total > 0).length,
-      weeklyCompleted,
-      weeklyPoints,
       totalCompleted: completedTasks.reduce((sum, item) => sum + item.completionCount, 0),
     };
-  }, [history, isArabic, tasks]);
+  }, [history, tasks]);
 
   if (loading) {
     return (
@@ -340,223 +259,52 @@ export default function TaskInsights({ goalId, tasks, language = 'en' }: TaskIns
     );
   }
 
-  const pulsePeak = analytics.pulseDays.reduce((peak, day) => Math.max(peak, day.total), 0) || 1;
-  const highlightedTaskId = selectedTask?.id ?? analytics.topTasks[0]?.id ?? null;
-  const topTaskPeak = analytics.topTasks.reduce((peak, item) => Math.max(peak, item.completions), 0) || 1;
-  const insightCardClassName =
-    'relative flex h-full flex-col overflow-hidden rounded-[24px] border border-border/80 bg-white/85 p-2.5 shadow-sm ring-1 ring-border/5 dark:bg-card/55 sm:rounded-[26px] sm:p-3.5';
-  const insightTileClassName =
-    'rounded-2xl border border-border/60 bg-background/75 px-2.5 py-1.5 backdrop-blur-sm sm:py-2';
-
   return (
-    <section className="space-y-2.5" dir={isArabic ? 'rtl' : 'ltr'}>
-      <div className="grid gap-2.5 lg:grid-cols-[0.95fr_1.35fr]">
-        <div className={insightCardClassName} aria-label={text.weeklyPulse}>
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-20 rounded-full bg-chart-5/10 blur-3xl dark:bg-chart-3/10" />
-
-          <div className="relative grid grid-cols-3 gap-1.5">
-            <div className={insightTileClassName}>
-              <div className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">{text.completions}</div>
-              <div className="mt-0.5 text-base font-black text-foreground">{analytics.weeklyCompleted}</div>
-            </div>
-            <div className={insightTileClassName}>
-              <div className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">{text.activeDays}</div>
-              <div className="mt-0.5 text-base font-black text-foreground">{analytics.activeDays}</div>
-            </div>
-            <div className={insightTileClassName}>
-              <div className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">{text.points}</div>
-              <div className="mt-0.5 text-base font-black text-foreground">
-                {analytics.weeklyPoints}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-            {analytics.pulseDays.map((day) => (
-              <div
-                key={day.key}
-                className="rounded-[18px] border border-border/60 bg-background/75 px-2 py-1.5 sm:px-2.5 sm:py-2"
-              >
-                <div className="mb-1 flex items-center justify-between gap-2 sm:mb-1.5">
-                  <div className="truncate text-xs font-bold text-muted-foreground">{day.label}</div>
-                  <div className="flex h-[1.375rem] min-w-[1.375rem] items-center justify-center rounded-full border border-border/60 bg-background px-1 text-[10px] font-black text-foreground">
-                    {day.total}
-                  </div>
-                </div>
-
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted/45">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-all',
-                      day.total > 0
-                        ? day.total >= 3
-                          ? 'bg-gradient-to-r from-primary to-chart-1 shadow-[0_6px_18px_rgba(59,130,246,0.18)]'
-                          : 'bg-primary/75'
-                        : 'bg-transparent'
-                    )}
-                    style={{
-                      width: day.total > 0 ? `${Math.max(14, (day.total / pulsePeak) * 100)}%` : '0%',
-                      opacity: day.total > 0 ? Math.min(1, 0.4 + day.total * 0.18) : 1,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={insightCardClassName} aria-label={text.topTasks}>
-          <div className="pointer-events-none absolute -top-8 right-6 h-28 w-28 rounded-full bg-primary/10 blur-3xl" />
-
-          <div className="grid min-h-[9rem] flex-1 grid-cols-2 grid-rows-3 gap-1.5 sm:min-h-[10rem] sm:gap-2">
-            {analytics.topTasks.map((item) => {
-              const isActive = highlightedTaskId === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedTask(item)}
-                  className={cn(
-                    'flex min-h-[4.25rem] flex-col justify-between rounded-[20px] border px-2 py-1.5 text-start transition-all sm:min-h-[4.75rem] sm:px-2.5 sm:py-2',
-                    isActive
-                      ? cn(item.accent.softClass, item.accent.borderClass, 'shadow-sm')
-                      : 'border-border/60 bg-background/65 hover:bg-background/80',
-                  )}
-                >
-                  <div className="mb-1 flex items-start justify-between gap-1.5 sm:mb-1.5 sm:gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-1.5 sm:gap-2">
-                        <div className="flex shrink-0 flex-col items-center gap-1">
-                        <span
-                          className={cn(
-                            'inline-flex min-h-5 min-w-7 shrink-0 items-center justify-center rounded-full border px-1 text-[9px] font-black sm:min-h-7 sm:text-[10px]',
-                            isActive
-                              ? cn(item.accent.softClass, item.accent.borderClass, item.accent.textClass)
-                              : 'border-border/60 bg-background text-muted-foreground',
-                          )}
-                        >
-                          {item.rankLabel}
-                        </span>
-
-                        <span
-                          className={cn(
-                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-sm',
-                            isActive
-                              ? cn(item.accent.softClass, item.accent.borderClass)
-                              : 'border-border/60 bg-background/80',
-                          )}
-                        >
-                          {item.icon}
-                        </span>
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="line-clamp-2 text-[13px] font-black leading-4.5 text-foreground">
-                            {item.fullName}
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                            <span className="shrink-0">{item.points} {text.points}</span>
-                            {item.mainTaskLabel ? (
-                              <span className="truncate">{item.mainTaskLabel}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-end">
-                      <div className="text-base font-black text-foreground">{item.completions}</div>
-                      <div className="text-[10px] font-bold text-muted-foreground">{text.completedTimes}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/45">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.max(16, (item.completions / topTaskPeak) * 100)}%`,
-                          backgroundColor: item.accent.fill,
-                          opacity: isActive ? 1 : 0.82,
-                        }}
-                      />
-                    </div>
-                    <div className="text-[10px] font-black text-muted-foreground">{item.rankLabel}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-        <DialogContent className="sm:max-w-[420px]" dir={isArabic ? 'rtl' : 'ltr'}>
-          {selectedTask ? (
-            <>
-              <DialogHeader className={isArabic ? 'sm:text-right' : undefined}>
-                <div
-                  className={cn(
-                    'inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black',
-                    selectedTask.accent.softClass,
-                    selectedTask.accent.borderClass,
-                    selectedTask.accent.textClass,
-                  )}
-                >
-                  <span className={cn('h-2.5 w-2.5 rounded-full', selectedTask.accent.swatchClass)} />
-                  {text.rank} {selectedTask.rankLabel}
-                </div>
-                <DialogTitle className="mt-3 flex items-start gap-3 text-base">
-                  <span
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-lg',
-                      selectedTask.accent.softClass,
-                      selectedTask.accent.borderClass,
-                    )}
-                  >
-                    {selectedTask.icon}
-                  </span>
-                  <span className="pt-1">{selectedTask.fullName}</span>
-                </DialogTitle>
-                <DialogDescription className="pt-1 text-xs leading-5">
-                  {text.dialogHint}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border/70 bg-muted/10 px-3 py-3">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                    {text.completions}
-                  </div>
-                  <div className="mt-1 text-lg font-black text-foreground">{selectedTask.completions}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/10 px-3 py-3">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                    {text.points}
-                  </div>
-                  <div className="mt-1 text-lg font-black text-foreground">{selectedTask.points}</div>
-                </div>
-              </div>
-
-              {selectedTask.mainTaskLabel ? (
-                <div
-                  className={cn(
-                    'rounded-2xl border px-3 py-3',
-                    selectedTask.accent.softClass,
-                    selectedTask.accent.borderClass,
-                  )}
-                >
-                  <div className={cn('text-[10px] font-black uppercase tracking-[0.18em]', selectedTask.accent.textClass)}>
-                    {text.mainTask}
-                  </div>
-                  <div className="mt-1 text-sm font-black text-foreground">{selectedTask.mainTaskLabel}</div>
-                </div>
-              ) : null}
-            </>
-          ) : null}
+    <section dir={isArabic ? 'rtl' : 'ltr'}>
+      <Dialog
+        open={taskNameDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setTaskNameDialog(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md" dir={isArabic ? 'rtl' : 'ltr'}>
+          <DialogHeader>
+            <DialogTitle className="text-start text-base font-semibold leading-snug sm:text-lg">
+              {taskNameDialog}
+            </DialogTitle>
+          </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-white/80 p-1.5 shadow-sm ring-1 ring-border/5 dark:bg-card/45">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+          {analytics.topTasks.map((item) => {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                title={item.fullName}
+                onClick={() => setTaskNameDialog(item.fullName)}
+                className={cn(
+                  'flex min-w-0 cursor-pointer items-center justify-between gap-1 rounded-lg border px-1 py-1 text-start transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  item.accent.softClass,
+                  item.accent.borderClass,
+                )}
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background/70 text-sm shadow-sm">
+                  {item.icon}
+                </span>
+                <span
+                  className="min-w-[2.5rem] rounded-md bg-background/80 px-1.5 py-0.5 text-center text-xs font-black leading-none text-foreground shadow-sm tabular-nums"
+                  dir="ltr"
+                >
+                  {formatNumberEn(item.completions)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </section>
   );
 }

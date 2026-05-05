@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -12,7 +12,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BarChart2, Layers, TrendingUp } from "lucide-react";
+import { BarChart2, ChevronDown, Layers, TrendingUp } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,7 +26,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { translations, type Language } from "@/lib/translations";
-import { cn } from "@/lib/utils";
+import { cn, formatNumberEn, localeWithEnglishDigits } from "@/lib/utils";
 
 type TimeRange = "7d" | "30d" | "60d" | "90d" | "120d" | "year" | "all";
 type ChartType = "bar" | "line" | "area";
@@ -68,10 +74,10 @@ function parseLocalDay(value: string) {
   return date;
 }
 
-function formatNumber(value: number, isArabic: boolean) {
-  return new Intl.NumberFormat(isArabic ? "ar-SA" : "en-US", {
+function formatNumber(value: number) {
+  return formatNumberEn(value, {
     maximumFractionDigits: value >= 10 ? 0 : 1,
-  }).format(value);
+  });
 }
 
 export default function GrowthChart({
@@ -85,7 +91,26 @@ export default function GrowthChart({
   const isArabic = language === "ar";
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [chartType, setChartType] = useState<ChartType>("bar");
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  const didApplyMobileDefaultRange = useRef(false);
   const gradientId = useId().replace(/:/g, "");
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setIsNarrowViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (didApplyMobileDefaultRange.current) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      setTimeRange("7d");
+    }
+    didApplyMobileDefaultRange.current = true;
+  }, []);
 
   const labels = {
     noRangeData: isArabic
@@ -93,7 +118,7 @@ export default function GrowthChart({
       : "No activity in this range yet.",
   };
 
-  const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-US";
+  const locale = localeWithEnglishDigits(language);
   const shortDayFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -152,7 +177,7 @@ export default function GrowthChart({
     }),
     [isArabic],
   );
-  const chartMargin = { top: 6, right: 4, left: -8, bottom: 0 };
+  const chartMargin = { top: 8, right: 10, left: 0, bottom: 4 };
 
   const rangeDays = RANGE_TO_DAYS[timeRange];
 
@@ -287,12 +312,98 @@ export default function GrowthChart({
               ? 8
               : 6;
   const showDots = chartData.length <= 18;
+  const dayAxisTickGap = useMemo(() => {
+    if (bucketMode !== "day") return 0;
+    const n = chartData.length;
+    if (isNarrowViewport) {
+      if (n <= 7) return 10;
+      if (n <= 14) return 18;
+      if (n <= 30) return 26;
+      if (n <= 60) return 34;
+      return 42;
+    }
+    if (n <= 14) return 6;
+    if (n <= 30) return 10;
+    if (n <= 60) return 14;
+    if (n <= 90) return 18;
+    return 22;
+  }, [bucketMode, chartData.length, isNarrowViewport]);
   const xAxisMinTickGap =
-    chartData.length > 60 ? 36 : chartData.length > 30 ? 28 : isArabic ? 28 : 24;
-  const yAxisWidth = isArabic ? 38 : 30;
+    bucketMode === "day"
+      ? dayAxisTickGap
+      : chartData.length > 60
+        ? 44
+        : chartData.length > 30
+          ? 36
+          : isArabic
+            ? 30
+            : 28;
+  const xAxisInterval = "preserveStartEnd" as const;
+  const yAxisWidth = isArabic ? 40 : 34;
+  const xAxisMetaByDate = useMemo(() => {
+    const meta = new Map<string, { primary: string; secondary?: string }>();
+
+    chartData.forEach((entry, index) => {
+      if (bucketMode === "month") {
+        meta.set(entry.date, { primary: entry.label });
+        return;
+      }
+
+      const entryDate = parseLocalDay(entry.date);
+      const previousDate =
+        index > 0 ? parseLocalDay(chartData[index - 1].date) : null;
+      const showMonth =
+        index === 0 ||
+        !previousDate ||
+        entryDate.getMonth() !== previousDate.getMonth() ||
+        entryDate.getFullYear() !== previousDate.getFullYear();
+
+      meta.set(entry.date, {
+        primary: formatNumberEn(entryDate.getDate()),
+        secondary: showMonth
+          ? shortMonthFormatter.format(entryDate)
+          : undefined,
+      });
+    });
+
+    return meta;
+  }, [bucketMode, chartData, shortMonthFormatter]);
+  const renderXAxisTick = ({
+    x = 0,
+    y = 0,
+    payload,
+  }: {
+    x?: number;
+    y?: number;
+    payload?: { value?: string };
+  }) => {
+    const value = payload?.value ?? "";
+    const meta = xAxisMetaByDate.get(value);
+    const primary = meta?.primary ?? value;
+    const secondary = meta?.secondary;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          textAnchor="middle"
+          className="fill-muted-foreground text-[10.5px] font-medium"
+        >
+          <tspan x={0} dy={10}>
+            {primary}
+          </tspan>
+          {secondary ? (
+            <tspan x={0} dy={12} className="text-[9px] opacity-75">
+              {secondary}
+            </tspan>
+          ) : null}
+        </text>
+      </g>
+    );
+  };
+  const xAxisHeight = bucketMode === "day" ? 42 : 34;
   const chartViewportClass = fillHeight
-    ? "aspect-auto h-full min-h-[158px] w-full flex-1 sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
-    : "aspect-auto h-[180px] w-full sm:h-[196px] lg:h-[208px]";
+    ? "aspect-auto h-full min-h-[158px] w-full shrink-0 flex-1 sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
+    : "aspect-auto h-[180px] w-full shrink-0 sm:h-[196px] lg:h-[208px]";
   const emptyStateClass = fillHeight
     ? "h-full min-h-[158px] sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
     : "h-[180px] sm:h-[196px] lg:h-[208px]";
@@ -314,6 +425,15 @@ export default function GrowthChart({
     { key: "year", label: t.thisYear },
     { key: "all", label: t.allTime },
   ];
+  const primaryTimeRangeOptions = timeRangeOptions.filter((option) =>
+    ["7d", "30d", "year"].includes(option.key),
+  );
+  const secondaryTimeRangeOptions = timeRangeOptions.filter((option) =>
+    ["60d", "90d", "120d", "all"].includes(option.key),
+  );
+  const activeSecondaryOption = secondaryTimeRangeOptions.find(
+    (option) => option.key === timeRange,
+  );
 
   const chartTypeOptions: {
     key: ChartType;
@@ -348,13 +468,15 @@ export default function GrowthChart({
               className="stroke-border/50"
             />
             <XAxis
-              dataKey="label"
+              dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={xAxisMinTickGap}
-              height={34}
-              className="text-[11px] fill-muted-foreground"
+              interval={xAxisInterval}
+              height={xAxisHeight}
+              tick={renderXAxisTick}
+              className="text-[11.5px] fill-muted-foreground"
             />
             <YAxis
               tickLine={false}
@@ -363,8 +485,8 @@ export default function GrowthChart({
               width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
-              className="text-[11px] fill-muted-foreground"
-              tickFormatter={(value: number) => formatNumber(value, isArabic)}
+              className="text-[11.5px] fill-muted-foreground"
+              tickFormatter={(value: number) => formatNumber(value)}
             />
             <ChartTooltip
               cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
@@ -423,13 +545,15 @@ export default function GrowthChart({
               className="stroke-border/50"
             />
             <XAxis
-              dataKey="label"
+              dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={xAxisMinTickGap}
-              height={34}
-              className="text-[11px] fill-muted-foreground"
+              interval={xAxisInterval}
+              height={xAxisHeight}
+              tick={renderXAxisTick}
+              className="text-[11.5px] fill-muted-foreground"
             />
             <YAxis
               tickLine={false}
@@ -438,8 +562,8 @@ export default function GrowthChart({
               width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
-              className="text-[11px] fill-muted-foreground"
-              tickFormatter={(value: number) => formatNumber(value, isArabic)}
+              className="text-[11.5px] fill-muted-foreground"
+              tickFormatter={(value: number) => formatNumber(value)}
             />
             <ChartTooltip
               cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
@@ -480,13 +604,15 @@ export default function GrowthChart({
               className="stroke-border/50"
             />
             <XAxis
-              dataKey="label"
+              dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={xAxisMinTickGap}
-              height={34}
-              className="text-[11px] fill-muted-foreground"
+              interval={xAxisInterval}
+              height={xAxisHeight}
+              tick={renderXAxisTick}
+              className="text-[11.5px] fill-muted-foreground"
             />
             <YAxis
               tickLine={false}
@@ -495,8 +621,8 @@ export default function GrowthChart({
               width={yAxisWidth}
               allowDecimals={false}
               tickCount={4}
-              className="text-[11px] fill-muted-foreground"
-              tickFormatter={(value: number) => formatNumber(value, isArabic)}
+              className="text-[11.5px] fill-muted-foreground"
+              tickFormatter={(value: number) => formatNumber(value)}
             />
             <ChartTooltip
               cursor={{ fill: "var(--muted)", opacity: 0.2 }}
@@ -519,15 +645,15 @@ export default function GrowthChart({
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       )}
 
-      <div className="border-b border-border/60 pb-2 sm:pb-1">
+      <div className="pb-1">
         <div className="flex items-center gap-2">
           <div
-            className="-my-0.5 flex min-w-0 flex-1 snap-x overflow-x-auto py-0.5 scrollbar-thin"
+            className="flex min-w-0 flex-1"
             role="tablist"
             aria-label={isArabic ? "النطاق الزمني" : "Time range"}
           >
-            <div className="inline-flex shrink-0 gap-0.5 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm">
-              {timeRangeOptions.map((option) => (
+            <div className="inline-flex max-w-full shrink-0 gap-0.5 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm">
+              {primaryTimeRangeOptions.map((option) => (
                 <button
                   key={option.key}
                   type="button"
@@ -535,7 +661,7 @@ export default function GrowthChart({
                   onClick={() => setTimeRange(option.key)}
                   aria-selected={timeRange === option.key}
                   className={cn(
-                    "h-8 snap-start whitespace-nowrap rounded-full px-2.5 text-[11px] font-bold leading-none transition-all sm:h-[28px] sm:px-2.5 sm:font-semibold",
+                    "h-7 whitespace-nowrap rounded-full px-2.5 text-[11px] font-bold leading-none transition-all sm:h-[26px] sm:px-2.5 sm:font-semibold",
                     isArabic
                       ? "min-w-[3rem] tracking-normal"
                       : "min-w-[2.75rem] tabular-nums",
@@ -547,6 +673,42 @@ export default function GrowthChart({
                   {option.label}
                 </button>
               ))}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex h-7 min-w-[3.4rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] font-bold leading-none transition-all sm:h-[26px] sm:font-semibold",
+                      activeSecondaryOption
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                    )}
+                    aria-label={
+                      isArabic ? "المزيد من المدد" : "More time ranges"
+                    }
+                  >
+                    <span className="truncate">
+                      {activeSecondaryOption?.label ||
+                        (isArabic ? "المزيد" : "More")}
+                    </span>
+                    <ChevronDown className="h-3 w-3 shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={isArabic ? "start" : "end"}
+                  className="min-w-28"
+                >
+                  {secondaryTimeRangeOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.key}
+                      onClick={() => setTimeRange(option.key)}
+                      className="cursor-pointer text-xs"
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -559,7 +721,7 @@ export default function GrowthChart({
                 aria-pressed={chartType === option.key}
                 aria-label={option.label}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition-all sm:h-[28px] sm:w-[28px] sm:rounded-[10px]",
+                  "flex h-7 w-7 items-center justify-center rounded-full transition-all sm:h-[26px] sm:w-[26px] sm:rounded-[10px]",
                   chartType === option.key
                     ? "bg-chart-1 text-white shadow-sm"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
@@ -573,8 +735,8 @@ export default function GrowthChart({
         </div>
       </div>
 
-      <div className="mt-1 flex flex-1 min-h-0">
-        <div className="flex w-full flex-1 min-h-0 rounded-xl border border-border/60 bg-gradient-to-b from-background/70 via-background/45 to-background/20 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-2">
+      <div className="mt-0.5 flex flex-1 min-h-0">
+        <div className="flex w-full min-w-0 flex-1 min-h-0 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-b from-background/70 via-background/45 to-background/20 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-2">
           {chartData.length === 0 ? (
             <div
               className={cn(
@@ -589,11 +751,7 @@ export default function GrowthChart({
               </p>
             </div>
           ) : (
-            <ChartContainer
-              config={chartConfig}
-              className={chartViewportClass}
-              dir="ltr"
-            >
+            <ChartContainer config={chartConfig} className={chartViewportClass} dir="ltr">
               {renderChart()}
             </ChartContainer>
           )}

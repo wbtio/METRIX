@@ -5,7 +5,11 @@ import { Flame, BarChart3, ListTodo, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/translations";
 import { createClient } from "@/utils/supabase/client";
-import { getPeriodStart, getPeriodTypeFromFrequency, getLocalDateKey } from "@/lib/task-periods";
+import {
+  getPeriodStart,
+  getPeriodTypeFromFrequency,
+  getLocalDateKey,
+} from "@/lib/task-periods";
 import {
   buildDailyFocusHistory,
   buildDailyFocusSessionFromRow,
@@ -88,6 +92,7 @@ interface DashboardProps {
   goal: Goal;
   language?: Language;
   onGoalUpdated?: () => void;
+  onLogModalChange?: (isOpen: boolean) => void;
 }
 
 type DashboardTab = "focus" | "chart" | "challenge";
@@ -126,6 +131,7 @@ export default function Dashboard({
   goal,
   language = "en",
   onGoalUpdated,
+  onLogModalChange,
 }: DashboardProps) {
   const supabase = createClient();
   const t = translations[language];
@@ -143,6 +149,14 @@ export default function Dashboard({
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    onLogModalChange?.(showLogModal);
+
+    return () => {
+      onLogModalChange?.(false);
+    };
+  }, [onLogModalChange, showLogModal]);
 
   // CRUD inline editing
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -182,7 +196,9 @@ export default function Dashboard({
   >([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [logsLoaded, setLogsLoaded] = useState(false);
-  const [dailyFocusRows, setDailyFocusRows] = useState<DailyFocusEntryRow[]>([]);
+  const [dailyFocusRows, setDailyFocusRows] = useState<DailyFocusEntryRow[]>(
+    [],
+  );
   const [dailyFocusRowsLoaded, setDailyFocusRowsLoaded] = useState(false);
   const [dailyFocus, setDailyFocus] = useState<DailyFocusSession | null>(null);
   const [dailyFocusAnswer, setDailyFocusAnswer] = useState("");
@@ -240,6 +256,7 @@ export default function Dashboard({
   );
 
   const todayDateKey = getLocalDateKey();
+  const dailyFocusPromptStorageKey = `metrix:daily-focus-prompt:${goal.id}:${todayDateKey}`;
   const dailyFocusGoal = useMemo<DailyFocusGoalContext>(
     () => ({
       id: goal.id,
@@ -258,10 +275,7 @@ export default function Dashboard({
       goal.title,
     ],
   );
-  const recentFocusLogs = useMemo(
-    () => compactDailyFocusLogs(logs),
-    [logs],
-  );
+  const recentFocusLogs = useMemo(() => compactDailyFocusLogs(logs), [logs]);
   const answeredDailyFocusRows = useMemo(
     () =>
       dailyFocusRows.filter((row) =>
@@ -293,22 +307,23 @@ export default function Dashboard({
       getTaskAccent(newMainText.trim() || "main-task-preview", newMainColor),
     [newMainColor, newMainText],
   );
-  const filteredHierarchy = useMemo(
-    () => hierarchy,
-    [hierarchy],
-  );
+  const filteredHierarchy = useMemo(() => hierarchy, [hierarchy]);
   const focusStats = useMemo(() => {
     const allSubs = filteredHierarchy.flatMap((main) => main.subtasks);
     if (allSubs.length > 0) {
       return {
         totalSubtasks: allSubs.length,
-        completedSubtasks: allSubs.filter((sub) => isChecked(sub.id, sub.frequency)).length,
+        completedSubtasks: allSubs.filter((sub) =>
+          isChecked(sub.id, sub.frequency),
+        ).length,
       };
     }
     // Fallback: count main tasks when no subtasks exist
     return {
       totalSubtasks: filteredHierarchy.length,
-      completedSubtasks: filteredHierarchy.filter((main) => isChecked(main.id, main.frequency)).length,
+      completedSubtasks: filteredHierarchy.filter((main) =>
+        isChecked(main.id, main.frequency),
+      ).length,
     };
   }, [filteredHierarchy, isChecked]);
 
@@ -418,7 +433,11 @@ export default function Dashboard({
       const now = new Date();
 
       for (let i = 0; i < 365; i++) {
-        const checkDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const checkDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - i,
+        );
         if (loggedDateKeys.has(getLocalDateKey(checkDate))) {
           count++;
         } else if (i > 0) {
@@ -580,6 +599,7 @@ export default function Dashboard({
               todayDailyFocusRow?.question ||
               undefined,
             date: todayDateKey,
+            language,
           }),
         });
 
@@ -728,9 +748,23 @@ export default function Dashboard({
   ]);
 
   useEffect(() => {
-    if (!dailyFocus || dailyFocus.answered_at || dailyFocusPromptDismissed) return;
+    if (!dailyFocus || dailyFocus.answered_at || dailyFocusPromptDismissed)
+      return;
+
+    const alreadySeenToday =
+      typeof window !== "undefined" &&
+      window.localStorage.getItem(dailyFocusPromptStorageKey) === "seen";
+
+    if (alreadySeenToday) {
+      setDailyFocusPromptDismissed(true);
+      return;
+    }
+
     setShowDailyFocusPrompt(true);
-  }, [dailyFocus, dailyFocusPromptDismissed]);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(dailyFocusPromptStorageKey, "seen");
+    }
+  }, [dailyFocus, dailyFocusPromptDismissed, dailyFocusPromptStorageKey]);
 
   useEffect(() => {
     if (!dailyFocus?.answered_at) return;
@@ -779,9 +813,14 @@ export default function Dashboard({
     if (existing) {
       if (existing.completed) {
         // Uncheck
-        const { error } = await supabase.from("task_checkins").delete().eq("id", existing.id);
+        const { error } = await supabase
+          .from("task_checkins")
+          .delete()
+          .eq("id", existing.id);
         if (error) {
-          showSuccessToast(isArabic ? "تعذر حذف الإنجاز" : "Could not remove check-in");
+          showSuccessToast(
+            isArabic ? "تعذر حذف الإنجاز" : "Could not remove check-in",
+          );
           return;
         }
         setCheckins((prev) => prev.filter((c) => c.id !== existing.id));
@@ -792,7 +831,9 @@ export default function Dashboard({
           .update({ completed: true, completed_at: new Date().toISOString() })
           .eq("id", existing.id);
         if (error) {
-          showSuccessToast(isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in");
+          showSuccessToast(
+            isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in",
+          );
           return;
         }
         setCheckins((prev) =>
@@ -824,7 +865,9 @@ export default function Dashboard({
         .single();
 
       if (error || !data) {
-        showSuccessToast(isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in");
+        showSuccessToast(
+          isArabic ? "تعذر حفظ الإنجاز" : "Could not save check-in",
+        );
         return;
       }
 
@@ -999,14 +1042,20 @@ export default function Dashboard({
       message,
       onConfirm: async () => {
         try {
-          const { error } = await supabase.from("goals").delete().eq("id", goal.id);
+          const { error } = await supabase
+            .from("goals")
+            .delete()
+            .eq("id", goal.id);
           if (error) throw error;
           if (onGoalUpdated) onGoalUpdated();
           window.location.href = "/";
         } catch (err: unknown) {
           const errMessage = err instanceof Error ? err.message : "";
           console.error("Error deleting goal:", err);
-          showSuccessToast((isArabic ? "فشل حذف الهدف: " : "Failed to delete goal: ") + errMessage);
+          showSuccessToast(
+            (isArabic ? "فشل حذف الهدف: " : "Failed to delete goal: ") +
+              errMessage,
+          );
         }
       },
     });
@@ -1099,17 +1148,6 @@ export default function Dashboard({
     [updateDailyFocusSession],
   );
 
-  const handleRetryDailyFocus = useCallback(() => {
-    setDailyFocus(null);
-    setDailyFocusAnswer("");
-    setDailyFocusError(null);
-    void generateDailyFocus({
-      force: true,
-      existingQuestion: "",
-      answer: todayDailyFocusRow?.answer || "",
-    });
-  }, [generateDailyFocus, todayDailyFocusRow?.answer]);
-
   const handleSubmitDailyFocusAnswer = useCallback(async () => {
     if (!dailyFocus || !dailyFocusAnswer.trim()) return;
 
@@ -1124,12 +1162,7 @@ export default function Dashboard({
         isArabic ? "تم حفظ جواب اليوم" : "Today's answer was saved",
       );
     }
-  }, [
-    dailyFocus,
-    dailyFocusAnswer,
-    generateDailyFocus,
-    isArabic,
-  ]);
+  }, [dailyFocus, dailyFocusAnswer, generateDailyFocus, isArabic]);
 
   const handleAddDailyFocusSuggestion = useCallback(
     async (suggestionId: string) => {
@@ -1212,12 +1245,16 @@ export default function Dashboard({
             : [...current.addedSuggestionIds, suggestionId],
         }));
         showSuccessToast(
-          isArabic ? "تمت إضافة الاقتراح إلى مهامك" : "Suggestion added to your tasks",
+          isArabic
+            ? "تمت إضافة الاقتراح إلى مهامك"
+            : "Suggestion added to your tasks",
         );
       } catch (error) {
         console.error("Failed to add daily focus suggestion:", error);
         showSuccessToast(
-          isArabic ? "تعذر إضافة هذا الاقتراح" : "Could not add this suggestion",
+          isArabic
+            ? "تعذر إضافة هذا الاقتراح"
+            : "Could not add this suggestion",
         );
       } finally {
         setAddingSuggestionId(null);
@@ -1308,7 +1345,12 @@ export default function Dashboard({
         open={showDailyFocusPrompt}
         onOpenChange={(open) => {
           setShowDailyFocusPrompt(open);
-          if (!open) setDailyFocusPromptDismissed(true);
+          if (!open) {
+            setDailyFocusPromptDismissed(true);
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(dailyFocusPromptStorageKey, "seen");
+            }
+          }
         }}
         language={language}
         isArabic={isArabic}
@@ -1317,15 +1359,16 @@ export default function Dashboard({
         submitting={dailyFocusSubmitting}
         answer={dailyFocusAnswer}
         onAnswerChange={handleDailyFocusAnswerChange}
+        onAppendTranscript={handleAppendDailyFocusTranscript}
         onSubmit={handleSubmitDailyFocusAnswer}
       />
 
       {/* ===== Log Progress Button ===== */}
       <button
         onClick={() => setShowLogModal(true)}
-        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:opacity-90"
+        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary/90 py-3 text-[15px] font-extrabold text-primary-foreground shadow-sm shadow-primary/15 transition-all duration-200 hover:bg-primary hover:shadow-md active:scale-[0.98]"
       >
-        <Flame className="w-4 h-4" />
+        <Flame className="w-[17px] h-[17px]" />
         {t.logProgressButton}
       </button>
 
@@ -1336,7 +1379,7 @@ export default function Dashboard({
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap",
+              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap [&_svg]:h-[17px] [&_svg]:w-[17px]",
               activeTab === tab.key
                 ? "bg-white dark:bg-background text-foreground border border-border/70"
                 : "text-muted-foreground hover:text-foreground",
@@ -1349,12 +1392,20 @@ export default function Dashboard({
       </div>
 
       {/* ===== Tab Content ===== */}
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        className={cn(
+          "min-h-0 flex-1",
+          activeTab === "chart"
+            ? "scrollbar-hide relative z-0 touch-pan-y overflow-y-scroll overscroll-contain pb-24 [-webkit-overflow-scrolling:touch] sm:pb-4"
+            : "overflow-hidden",
+        )}
+      >
         {activeTab === "focus" && (
           <FocusTab
             language={language}
             isArabic={isArabic}
             dailyFocus={dailyFocus}
+            dailyFocusHistory={dailyFocusHistory}
             dailyFocusLoading={dailyFocusLoading}
             dailyFocusSubmitting={dailyFocusSubmitting}
             dailyFocusAddingSuggestionId={addingSuggestionId}
@@ -1398,7 +1449,6 @@ export default function Dashboard({
             onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
             onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
             onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
-            onRetryDailyFocus={handleRetryDailyFocus}
             onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
             onSetNewMainText={setNewMainText}
             onSetNewMainFreq={setNewMainFreq}
@@ -1412,7 +1462,7 @@ export default function Dashboard({
         )}
 
         {activeTab === "chart" && (
-          <div className="scrollbar-thin h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain">
+          <div className="scrollbar-thin min-h-full space-y-3">
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem] md:items-stretch">
               <div className="w-full min-w-0 md:flex md:min-h-0">
                 <GrowthChart

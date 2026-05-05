@@ -187,6 +187,17 @@
   .scrollbar-thin:active {
     scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
   }
+
+  /* Fully hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
 }
 
 @keyframes focus-task-complete {

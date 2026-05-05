@@ -113,13 +113,15 @@ async function getRecentEvents(
 ) {
   let query = supabase
     .from('daily_logs')
-    .select('created_at, ai_score')
+    .select('id, created_at, ai_score, breakdown')
     .eq('goal_id', participant.goal_id)
     .gte('created_at', participant.joined_at)
     .order('created_at', { ascending: false })
-    .limit(8);
+    .limit(20);
 
-  if (challengeEndedAt) {
+  // For "me", show all milestones — including ones submitted after the challenge ended.
+  // For "opponent", limit to challenge timeframe (post-challenge activity is irrelevant).
+  if (challengeEndedAt && actor === 'opponent') {
     query = query.lte('created_at', challengeEndedAt);
   }
 
@@ -129,11 +131,19 @@ async function getRecentEvents(
     throw error;
   }
 
-  return (data || []).map((row: { created_at: string; ai_score: number }) => ({
-    actor,
-    points: row.ai_score || 0,
-    createdAt: row.created_at,
-  }));
+  return (data || []).map((row: { id: string; created_at: string; ai_score: number; breakdown: any }) => {
+    let milestone;
+    if (row.breakdown && typeof row.breakdown === 'object') {
+      milestone = row.breakdown.milestone;
+    }
+    return {
+      logId: row.id,
+      actor,
+      points: row.ai_score || 0,
+      createdAt: row.created_at,
+      milestone,
+    };
+  });
 }
 
 function noneSnapshot() {
@@ -260,7 +270,7 @@ export async function POST(req: Request) {
 
     const recentEvents = [...meEvents, ...opponentEvents]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 10);
+      .slice(0, 20);
 
     return NextResponse.json({
       data: {

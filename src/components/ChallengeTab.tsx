@@ -88,9 +88,12 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
     fetchSnapshot();
     fetchHistory();
 
-    const intervalId = setInterval(() => {
-      fetchSnapshot(true);
-    }, 20000);
+    // Refresh only when user returns to the tab (not on a fixed 20s timer)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSnapshot(true);
+      }
+    };
 
     const onLogSaved = (event: Event) => {
       const custom = event as CustomEvent<{ goalId?: string }>;
@@ -99,10 +102,11 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
       }
     };
 
+    document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('challenge-log-updated', onLogSaved as EventListener);
 
     return () => {
-      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('challenge-log-updated', onLogSaved as EventListener);
     };
   }, [fetchSnapshot, fetchHistory, goalId]);
@@ -344,6 +348,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
 
         {(snapshot.status === 'active' || snapshot.status === 'ended') && (
           <ActivityCard
+            goalId={goalId}
             recentEvents={snapshot.recentEvents}
             visibleEvents={visibleEvents}
             canToggleEvents={canToggleEvents}

@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import { Brain, Loader2, Send } from 'lucide-react';
-import { translations, type Language } from '@/lib/translations';
-import type { DailyFocusSession } from '@/lib/daily-focus';
-import { cn } from '@/lib/utils';
+import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { translations, type Language } from "@/lib/translations";
+import type { DailyFocusSession } from "@/lib/daily-focus";
+import { cn } from "@/lib/utils";
+import VoiceRecorder from "@/components/shared/VoiceRecorder";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+  DialogClose,
+} from "@/components/ui/dialog";
 
 interface DailyFocusQuestionDialogProps {
   open: boolean;
@@ -22,23 +24,26 @@ interface DailyFocusQuestionDialogProps {
   submitting: boolean;
   answer: string;
   onAnswerChange: (value: string) => void;
+  onAppendTranscript: (text: string) => void;
   onSubmit: () => void;
 }
 
 export default function DailyFocusQuestionDialog({
   open,
   onOpenChange,
-  language = 'en',
+  language = "en",
   isArabic,
   dailyFocus,
   loading,
   submitting,
   answer,
   onAnswerChange,
+  onAppendTranscript,
   onSubmit,
 }: DailyFocusQuestionDialogProps) {
   const t = translations[language];
   const submitDisabled = submitting || loading || !answer.trim();
+
   const currentQuestionNumber = Math.max(
     1,
     (dailyFocus?.answered_days_count || 0) + (dailyFocus?.answered_at ? 0 : 1),
@@ -50,90 +55,199 @@ export default function DailyFocusQuestionDialog({
     : `${cycleStep} of ${cycleTotal}`;
   const questionLabel = isArabic
     ? `السؤال ${currentQuestionNumber}`
-    : `Question ${currentQuestionNumber}`;
+    : `Q${currentQuestionNumber}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="left-1/2 top-auto bottom-2 w-[calc(100vw-1rem)] max-w-none translate-x-[-50%] translate-y-0 gap-0 overflow-hidden rounded-[2rem] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,247,251,0.98))] p-0 shadow-[0_40px_120px_-48px_rgba(15,23,42,0.62)] sm:bottom-auto sm:top-[50%] sm:w-full sm:max-w-[34rem] sm:translate-y-[-50%] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(8,15,29,0.98),rgba(14,23,38,0.98))]"
-        dir={isArabic ? 'rtl' : 'ltr'}
+        showCloseButton={false}
+        className={cn(
+          // Mobile: bottom sheet
+          "fixed bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0",
+          "rounded-t-[1.5rem] rounded-b-none",
+          // Desktop: centered modal (medium width)
+          "sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2",
+          "sm:w-full sm:max-w-xl",
+          "sm:-translate-x-1/2 sm:-translate-y-1/2",
+          "sm:rounded-3xl",
+          // Base styles
+          "gap-0 overflow-hidden border border-border/50 bg-background p-0",
+          "shadow-[0_-8px_32px_rgba(0,0,0,0.08)] sm:shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+          "dark:border-white/8 dark:shadow-[0_-8px_32px_rgba(0,0,0,0.3)] dark:sm:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+        )}
+        dir={isArabic ? "rtl" : "ltr"}
       >
-        <div className="flex max-h-[92svh] flex-col">
-          <div className="overflow-y-auto px-4 pb-5 pt-3 sm:px-6 sm:pb-6 sm:pt-5">
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-foreground/10 sm:hidden" />
-            <DialogHeader
-              className={cn(
-                'gap-0 text-left',
-                isArabic && 'text-right sm:text-right',
-              )}
-            >
-              <div className="flex flex-wrap items-center gap-2 pe-10">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">
-                  <Brain className="h-3.5 w-3.5" />
-                  <span>{t.dailyFocus}</span>
-                </span>
-                <span className="inline-flex items-center rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-bold text-muted-foreground dark:bg-white/[0.04]">
-                  {cycleLabel}
-                </span>
-              </div>
-              <DialogTitle className="mt-4 pe-10 text-[1.35rem] font-black tracking-[-0.03em] text-foreground sm:text-[1.55rem]">
-                {t.todayQuestion}
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                {t.dailyAiQuestionDesc}
-              </DialogDescription>
-            </DialogHeader>
+        <div className="flex max-h-[90svh] flex-col sm:max-h-[min(85vh,40rem)]">
+          {/* Single custom close button — logical inset for LTR/RTL */}
+          <DialogClose className="absolute top-4 end-4 z-10 flex size-9 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none sm:top-5 sm:end-5">
+            <X className="size-5" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
 
-            <div className="mt-5 rounded-[1.75rem] border border-border/60 bg-white/85 p-4 shadow-[0_24px_60px_-48px_rgba(6,182,212,0.6)] dark:bg-white/[0.04] sm:p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <span className="inline-flex items-center rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
-                  {questionLabel}
-                </span>
-              </div>
+          {/* ── Scroll area ── */}
+          <div className="flex-1 overflow-y-auto pb-4">
+            {/* Mobile drag handle */}
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="h-1.5 w-12 rounded-full bg-foreground/10" />
+            </div>
+
+            {/* Header — padding respects dir; title scale is medium */}
+            <div className="px-5 pt-5 pb-4 pe-14 sm:px-7 sm:pt-7 sm:pb-5 sm:pe-16">
+              <DialogHeader
+                className={cn(
+                  "gap-0 space-y-0 !text-start sm:!text-start",
+                  isArabic ? "items-end" : "items-start",
+                )}
+              >
+                {/* Badge row: logical separator works in both directions */}
+                <div
+                  className={cn(
+                    "mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-2",
+                    isArabic ? "justify-end" : "justify-start",
+                  )}
+                >
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-primary dark:bg-primary/20">
+                    <Sparkles className="size-3.5 shrink-0" aria-hidden />
+                    {t.dailyFocus}
+                  </span>
+                  <span className="text-[12px] font-semibold text-muted-foreground/80 ms-0.5 border-s border-border/60 ps-2.5 dark:border-white/10">
+                    {cycleLabel}
+                  </span>
+                </div>
+
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                  {t.todayQuestion}
+                </DialogTitle>
+
+                <DialogDescription className="sr-only">
+                  {t.dailyAiQuestionDesc}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            {/* Divider */}
+            <div className="mx-5 h-px bg-linear-to-r from-transparent via-border/60 to-transparent sm:mx-7" />
+
+            {/* Question block */}
+            <div className="px-5 py-5 sm:px-7 sm:py-6">
+              {/* Question number label */}
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-primary/75 sm:text-[11px]">
+                {questionLabel}
+              </p>
 
               {loading && !dailyFocus ? (
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 w-5/6 rounded-full bg-muted/70" />
-                  <div className="h-4 w-full rounded-full bg-muted/60" />
-                  <div className="h-4 w-3/4 rounded-full bg-muted/50" />
+                <div className="space-y-3">
+                  <div className="h-4 w-full animate-pulse rounded-full bg-muted" />
+                  <div className="h-4 w-5/6 animate-pulse rounded-full bg-muted" />
+                  <div className="h-4 w-4/6 animate-pulse rounded-full bg-muted" />
                 </div>
               ) : (
-                <p className="text-base font-bold leading-8 text-foreground sm:text-[1.05rem]">
-                  {dailyFocus?.question || t.dailyFocusUnavailable}
-                </p>
+                <>
+                  <p
+                    className={cn(
+                      "whitespace-pre-line text-base font-semibold leading-7 text-foreground sm:text-[1.0625rem] sm:leading-relaxed",
+                      "text-start",
+                    )}
+                  >
+                    {dailyFocus?.question || t.dailyFocusUnavailable}
+                  </p>
+
+                  {dailyFocus?.question_why && (
+                    <div
+                      className={cn(
+                        "mt-5 rounded-xl border border-primary/10 bg-primary/5 px-3.5 py-3 dark:bg-white/5 sm:rounded-2xl sm:px-4 sm:py-3.5",
+                      )}
+                    >
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary/65 sm:text-[11px]">
+                        {t.questionWhyLabel}
+                      </p>
+                      <p
+                        className={cn(
+                          "whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground font-medium",
+                          "text-start",
+                        )}
+                      >
+                        {dailyFocus.question_why}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
-            <div className="mt-4">
-              <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            {/* Divider */}
+            <div className="mx-5 h-px bg-border/40 sm:mx-7" />
+
+            {/* Answer area */}
+            <div className="px-5 pt-5 pb-2 sm:px-7">
+              <label className="mb-2 block text-start text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/85 sm:text-[11px]">
                 {t.answerQuestion}
               </label>
-              <textarea
-                value={answer}
-                onChange={(event) => onAnswerChange(event.target.value)}
-                placeholder={t.answerQuestionPlaceholder}
-                disabled={loading || submitting}
-                className={cn(
-                  'min-h-[160px] w-full rounded-[1.5rem] border border-border/70 bg-background/80 px-4 py-3.5 text-sm leading-7 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-cyan-600/40 focus:bg-background dark:bg-background/30',
-                  (loading || submitting) && 'cursor-not-allowed opacity-80',
-                )}
-                dir={isArabic ? 'rtl' : 'ltr'}
-              />
+
+              <div className="relative">
+                <textarea
+                  value={answer}
+                  onChange={(e) => onAnswerChange(e.target.value)}
+                  placeholder={t.answerQuestionPlaceholder}
+                  disabled={loading || submitting}
+                  rows={4}
+                  className={cn(
+                    "w-full resize-none rounded-2xl border-2 border-border/40 bg-muted/30",
+                    "px-4 py-3.5 pb-14 pe-14",
+                    "text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/45 sm:text-[15px]",
+                    "text-start outline-none transition-all duration-200",
+                    "focus:border-primary/30 focus:bg-background focus:ring-4 focus:ring-primary/5",
+                    "dark:bg-white/5 dark:border-white/5 dark:focus:bg-white/10",
+                    (loading || submitting) && "cursor-not-allowed opacity-60",
+                  )}
+                  dir={isArabic ? "rtl" : "ltr"}
+                />
+
+                {/* Mic: inset-inline-end follows RTL/LTR */}
+                <div
+                  className={cn(
+                    "absolute bottom-3 end-3 flex flex-col",
+                    isArabic ? "items-start" : "items-end",
+                  )}
+                >
+                  <VoiceRecorder
+                    onTranscript={onAppendTranscript}
+                    language={language}
+                    size="sm"
+                    statusAboveButton
+                    className="gap-1"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-border/60 bg-background/85 px-4 py-4 backdrop-blur sm:px-6 sm:py-5 dark:bg-background/20">
+          {/* ── Footer ── */}
+          <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 sm:py-5">
             <button
+              type="button"
               onClick={onSubmit}
               disabled={submitDisabled}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[1.25rem] bg-primary px-5 text-sm font-black text-primary-foreground shadow-[0_20px_40px_-24px_rgba(14,165,233,0.8)] transition-all hover:translate-y-[-1px] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              className={cn(
+                "group relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-5 sm:h-[3.25rem] sm:rounded-2xl",
+                "text-sm font-bold text-primary-foreground sm:text-[0.9375rem]",
+                "transition-all duration-200",
+                "hover:brightness-110 active:scale-[0.99] shadow-md shadow-primary/15",
+                "disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none",
+                isArabic && "flex-row-reverse",
+              )}
             >
               {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <>
+                  <Send
+                    className="size-[1.125rem] shrink-0 transition-transform group-hover:-translate-y-0.5 ltr:group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+                    aria-hidden
+                  />
+                  <span>{t.submitAnswer}</span>
+                </>
               )}
-              {t.submitAnswer}
             </button>
           </div>
         </div>

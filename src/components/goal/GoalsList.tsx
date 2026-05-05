@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Target, Trash2, MoreVertical, Pin, PinOff, Edit2, ListChecks } from 'lucide-react';
+import { Clock, Target, Trash2, MoreVertical, Pin, PinOff, Edit2, ListChecks } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import {
     DropdownMenu,
@@ -14,7 +14,7 @@ import { createClient } from '@/utils/supabase/client';
 import type { GoalTaskStats } from '@/app/page';
 import { cn } from '@/lib/utils';
 import { getGoalEndDaysChip } from '@/lib/goal-dates';
-import { getIconComponent } from './IconPicker';
+import { getGoalIcon } from './IconPicker';
 import GoalEditDialog from './GoalEditDialog';
 import GoalProgressBar from '@/components/shared/GoalProgressBar';
 import ConfirmModal from '@/components/shared/ConfirmModal';
@@ -125,21 +125,20 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                         const progress = targetPoints > 0
                             ? Math.round((currentPoints / targetPoints) * 100)
                             : 0;
-                        const Icon = getIconComponent(goal.icon || 'Target');
                         const daysChip = getGoalEndDaysChip(goal.estimated_completion_date, isArabic);
                         const stats = taskStatsMap[goal.id];
 
                         return (
                             <div
                                 key={goal.id}
-                                className={`w-full rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-3 sm:p-4 transition-all relative group ${isSelected
-                                        ? 'ring-1 ring-primary/20 border-primary bg-primary/5 shadow-md'
-                                        : 'hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
+                                className={`group relative w-full rounded-2xl border border-border/80 bg-white p-3 transition-all dark:bg-card/50 sm:p-4 ${isSelected
+                                        ? 'border-primary/70 shadow-md shadow-primary/10 ring-1 ring-primary/20'
+                                        : 'shadow-sm hover:border-primary/35 hover:shadow-md'
                                     } ${deletingId === goal.id ? 'opacity-50 pointer-events-none' : ''}`}
                             >
                                 <div
                                     onClick={() => onSelectGoal(goal.id)}
-                                    className="w-full cursor-pointer flex flex-col gap-3"
+                                    className="flex w-full cursor-pointer flex-col gap-3"
                                     role="button"
                                     tabIndex={0}
                                     onKeyDown={(e) => {
@@ -149,105 +148,116 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                                         }
                                     }}
                                 >
-                                    {/* Header: Icon + Title + Pin & Menu */}
-                                    <div className="flex items-center gap-3 w-full" dir={titleRTL ? 'rtl' : 'ltr'}>
-                                        <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center border transition-colors shadow-sm ${isSelected
-                                                ? 'bg-primary text-primary-foreground border-primary'
-                                                : 'bg-muted/50 text-muted-foreground border-border group-hover:border-primary/50 group-hover:text-primary'
-                                            }`}>
-                                            <Icon className="w-6 h-6" />
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" dir={titleRTL ? 'rtl' : 'ltr'}>
+                                            <div
+                                                className={cn(
+                                                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary shadow-sm transition-colors sm:h-12 sm:w-12 sm:rounded-2xl',
+                                                    isSelected && 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/15',
+                                                )}
+                                            >
+                                                {getGoalIcon(goal.icon)}
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <h3
+                                                    className={cn(
+                                                        'line-clamp-2 text-base font-black text-foreground transition-colors sm:text-lg',
+                                                        isSelected && 'text-primary',
+                                                        titleRTL ? 'text-right' : 'text-left',
+                                                    )}
+                                                >
+                                                    {goal.title}
+                                                </h3>
+
+                                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                    {goal.is_pinned && (
+                                                        <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                                            <Pin className="h-3 w-3" />
+                                                            {isArabic ? 'مثبت' : 'Pinned'}
+                                                        </span>
+                                                    )}
+                                                    {daysChip && (
+                                                        <span
+                                                            className={cn(
+                                                                'flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                                                                daysChip.tone === 'soon' && 'bg-primary/10 text-primary',
+                                                                daysChip.tone === 'today' && 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+                                                                daysChip.tone === 'late' && 'bg-destructive/10 text-destructive',
+                                                            )}
+                                                            title={daysChip.title}
+                                                        >
+                                                            <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                                            {daysChip.text}
+                                                        </span>
+                                                    )}
+                                                    {stats && stats.total > 0 && (
+                                                        <span
+                                                            className="flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary"
+                                                            title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}
+                                                        >
+                                                            <ListChecks className="h-3 w-3 shrink-0" aria-hidden />
+                                                            <span dir="ltr">{stats.completed}/{stats.total}</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <h3
-                                            className={`text-lg font-bold flex-1 truncate ${isSelected ? 'text-primary' : 'text-foreground group-hover:text-primary'
-                                                } ${titleRTL ? 'text-right' : 'text-left'}`}
-                                        >
-                                            {goal.title}
-                                        </h3>
-
-                                        <div className="flex items-center gap-1 shrink-0" dir="ltr">
-                                            {goal.is_pinned && (
-                                                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-chart-5/10">
-                                                    <Pin className="w-4 h-4 text-chart-5 rotate-45" />
-                                                </div>
-                                            )}
-                                            {daysChip && (
-                                                <div
-                                                    className={cn(
-                                                        'h-8 min-w-8 px-1.5 flex items-center justify-center gap-0.5 rounded-full text-[10px] font-bold tabular-nums',
-                                                        daysChip.tone === 'soon' &&
-                                                            'bg-primary/10 text-primary border border-primary/20',
-                                                        daysChip.tone === 'today' &&
-                                                            'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25',
-                                                        daysChip.tone === 'late' &&
-                                                            'bg-destructive/15 text-destructive border border-destructive/25'
-                                                    )}
-                                                    title={daysChip.title}
-                                                >
-                                                    {daysChip.text}
-                                                </div>
-                                            )}
-                                            {stats && stats.total > 0 && (
-                                                <div
-                                                    className="h-8 min-w-8 px-1.5 flex items-center justify-center gap-1 rounded-full text-[10px] font-bold tabular-nums bg-primary/10 text-primary border border-primary/20"
-                                                    title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}
-                                                >
-                                                    <ListChecks className="w-3 h-3 shrink-0" aria-hidden />
-                                                    <span dir="ltr">{stats.completed}/{stats.total}</span>
-                                                </div>
-                                            )}
-                                            <div onClick={(e) => e.stopPropagation()}>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <button
-                                                            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-                                                            aria-label={language === 'ar' ? 'خيارات الهدف' : 'Goal options'}
-                                                        >
-                                                            <MoreVertical className="w-4 h-4" />
-                                                        </button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleTogglePin(goal);
-                                                            }}
-                                                        >
-                                                            {goal.is_pinned ? (
-                                                                <>
-                                                                    <PinOff className="w-4 h-4" />
-                                                                    {t.unpinGoal}
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Pin className="w-4 h-4" />
-                                                                    {t.pinGoal}
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openEditDialog(goal);
-                                                            }}
-                                                        >
-                                                            <Edit2 className="w-4 h-4" />
-                                                            {t.editGoal}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setConfirmDeleteGoal({ id: goal.id, title: goal.title });
-                                                            }}
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                            {language === 'ar' ? 'حذف الهدف' : 'Delete Goal'}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
+                                        <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        className="rounded-xl border border-transparent p-2 text-muted-foreground transition-all hover:border-border/60 hover:bg-muted/60 hover:text-foreground sm:p-2.5"
+                                                        aria-label={language === 'ar' ? 'خيارات الهدف' : 'Goal options'}
+                                                    >
+                                                        <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align={isArabic ? 'start' : 'end'} className="w-52">
+                                                    <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleTogglePin(goal);
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        {goal.is_pinned ? (
+                                                            <>
+                                                                <PinOff className="w-4 h-4" />
+                                                                {t.unpinGoal}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Pin className="w-4 h-4" />
+                                                                {t.pinGoal}
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openEditDialog(goal);
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                        {t.editGoal}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        className="cursor-pointer"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setConfirmDeleteGoal({ id: goal.id, title: goal.title });
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        {language === 'ar' ? 'حذف الهدف' : 'Delete Goal'}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
 

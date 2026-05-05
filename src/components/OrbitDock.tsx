@@ -30,14 +30,11 @@ const DockItem = ({ icon: Icon, label, isActive, onClick }: DockItemProps) => {
                         className={cn(
                               "group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[1.15rem] transition-all duration-300 ease-out sm:h-11 sm:w-11 sm:rounded-[1.25rem]",
                               isActive
-                                  ? "bg-primary text-primary-foreground shadow-[0_12px_26px_-12px_hsl(var(--primary)/0.8)] -translate-y-1 sm:scale-110 sm:-translate-y-1.5"
+                                  ? "bg-primary/[0.12] text-primary shadow-[0_10px_24px_-16px_hsl(var(--primary)/0.8)] ring-1 ring-primary/25"
                                   : "bg-background/55 text-muted-foreground shadow-sm ring-1 ring-border/40 hover:-translate-y-0.5 hover:bg-muted/80 hover:text-foreground"
                         )}
                     >
                         <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
-                        {isActive && (
-                            <span className="absolute -bottom-1.5 h-1 w-1 rounded-full bg-primary-foreground/70 shadow-sm" />
-                        )}
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="bg-popover text-popover-foreground border-border shadow-md">
@@ -80,9 +77,9 @@ export default function OrbitDock({
     };
 
     return (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex h-[calc(5.75rem+env(safe-area-inset-bottom))] w-full items-start justify-center px-2 pt-3 transition-all duration-500 sm:h-28 sm:pt-6 lg:inset-x-auto lg:bottom-auto lg:left-6 lg:top-1/2 lg:h-auto lg:w-auto lg:max-w-none lg:-translate-y-1/2 lg:px-0 lg:pt-0 rtl:lg:left-auto rtl:lg:right-6 rtl:lg:translate-x-0">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex h-[calc(5rem+env(safe-area-inset-bottom))] w-full items-end justify-center px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-all duration-500 sm:h-24 lg:inset-x-auto lg:bottom-auto lg:left-6 lg:top-1/2 lg:h-auto lg:w-auto lg:max-w-none lg:-translate-y-1/2 lg:px-0 lg:pb-0 rtl:lg:left-auto rtl:lg:right-6 rtl:lg:translate-x-0">
             {/* DOCK BAR */}
-            <div className="pointer-events-auto relative flex max-w-full items-center gap-1.5 overflow-x-auto rounded-[1.75rem] border border-border/55 bg-background/78 px-2 pb-3 pt-1.5 shadow-[0_22px_55px_-30px_rgba(15,23,42,0.75)] ring-1 ring-white/65 backdrop-blur-2xl transition-all duration-500 [scrollbar-width:none] [-ms-overflow-style:none] before:pointer-events-none before:absolute before:inset-x-8 before:top-1 before:h-px before:bg-white/70 [&::-webkit-scrollbar]:hidden dark:bg-background/70 dark:ring-white/10 dark:before:bg-white/12 sm:gap-2.5 sm:px-3 sm:pb-3 sm:pt-2 lg:max-h-[calc(100dvh-4rem)] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:px-2.5 lg:py-3">
+            <div className="pointer-events-auto relative flex max-w-full items-center gap-1.5 overflow-x-auto rounded-[1.75rem] border border-border/55 bg-background/78 px-2 pb-3 pt-1.5 shadow-[0_22px_55px_-30px_rgba(15,23,42,0.75)] ring-1 ring-white/65 backdrop-blur-2xl transition-all duration-500 [scrollbar-width:none] [-ms-overflow-style:none] before:pointer-events-none before:absolute before:inset-x-8 before:top-1 before:h-px before:bg-white/70 [&::-webkit-scrollbar]:hidden dark:bg-background/70 dark:ring-white/10 dark:before:bg-white/12 min-[480px]:w-full min-[480px]:justify-center sm:w-auto sm:justify-start sm:gap-2.5 sm:px-3 sm:pb-3 sm:pt-2 lg:max-h-[calc(100dvh-4rem)] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:px-2.5 lg:py-3">
                 <DockItem
                     icon={Home}
                     label={language === 'ar' ? 'الرئيسية' : 'Home'}

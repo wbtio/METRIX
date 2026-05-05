@@ -1,3 +1,5 @@
+import { formatNumberEn } from '@/lib/utils';
+
 export type GoalEndDaysTone = 'soon' | 'today' | 'late';
 
 export interface GoalEndDaysChip {
@@ -27,20 +29,22 @@ export function getGoalEndDaysChip(
 
   const endDateLabel =
     isoDate && !Number.isNaN(new Date(isoDate).getTime())
-      ? new Date(isoDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
+      ? new Date(isoDate).toLocaleDateString(isArabic ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         })
       : '';
 
+  const daysLabel = formatNumberEn(daysToEnd);
+
   if (daysToEnd > 0) {
     return {
-      text: String(daysToEnd),
+      text: daysLabel,
       tone: 'soon',
       title: isArabic
-        ? `${daysToEnd} يوم متبقٍ حتى انتهاء الهدف (${endDateLabel})`
-        : `${daysToEnd} day${daysToEnd === 1 ? '' : 's'} left until goal end (${endDateLabel})`,
+        ? `${daysLabel} يوم متبقٍ حتى انتهاء الهدف (${endDateLabel})`
+        : `${daysLabel} day${daysToEnd === 1 ? '' : 's'} left until goal end (${endDateLabel})`,
     };
   }
   if (daysToEnd === 0) {
@@ -53,11 +57,12 @@ export function getGoalEndDaysChip(
     };
   }
   const late = -daysToEnd;
+  const lateLabel = formatNumberEn(late);
   return {
-    text: String(late),
+    text: lateLabel,
     tone: 'late',
     title: isArabic
-      ? `متأخر ${late} يومًا عن موعد انتهاء الهدف (${endDateLabel})`
-      : `${late} day${late === 1 ? '' : 's'} past goal end (${endDateLabel})`,
+      ? `متأخر ${lateLabel} يومًا عن موعد انتهاء الهدف (${endDateLabel})`
+      : `${lateLabel} day${late === 1 ? '' : 's'} past goal end (${endDateLabel})`,
   };
 }

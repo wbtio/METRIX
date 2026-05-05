@@ -1,14 +1,19 @@
-export async function postJSON<T = unknown>(url: string, body: Record<string, unknown>) {
+export async function postJSON<T = unknown>(
+  url: string,
+  body: Record<string, unknown>,
+) {
   const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(payload?.error || payload?.message || `HTTP ${response.status}`);
+    throw new Error(
+      payload?.error || payload?.message || `HTTP ${response.status}`,
+    );
   }
 
   return payload as T;
@@ -16,45 +21,54 @@ export async function postJSON<T = unknown>(url: string, body: Record<string, un
 
 export function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error.trim()) return error;
+  if (typeof error === "string" && error.trim()) return error;
   return fallback;
 }
 
 export function formatTime(dateIso: string, locale: string) {
   return new Date(dateIso).toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 export function formatDate(dateIso: string | null, locale: string) {
-  if (!dateIso) return '—';
+  if (!dateIso) return "—";
   return new Date(dateIso).toLocaleDateString(locale, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function formatNumericDate(dateIso: string | null, locale: string) {
+  if (!dateIso) return "—";
+  return new Date(dateIso).toLocaleDateString(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
 export function initialFromName(value: string | null | undefined) {
   const clean = value?.trim();
-  if (!clean) return 'U';
-  return clean[0]?.toUpperCase() || 'U';
+  if (!clean) return "U";
+  return clean[0]?.toUpperCase() || "U";
 }
 
 export function initialsFromName(value: string | null | undefined) {
   const clean = value?.trim();
-  if (!clean) return 'U';
+  if (!clean) return "U";
 
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length === 1) {
-    return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+    return Array.from(parts[0]).slice(0, 2).join("").toUpperCase();
   }
 
   return parts
     .slice(0, 2)
-    .map((part) => Array.from(part)[0] || '')
-    .join('')
+    .map((part) => Array.from(part)[0] || "")
+    .join("")
     .toUpperCase();
 }
 
@@ -68,14 +82,14 @@ function hashString(value: string) {
 
 export function buildFallbackAvatar(displayName: string) {
   const palette = [
-    ['#0f766e', '#34d399'],
-    ['#1d4ed8', '#60a5fa'],
-    ['#7c3aed', '#a78bfa'],
-    ['#be185d', '#f472b6'],
-    ['#c2410c', '#fb923c'],
-    ['#475569', '#94a3b8'],
+    ["#0f766e", "#34d399"],
+    ["#1d4ed8", "#60a5fa"],
+    ["#7c3aed", "#a78bfa"],
+    ["#be185d", "#f472b6"],
+    ["#c2410c", "#fb923c"],
+    ["#475569", "#94a3b8"],
   ];
-  const safeName = displayName?.trim() || 'User';
+  const safeName = displayName?.trim() || "User";
   const [startColor, endColor] = palette[hashString(safeName) % palette.length];
   const initials = initialsFromName(safeName);
   const svg = `

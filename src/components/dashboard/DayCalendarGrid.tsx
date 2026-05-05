@@ -22,7 +22,7 @@ import {
   getDailyPerformanceLabel,
   parseDailyLogBreakdown,
 } from "@/lib/daily-log-feedback";
-import { cn } from "@/lib/utils";
+import { cn, formatNumberEn, hasArabicText, localeWithEnglishDigits } from "@/lib/utils";
 
 interface Log {
   id: string;
@@ -58,22 +58,15 @@ function parseLocalDay(value: string) {
   return date;
 }
 
-function heatClass(logCount: number) {
-  if (logCount <= 0) return "border-border/60 bg-background/45";
-  if (logCount === 1) return "border-chart-1/30 bg-chart-1/15";
-  if (logCount === 2) return "border-chart-1/40 bg-chart-1/30";
-  if (logCount === 3) return "border-chart-1/55 bg-chart-1/50";
-  return "border-chart-1/70 bg-chart-1/80";
-}
+function heatClass(value: number, peakValue: number, hasActivity: boolean) {
+  if (!hasActivity) return "border-border/55 bg-background/45";
 
-function formatShortNumber(value: number, isArabic: boolean) {
-  return new Intl.NumberFormat(isArabic ? "ar-SA" : "en-US").format(value);
-}
-
-function formatYearNumber(value: number, isArabic: boolean) {
-  return new Intl.NumberFormat(isArabic ? "ar-SA" : "en-US", {
-    useGrouping: false,
-  }).format(value);
+  const ratio = peakValue > 0 ? value / peakValue : 0;
+  if (ratio >= 0.85) return "border-transparent bg-primary/90";
+  if (ratio >= 0.6) return "border-transparent bg-primary/70";
+  if (ratio >= 0.35) return "border-transparent bg-primary/50";
+  if (ratio >= 0.15) return "border-transparent bg-primary/32";
+  return "border-transparent bg-primary/18";
 }
 
 function getDayBadgeLabel(
@@ -147,7 +140,7 @@ export default function DayCalendarGrid({
     return map;
   }, [logs]);
 
-  const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-US";
+  const locale = localeWithEnglishDigits(language);
   const monthNameFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -224,6 +217,15 @@ export default function DayCalendarGrid({
       (cell) => !cell.isBeforeStart && !cell.isAfterToday && cell.hasLogs,
     );
 
+    const peakPoints = loggedCells.reduce(
+      (peak, cell) => Math.max(peak, cell.totalPoints),
+      0,
+    );
+    const peakLogCount = loggedCells.reduce(
+      (peak, cell) => Math.max(peak, cell.logCount),
+      0,
+    );
+
     return {
       calendarCells: cells,
       monthStats: {
@@ -233,6 +235,7 @@ export default function DayCalendarGrid({
           0,
         ),
         totalEntries: loggedCells.reduce((sum, cell) => sum + cell.logCount, 0),
+        peakActivity: peakPoints > 0 ? peakPoints : peakLogCount,
         daysRemaining:
           monthStart > today
             ? daysInMonth
@@ -270,19 +273,19 @@ export default function DayCalendarGrid({
     {
       key: "points",
       label: labels.monthPoints,
-      value: formatShortNumber(monthStats.totalPoints, isArabic),
+      value: formatNumberEn(monthStats.totalPoints),
       accent: "text-primary",
     },
     {
       key: "logged",
       label: labels.loggedDays,
-      value: formatShortNumber(monthStats.loggedDays, isArabic),
+      value: formatNumberEn(monthStats.loggedDays),
       accent: "text-foreground",
     },
     {
       key: "remaining",
       label: labels.daysLeft,
-      value: formatShortNumber(monthStats.daysRemaining, isArabic),
+      value: formatNumberEn(monthStats.daysRemaining),
       accent: "text-muted-foreground",
     },
   ];
@@ -300,7 +303,7 @@ export default function DayCalendarGrid({
       ? "strong"
       : "none";
   const selectedDayBadgeLabel = getDayBadgeLabel(selectedDayBadge, language);
-  const isRTLText = (text: string) => /[\u0600-\u06ff]/.test(text);
+  const isRTLText = hasArabicText;
 
   const handleMonthPickerOpenChange = (open: boolean) => {
     setIsMonthPickerOpen(open);
@@ -319,12 +322,10 @@ export default function DayCalendarGrid({
   return (
     <>
       <div
-        className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 p-1.5 shadow-xl ring-1 ring-border/10 backdrop-blur-xl sm:p-2"
+        className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-transparent bg-card/35 p-1.5 shadow-sm backdrop-blur-xl sm:p-2"
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
-        <div className="border-b border-border/60 pb-1 sm:pb-1">
+        <div className="pb-1 sm:pb-1">
           <div className="flex items-center gap-0.5" dir="ltr">
             <button
               type="button"
@@ -374,7 +375,7 @@ export default function DayCalendarGrid({
 
                     <div className="min-w-0 flex-1 text-center">
                       <p className="text-sm font-semibold text-foreground">
-                        {formatYearNumber(pickerYear, isArabic)}
+                        {formatNumberEn(pickerYear, { useGrouping: false })}
                       </p>
                     </div>
 
@@ -446,13 +447,14 @@ export default function DayCalendarGrid({
                 return (
                   <div
                     key={`blank-${index}`}
-                    className="h-8 rounded-md bg-transparent min-[380px]:h-9 md:aspect-square md:h-auto"
+                    className="h-8 rounded-md bg-transparent min-[500px]:h-9 md:aspect-square md:h-auto"
                   />
                 );
               }
 
               const isSelectable = !day.isBeforeStart && !day.isAfterToday;
               const isSelected = selectedDate === day.date;
+              const activityValue = day.totalPoints > 0 ? day.totalPoints : day.logCount;
               const state = day.isBeforeStart
                 ? "before-start"
                 : day.isAfterToday
@@ -482,33 +484,35 @@ export default function DayCalendarGrid({
                   }}
                   onMouseLeave={() => setTooltip(null)}
                   className={cn(
-                    "group relative h-8 rounded-md border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card min-[380px]:h-9 md:aspect-square md:h-auto",
+                    "group relative h-8 rounded-md border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-1 focus-visible:ring-offset-card min-[500px]:h-9 md:aspect-square md:h-auto",
                     day.isBeforeStart || day.isAfterToday
-                      ? "border-dashed border-border/35 bg-muted/10 text-muted-foreground/35"
-                      : heatClass(day.logCount),
-                    day.isToday && !isSelected && "ring-1 ring-primary/55",
+                      ? "border-border/35 bg-muted/10 text-muted-foreground/35"
+                      : heatClass(activityValue, monthStats.peakActivity, day.hasLogs),
+                    day.isToday && !isSelected && !day.hasLogs && "shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.18)]",
                     isSelectable &&
-                      "hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm",
+                      "hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-sm",
                     isSelected &&
-                      "scale-[1.03] ring-2 ring-primary ring-offset-1 ring-offset-card",
+                      "scale-[1.02] brightness-95",
                     day.badge === "strong" &&
                       !day.isBeforeStart &&
                       !day.isAfterToday &&
-                      "shadow-[0_0_0_1px_rgba(34,197,94,0.22)]",
+                      "shadow-none",
                     day.badge === "exceptional" &&
                       !day.isBeforeStart &&
                       !day.isAfterToday &&
-                      "shadow-[0_0_0_1px_rgba(245,158,11,0.28)] ring-1 ring-chart-5/35 dark:ring-chart-3/40",
+                      "shadow-none",
                   )}
                   aria-label={`${day.date} ${day.logCount > 0 ? `${day.logCount} ${labels.logs}` : labels.noActivity}${badgeLabel ? ` ${badgeLabel}` : ""}`}
                 >
                   <span
                     className={cn(
-                      "absolute left-1 top-1 text-[8px] font-semibold leading-none sm:left-1.5 sm:top-1.5 sm:text-[10px]",
+                      "absolute left-1 top-1 text-[11px] font-bold leading-none sm:left-1.5 sm:top-1.5 sm:text-xs",
                       day.isBeforeStart || day.isAfterToday
                         ? "text-muted-foreground/40"
                         : day.hasLogs
-                          ? "text-foreground"
+                          ? day.logCount >= 3
+                            ? "text-primary-foreground drop-shadow-sm"
+                            : "text-foreground"
                           : "text-muted-foreground",
                     )}
                   >
@@ -518,7 +522,7 @@ export default function DayCalendarGrid({
                   {day.hasLogs && !day.isBeforeStart && !day.isAfterToday && (
                     <span
                       className={cn(
-                        "absolute bottom-1 right-1 h-1 w-1 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.14)] sm:bottom-1.5 sm:right-1.5 sm:h-1.5 sm:w-1.5",
+                        "absolute bottom-1 right-1 h-1 w-1 rounded-full opacity-80 sm:bottom-1.5 sm:right-1.5 sm:h-1.5 sm:w-1.5",
                         day.badge === "exceptional"
                           ? "bg-chart-5 dark:bg-chart-3"
                           : day.badge === "strong"
@@ -533,9 +537,9 @@ export default function DayCalendarGrid({
           </div>
         </div>
 
-        <div className="mt-1.5 flex flex-col gap-1.5 border-t border-border/60 pt-1.5 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between sm:gap-2">
+        <div className="mt-1.5 flex items-center justify-between gap-1.5 overflow-hidden pt-1.5 sm:gap-2">
           <div className="min-w-0 flex flex-1 items-center overflow-hidden">
-            <div className="inline-flex max-w-full items-center gap-1 overflow-hidden rounded-full border border-border/70 bg-muted/15 px-1.5 py-0.5 text-[9px] font-medium leading-none whitespace-nowrap sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[10px]">
+            <div className="inline-flex max-w-full items-center gap-1 overflow-hidden rounded-full bg-muted/15 px-1.5 py-0.5 text-[10px] font-medium leading-none whitespace-nowrap sm:gap-1.5 sm:px-2.5 sm:py-1">
               {monthSummaryItems.map((item, index) => (
                 <span
                   key={item.key}
@@ -560,14 +564,16 @@ export default function DayCalendarGrid({
             </div>
           </div>
 
-          <div className="inline-flex shrink-0 items-center justify-start gap-1 text-[9px] text-muted-foreground whitespace-nowrap sm:justify-end sm:gap-1.5 sm:text-[10px]">
+          <div className="inline-flex shrink-0 items-center justify-start gap-1 text-[10px] text-muted-foreground whitespace-nowrap sm:justify-end sm:gap-1.5">
             <span>{labels.less}</span>
             {[0, 1, 2, 3, 4].map((intensity) => (
               <div
                 key={intensity}
                 className={cn(
                   "h-2.5 w-2.5 rounded-[4px] border sm:h-3 sm:w-3",
-                  heatClass(intensity),
+                  intensity === 0
+                    ? heatClass(0, 1, false)
+                    : heatClass(intensity, 4, true),
                 )}
               />
             ))}
@@ -590,7 +596,7 @@ export default function DayCalendarGrid({
             : tooltip.state === "future"
               ? `${labels.futureDay} — ${tooltip.date}`
               : tooltip.count > 0
-                ? `${tooltip.count} ${labels.logs} · +${formatShortNumber(tooltip.pts, isArabic)} ${labels.points}${tooltip.badgeLabel ? ` · ${tooltip.badgeLabel}` : ""} — ${tooltip.date}`
+                ? `${formatNumberEn(tooltip.count)} ${labels.logs} · +${formatNumberEn(tooltip.pts)} ${labels.points}${tooltip.badgeLabel ? ` · ${tooltip.badgeLabel}` : ""} — ${tooltip.date}`
                 : `${labels.noActivity} — ${tooltip.date}`}
         </div>
       )}
@@ -645,12 +651,11 @@ export default function DayCalendarGrid({
                     <Flame className="h-3 w-3" />
                     <span>
                       +
-                      {formatShortNumber(
+                      {formatNumberEn(
                         selectedLogs.reduce(
                           (sum, log) => sum + (log.ai_score || 0),
                           0,
-                        ),
-                        isArabic,
+                        )
                       )}
                     </span>
                   </div>
@@ -710,7 +715,7 @@ export default function DayCalendarGrid({
                           <div className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary ring-1 ring-primary/15">
                             <Star className="h-2.5 w-2.5 fill-current" />
                             <span>
-                              +{formatShortNumber(log.ai_score ?? 0, isArabic)}
+                              +{formatNumberEn(log.ai_score ?? 0)}
                             </span>
                           </div>
                         </div>
