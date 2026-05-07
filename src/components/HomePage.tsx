@@ -601,11 +601,18 @@ export default function HomePage({
       </div>
 
       <Tabs
-        defaultValue={primaryGoal ? "notifications" : "goals"}
+        defaultValue="goals"
         className="flex-1 min-h-0 flex flex-col"
         dir={isArabic ? "rtl" : "ltr"}
       >
         <TabsList className="w-full shrink-0 mb-2">
+          <TabsTrigger value="goals" className={cn("flex-1 gap-1.5", !primaryGoal && "w-full")}>
+            <Target className="h-4 w-4" />
+            {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
+            <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
+              {recentGoals.length}
+            </span>
+          </TabsTrigger>
           {primaryGoal && (
             <TabsTrigger value="notifications" className="flex-1 gap-1.5">
               <Bell className="h-4 w-4" />
@@ -617,28 +624,7 @@ export default function HomePage({
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="goals" className={cn("flex-1 gap-1.5", !primaryGoal && "w-full")}>
-            <Target className="h-4 w-4" />
-            {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
-            <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
-              {recentGoals.length}
-            </span>
-          </TabsTrigger>
         </TabsList>
-
-        {primaryGoal && (
-          <TabsContent value="notifications" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
-            <NotificationsSection
-              primaryGoal={primaryGoal}
-              isArabic={isArabic}
-              notifications={notifications}
-              notifLoading={notifLoading}
-              notifError={notifError}
-              contextReady={contextReady}
-              onRefresh={handleRefreshNotifs}
-            />
-          </TabsContent>
-        )}
 
         <TabsContent value="goals" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
@@ -722,6 +708,20 @@ export default function HomePage({
         </div>
       </div>
       </TabsContent>
+
+      {primaryGoal && (
+        <TabsContent value="notifications" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
+          <NotificationsSection
+            primaryGoal={primaryGoal}
+            isArabic={isArabic}
+            notifications={notifications}
+            notifLoading={notifLoading}
+            notifError={notifError}
+            contextReady={contextReady}
+            onRefresh={handleRefreshNotifs}
+          />
+        </TabsContent>
+      )}
     </Tabs>
 
 

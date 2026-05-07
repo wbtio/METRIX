@@ -1,9 +1,9 @@
 'use client';
 
 import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2
+    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2, Send, MessageCircle, Clock, CircleHelp, CheckCircle2, Bot, Plus, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
@@ -11,6 +11,24 @@ import { cn } from '@/lib/utils';
 import { isNotificationsEnabled, setNotificationsEnabled, getNotificationPermission } from '@/hooks/useStreakReminder';
 import { getIconComponent } from '@/components/goal/IconPicker';
 import { buildTaskHierarchy, type TaskRow } from '@/lib/task-hierarchy';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Goal {
@@ -52,6 +70,109 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
     const [notifEnabled, setNotifEnabled] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
     const [isManifestoOpen, setIsManifestoOpen] = useState(false);
+
+    // Telegram state
+    const [telegramLinked, setTelegramLinked] = useState(false);
+    const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
+    const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null);
+    const [telegramLinkCode, setTelegramLinkCode] = useState<string | null>(null);
+    const [telegramLoading, setTelegramLoading] = useState(false);
+    const [telegramGuideOpen, setTelegramGuideOpen] = useState(false);
+    const [telegramError, setTelegramError] = useState<string | null>(null);
+
+    // Per-goal reminders state
+    interface GoalReminder {
+        id: string;
+        goal_id: string;
+        reminder_time: string;
+        reminder_count: number;
+        enabled: boolean;
+    }
+    const [goalReminders, setGoalReminders] = useState<GoalReminder[]>([]);
+    const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
+
+    const getLocalTimezone = () => {
+        if (typeof Intl === 'undefined') return 'UTC';
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    };
+
+    const persistTelegramPreferences = async (updates: Record<string, unknown> = {}) => {
+        try {
+            await fetch('/api/telegram/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    timezone: getLocalTimezone(),
+                    language,
+                    ...updates,
+                }),
+            });
+        } catch (error) {
+            console.error('Error saving Telegram preferences:', error);
+        }
+    };
+
+    const fetchGoalReminders = async () => {
+        try {
+            const res = await fetch('/api/goal-reminders');
+            if (res.ok) {
+                const data = await res.json();
+                setGoalReminders(data.data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching goal reminders:', error);
+        }
+    };
+
+    const handleAddGoalReminder = async (goalId: string) => {
+        try {
+            const res = await fetch('/api/goal-reminders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    goalId,
+                    reminderTime: '21:00',
+                    reminderCount: 3,
+                    timezone: getLocalTimezone(),
+                }),
+            });
+            if (res.ok) {
+                await fetchGoalReminders();
+            }
+        } catch (error) {
+            console.error('Error adding goal reminder:', error);
+        }
+    };
+
+    const handleUpdateGoalReminder = async (id: string, updates: Partial<GoalReminder>) => {
+        try {
+            const res = await fetch('/api/goal-reminders', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    ...updates,
+                    timezone: updates.reminder_time ? getLocalTimezone() : undefined,
+                }),
+            });
+            if (res.ok) {
+                await fetchGoalReminders();
+            }
+        } catch (error) {
+            console.error('Error updating goal reminder:', error);
+        }
+    };
+
+    const handleDeleteGoalReminder = async (id: string) => {
+        try {
+            const res = await fetch(`/api/goal-reminders?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setGoalReminders(prev => prev.filter(r => r.id !== id));
+            }
+        } catch (error) {
+            console.error('Error deleting goal reminder:', error);
+        }
+    };
 
     // Profile state
     const [displayName, setDisplayName] = useState('');
@@ -123,6 +244,94 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         }
     };
 
+    const fetchTelegramStatus = useCallback(async () => {
+        try {
+            const res = await fetch('/api/telegram/status');
+            if (res.ok) {
+                const data = await res.json();
+                setTelegramLinked(data.linked);
+                setTelegramUsername(data.username);
+                if (data.linked) {
+                    setTelegramDeepLink(null);
+                    setTelegramLinkCode(null);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching Telegram status:', error);
+        }
+    }, []);
+
+    const handleGenerateTelegramLink = async () => {
+        setTelegramLoading(true);
+        setTelegramError(null);
+        setTelegramGuideOpen(true);
+        try {
+            const res = await fetch('/api/telegram/link', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setTelegramError(
+                    data.error ||
+                    (isArabic
+                        ? 'تعذر إنشاء رابط تيليغرام. تأكد من إعدادات البوت وحاول مرة ثانية.'
+                        : 'Could not create the Telegram link. Check bot setup and try again.')
+                );
+                return;
+            }
+            if (res.ok) {
+                setTelegramDeepLink(data.deepLink);
+                setTelegramLinkCode(data.code);
+            }
+        } catch (error) {
+            console.error('Error generating Telegram link:', error);
+            setTelegramError(
+                isArabic
+                    ? 'صار خطأ أثناء الاتصال بالسيرفر.'
+                    : 'A server connection error happened.'
+            );
+        } finally {
+            setTelegramLoading(false);
+        }
+    };
+
+    const handleDisconnectTelegram = async () => {
+        setTelegramLoading(true);
+        try {
+            const res = await fetch('/api/telegram/disconnect', { method: 'POST' });
+            if (res.ok) {
+                setTelegramLinked(false);
+                setTelegramUsername(null);
+                setTelegramDeepLink(null);
+                setTelegramLinkCode(null);
+            }
+        } catch (error) {
+            console.error('Error disconnecting Telegram:', error);
+        } finally {
+            setTelegramLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        fetchTelegramStatus();
+        fetchGoalReminders();
+        persistTelegramPreferences();
+    }, []);
+
+    useEffect(() => {
+        if (!telegramGuideOpen || telegramLinked || !telegramDeepLink) return;
+
+        let checks = 0;
+        const intervalId = window.setInterval(async () => {
+            checks += 1;
+            await fetchTelegramStatus();
+            if (checks >= 30) {
+                window.clearInterval(intervalId);
+            }
+        }, 2000);
+
+        return () => window.clearInterval(intervalId);
+    }, [fetchTelegramStatus, telegramDeepLink, telegramGuideOpen, telegramLinked]);
+
     const handleThemeChange = (newTheme: 'light' | 'dark') => {
         setTheme(newTheme);
         localStorage.setItem('theme', newTheme);
@@ -138,6 +347,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         localStorage.setItem('language', lang);
         document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
         document.documentElement.setAttribute('lang', lang);
+        void persistTelegramPreferences({ language: lang });
     };
 
     const handleSignOut = async () => {
@@ -344,7 +554,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
-                let currentMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+                const currentMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
                 const endMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
                 while (currentMonth <= endMonth) {
@@ -435,24 +645,105 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
     return (
         <div
-            className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500"
+            className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
             <MatrixManifestoDialog
                 open={isManifestoOpen}
                 onOpenChange={setIsManifestoOpen}
             />
+            <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
+                <DialogContent
+                    className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+                    dir={isArabic ? 'rtl' : 'ltr'}
+                >
+                    <DialogHeader className={isArabic ? 'sm:text-right' : undefined}>
+                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-600/10">
+                            <Bot className="h-5 w-5 text-cyan-600" />
+                        </div>
+                        <DialogTitle>
+                            {isArabic ? 'ربط تيليغرام مع METRIX' : 'Connect Telegram to METRIX'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {isArabic
+                                ? 'اربط حسابك حتى تصلك رسالة تأكيد داخل البوت، وبعدها تذكيرات الأهداف عند الحاجة.'
+                                : 'Link your account to receive a confirmation message in the bot, then goal reminders when needed.'}
+                        </DialogDescription>
+                    </DialogHeader>
 
-            <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 shadow-2xl">
+                    <div className="space-y-3">
+                        {telegramError && (
+                            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-semibold leading-6 text-destructive">
+                                {telegramError}
+                            </div>
+                        )}
+
+                        <div className="rounded-xl border border-border bg-muted/20 p-3">
+                            <div className="mb-2 flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                <p className="text-sm font-bold text-foreground">
+                                    {telegramLinked
+                                        ? (isArabic ? 'تم الربط' : 'Linked')
+                                        : (isArabic ? 'خطوات الربط' : 'Connection steps')}
+                                </p>
+                            </div>
+                            {telegramLinked ? (
+                                <p className="text-xs leading-6 text-muted-foreground">
+                                    {isArabic
+                                        ? `تيليغرام مربوط الآن${telegramUsername ? ` بحساب @${telegramUsername}` : ''}. رسالة التأكيد وصلت داخل البوت.`
+                                        : `Telegram is linked${telegramUsername ? ` to @${telegramUsername}` : ''}. The confirmation message was sent inside the bot.`}
+                                </p>
+                            ) : (
+                                <ol className="space-y-2 text-xs leading-6 text-muted-foreground">
+                                    <li>{isArabic ? '1. افتح البوت من الزر بالأسفل.' : '1. Open the bot from the button below.'}</li>
+                                    <li>{isArabic ? '2. اضغط Start داخل تيليغرام.' : '2. Tap Start inside Telegram.'}</li>
+                                    <li>{isArabic ? '3. راح توصلك رسالة تأكيد داخل البوت، والموقع يحدّث الحالة تلقائياً.' : '3. The bot will send a confirmation message, and this page will update automatically.'}</li>
+                                </ol>
+                            )}
+                            {telegramLinkCode && (
+                                <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+                                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                        {isArabic ? 'كود الربط' : 'Link code'}
+                                    </p>
+                                    <p className="mt-1 font-mono text-sm font-bold tracking-widest text-foreground">{telegramLinkCode}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-2">
+                        {telegramDeepLink && !telegramLinked && (
+                            <a
+                                href={telegramDeepLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                            >
+                                <Send className="h-3.5 w-3.5" />
+                                {t.openInTelegram}
+                            </a>
+                        )}
+                        <button
+                            type="button"
+                            onClick={fetchTelegramStatus}
+                            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted/50"
+                        >
+                            {isArabic ? 'تحديث الحالة' : 'Refresh status'}
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0">
                 {/* Tabs */}
-                <div className="flex gap-2 mb-4 border-b border-border/50 pb-3">
+                <div className="flex gap-1 mb-4 p-1 rounded-2xl bg-muted/40 border border-border/40">
                     <button
                         onClick={() => setActiveTab('general')}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                            "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
                             activeTab === 'general'
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                         )}
                     >
                         <Globe className="w-4 h-4" />
@@ -461,10 +752,10 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     <button
                         onClick={() => setActiveTab('profile')}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                            "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
                             activeTab === 'profile'
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                         )}
                     >
                         <User className="w-4 h-4" />
@@ -472,7 +763,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     </button>
                 </div>
 
-                {activeTab === 'general' ? (
+                <ScrollArea className="flex-1 min-h-0" dir={isArabic ? 'rtl' : 'ltr'}>
+                    {activeTab === 'general' ? (
                     <div className="bg-card/40 rounded-2xl border border-border overflow-hidden">
                         <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 border-b border-border/50 hover:bg-muted/10 transition-colors">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -572,6 +864,248 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             </div>
                         </div>
 
+                        {/* Per-Goal Reminders */}
+                        <div className="w-full border-b border-border/50 p-3 sm:p-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="shrink-0 w-8 h-8 rounded-lg bg-cyan-600/10 flex items-center justify-center">
+                                    <Clock className="w-3.5 h-3.5 text-cyan-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-foreground text-sm">{t.goalReminders}</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.goalRemindersDesc}</p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                                    <span className={cn(
+                                        "rounded-full border px-2 py-1 text-[10px] font-bold",
+                                        notifEnabled
+                                            ? "border-cyan-600/20 bg-cyan-600/10 text-cyan-700 dark:text-cyan-300"
+                                            : "border-border bg-muted/30 text-muted-foreground"
+                                    )}>
+                                        {isArabic ? 'المتصفح' : 'Browser'}
+                                    </span>
+                                    <span className={cn(
+                                        "rounded-full border px-2 py-1 text-[10px] font-bold",
+                                        telegramLinked
+                                            ? "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300"
+                                            : "border-border bg-muted/30 text-muted-foreground"
+                                    )}>
+                                        {telegramLinked ? (isArabic ? 'تيليغرام متصل' : 'Telegram linked') : (isArabic ? 'تيليغرام غير متصل' : 'Telegram off')}
+                                    </span>
+                                </div>
+                            </div>
+                            {!telegramLinked && (
+                                <div className="mt-3 rounded-xl border border-cyan-600/15 bg-cyan-600/5 px-3 py-2 text-[11px] font-medium leading-5 text-muted-foreground">
+                                    {isArabic
+                                        ? 'اربط تيليغرام حتى تصلك التذكيرات داخل البوت إذا إشعارات المتصفح غير متاحة.'
+                                        : 'Link Telegram to receive reminders in the bot when browser notifications are unavailable.'}
+                                </div>
+                            )}
+
+                            <div className="mt-3 space-y-2.5">
+                                {goals.length === 0 ? (
+                                    <p className="py-3 text-center text-xs text-muted-foreground">
+                                        {t.noGoalsProfileHint}
+                                    </p>
+                                ) : (
+                                    goals.map((goal) => {
+                                        const GoalIcon = getIconComponent(goal.icon || 'Target');
+                                        const remindersForGoal = goalReminders.filter((r) => r.goal_id === goal.id);
+                                        const reminderCount = remindersForGoal.length;
+                                        const isExpanded = expandedGoalId === goal.id;
+
+                                        return (
+                                            <div
+                                                key={goal.id}
+                                                className="rounded-xl border border-border/60 bg-background/70 p-3"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                            <GoalIcon className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <h4 className="truncate text-sm font-bold text-foreground">
+                                                                {goal.title}
+                                                            </h4>
+                                                            <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                                                {isArabic
+                                                                    ? `${reminderCount} ${reminderCount === 1 ? 'تذكير' : 'تذكيرات'}`
+                                                                    : `${reminderCount} ${reminderCount === 1 ? 'reminder' : 'reminders'}`}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setExpandedGoalId((prev) =>
+                                                                prev === goal.id ? null : goal.id,
+                                                            )
+                                                        }
+                                                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                                        aria-label={isArabic ? 'تبديل عرض الأوقات' : 'Toggle reminder times'}
+                                                    >
+                                                        {isExpanded ? (
+                                                            <ChevronUp className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+
+                                                {isExpanded && (
+                                                    <div className="mt-2.5">
+                                                        {reminderCount === 0 ? (
+                                                            <div className="rounded-lg border border-dashed border-border/50 px-3 py-2 text-[11px] text-muted-foreground">
+                                                                {isArabic
+                                                                    ? 'لا توجد أوقات مضافة لهذا الهدف.'
+                                                                    : 'No reminder times for this goal.'}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1.5">
+                                                                {remindersForGoal.map((reminder) => (
+                                                                    <div
+                                                                        key={reminder.id}
+                                                                        className="grid h-9 grid-cols-[minmax(0,1fr)_92px_30px] items-center gap-1 rounded-md border border-border/60 bg-background/80 p-0.5 shadow-xs"
+                                                                    >
+                                                                        <div className="flex h-8 min-w-0 items-center gap-1 rounded-[6px] bg-background px-2">
+                                                                            <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                            <Input
+                                                                                type="time"
+                                                                                value={reminder.reminder_time}
+                                                                                onChange={(e) =>
+                                                                                    handleUpdateGoalReminder(reminder.id, {
+                                                                                        reminder_time: e.target.value,
+                                                                                    })
+                                                                                }
+                                                                                aria-label={isArabic ? 'وقت التذكير' : 'Reminder time'}
+                                                                                className="h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs font-bold shadow-none focus-visible:ring-0"
+                                                                            />
+                                                                        </div>
+                                                                        <Select
+                                                                            value={String(reminder.reminder_count)}
+                                                                            onValueChange={(value) =>
+                                                                                handleUpdateGoalReminder(reminder.id, {
+                                                                                    reminder_count: Number(value),
+                                                                                })
+                                                                            }
+                                                                        >
+                                                                            <SelectTrigger
+                                                                                size="sm"
+                                                                                aria-label={isArabic ? 'عدد التذكيرات' : 'Reminder attempts'}
+                                                                                className="h-8 w-full border-border/70 bg-background px-2 text-xs font-bold shadow-none"
+                                                                            >
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {[1, 2, 3, 4, 5].map((n) => (
+                                                                                    <SelectItem key={n} value={String(n)}>
+                                                                                        {n} {t.times}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon-xs"
+                                                                            onClick={() => handleDeleteGoalReminder(reminder.id)}
+                                                                            className="h-8 w-[30px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                            title={isArabic ? 'حذف' : 'Remove'}
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            onClick={() => handleAddGoalReminder(goal.id)}
+                                                            className="mt-2.5 h-8 w-full bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20"
+                                                        >
+                                                            <Plus className="me-1 h-3 w-3" />
+                                                            {t.addTime}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Telegram Bot */}
+                        <div className="p-3 sm:p-3.5 border-b border-border/50 hover:bg-muted/10 transition-colors">
+                            <div className="flex items-center gap-2.5">
+                                <div className="shrink-0 w-8 h-8 rounded-lg bg-cyan-600/10 flex items-center justify-center">
+                                    <MessageCircle className="w-3.5 h-3.5 text-cyan-600" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-foreground text-sm leading-tight">{t.telegramBot}</p>
+                                    <p className="truncate text-[10px] text-muted-foreground">{t.telegramBotDesc}</p>
+                                </div>
+                                <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon-sm"
+                                        onClick={() => setTelegramGuideOpen(true)}
+                                        className="bg-background/70 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                                        title={isArabic ? 'شرح الربط' : 'Connection guide'}
+                                    >
+                                        <CircleHelp className="h-3.5 w-3.5" />
+                                    </Button>
+                                    {telegramLinked ? (
+                                        <div className="flex h-8 min-w-0 items-center overflow-hidden rounded-lg border border-border bg-background/75">
+                                            <span className="max-w-[120px] truncate border-e border-border px-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                                {telegramUsername ? `@${telegramUsername}` : t.telegramConnected}
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleDisconnectTelegram}
+                                                disabled={telegramLoading}
+                                                className="h-8 rounded-none px-2 text-xs font-bold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            >
+                                                {telegramLoading ? '...' : t.disconnectTelegram}
+                                            </Button>
+                                        </div>
+                                    ) : telegramDeepLink ? (
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className="h-8 shrink-0 px-2 text-xs font-bold"
+                                        >
+                                            <a
+                                            href={telegramDeepLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            >
+                                                <Send className="w-3 h-3" />
+                                                {t.openInTelegram}
+                                            </a>
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={handleGenerateTelegramLink}
+                                            disabled={telegramLoading}
+                                            className="h-8 shrink-0 px-2 text-xs font-bold"
+                                        >
+                                            {telegramLoading ? '...' : t.connectTelegram}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="border-t border-border/50 bg-gradient-to-r from-background/10 via-muted/10 to-background/10 p-3 sm:p-4">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-950/[0.04] dark:border-white/10 dark:bg-white/6">
@@ -591,9 +1125,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6 px-1 py-1 sm:px-2">
                         {/* Profile section */}
-                        <div className="bg-card/40 rounded-2xl border border-border p-3 sm:p-4 space-y-4">
+                        <section className="space-y-5">
                             {profileMessage && (
                                 <div className={cn(
                                     "text-xs font-medium px-3 py-1.5 rounded-lg",
@@ -604,7 +1138,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             )}
 
                             {/* Profile Picture + Name Row */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4 rounded-2xl bg-background/55 px-3 py-3 ring-1 ring-border/40">
                                 <div className="relative group shrink-0">
                                     <div className="w-14 h-14 rounded-full overflow-hidden bg-muted/50 border-2 border-border flex items-center justify-center">
                                         {avatarUrl ? (
@@ -665,9 +1199,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             </div>
 
                             {/* Account Stats — Ultra Compact */}
-                            <div className="pt-2 border-t border-border">
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <p className="font-bold text-foreground text-xs flex items-center gap-1.5">
+                            <div className="border-t border-border/60 pt-4">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                                         <Target className="w-3 h-3 text-primary" />
                                         {t.account}
                                     </p>
@@ -684,37 +1218,37 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         )}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-4 gap-1">
-                                    <div className="bg-muted/30 rounded-md px-1 py-1.5 text-center border border-border/50">
-                                        <p className="text-sm font-black text-foreground leading-tight">{goals.length}</p>
-                                        <p className={cn("text-[9px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.goalsCreated}</p>
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <div className="rounded-xl bg-background/55 px-2 py-2.5 text-center ring-1 ring-border/45">
+                                        <p className="text-base font-black leading-tight text-foreground">{goals.length}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.goalsCreated}</p>
                                     </div>
-                                    <div className="bg-muted/30 rounded-md px-1 py-1.5 text-center border border-border/50">
-                                        <p className="text-sm font-black text-foreground leading-tight">{completedGoals}</p>
-                                        <p className={cn("text-[9px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.completedGoals}</p>
+                                    <div className="rounded-xl bg-background/55 px-2 py-2.5 text-center ring-1 ring-border/45">
+                                        <p className="text-base font-black leading-tight text-foreground">{completedGoals}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.completedGoals}</p>
                                     </div>
-                                    <div className="bg-muted/30 rounded-md px-1 py-1.5 text-center border border-border/50">
-                                        <p className="text-sm font-black text-foreground leading-tight">{totalPointsEarned >= 1000 ? (totalPointsEarned / 1000).toFixed(1) + 'k' : totalPointsEarned}</p>
-                                        <p className={cn("text-[9px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalPointsEarned}</p>
+                                    <div className="rounded-xl bg-background/55 px-2 py-2.5 text-center ring-1 ring-border/45">
+                                        <p className="text-base font-black leading-tight text-foreground">{totalPointsEarned >= 1000 ? (totalPointsEarned / 1000).toFixed(1) + 'k' : totalPointsEarned}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalPointsEarned}</p>
                                     </div>
-                                    <div className="bg-muted/30 rounded-md px-1 py-1.5 text-center border border-border/50">
-                                        <p className="text-sm font-black text-foreground leading-tight">{totalLogs}</p>
-                                        <p className={cn("text-[9px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalLogsRecorded}</p>
+                                    <div className="rounded-xl bg-background/55 px-2 py-2.5 text-center ring-1 ring-border/45">
+                                        <p className="text-base font-black leading-tight text-foreground">{totalLogs}</p>
+                                        <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground", !isArabic && "uppercase")}>{t.totalLogsRecorded}</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
                         {/* My Goals — Compact Export Section */}
-                        <div className="bg-card/40 rounded-2xl border border-border p-3 sm:p-4">
-                            <p className="font-bold text-foreground text-sm mb-2 flex items-center gap-1.5">
+                        <section className="border-t border-border/60 pt-1">
+                            <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
                                 <Target className="w-3.5 h-3.5 text-primary" />
                                 {t.myGoalsSection}
                             </p>
                             {goals.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">{t.noGoalsProfileHint}</p>
                             ) : (
-                                <div className="space-y-1.5">
+                                <div className="space-y-2">
                                     {goals.map((goal) => {
                                         const GoalIcon = getIconComponent(goal.icon || 'Target');
                                         const isExporting = exportingGoalId === goal.id;
@@ -722,9 +1256,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         return (
                                             <div
                                                 key={goal.id}
-                                                className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 px-2.5 py-2 transition-all hover:bg-muted/20"
+                                                className="flex items-center gap-3 rounded-xl bg-background/55 px-3 py-2.5 ring-1 ring-border/40 transition-all hover:bg-muted/20"
                                             >
-                                                <div className="shrink-0 w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                                                     <GoalIcon className="w-3.5 h-3.5 text-primary" />
                                                 </div>
                                                 <p className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">{goal.title}</p>
@@ -751,7 +1285,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     })}
                                 </div>
                             )}
-                        </div>
+                        </section>
 
                         {/* Sign Out */}
                         <button
@@ -773,6 +1307,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                         </button>
                     </div>
                 )}
+                </ScrollArea>
             </div>
         </div>
     );

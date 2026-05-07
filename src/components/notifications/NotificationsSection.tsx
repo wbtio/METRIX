@@ -9,13 +9,10 @@ import {
   Trophy,
   Lightbulb,
   CheckCheck,
-  Target,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getIconComponent } from "@/components/goal/IconPicker";
+
 import type { NotificationType } from "@/hooks/useNotifications";
 
 /* ------------------------------------------------------------------ */
@@ -98,49 +95,7 @@ const NOTIFICATION_META: Record<
   },
 };
 
-/* ------------------------------------------------------------------ */
-/*  Roast Data                                                        */
-/* ------------------------------------------------------------------ */
 
-/** Bumped so updated Iraqi-only lines replace older cached lists. */
-const ROASTS_STORAGE_KEY = "metrix_roasts_v2";
-
-/** عراقي محكي فقط — بدون فصحى */
-const DEFAULT_ROASTS_AR = [
-  "إذا ما تكمل على هدفك راح تنسد، صحصح يا بعد عمري.",
-  "الكسل ماكو مجال، قوم اشتغل مو تتمسكن.",
-  "كل يوم تؤجل، الهدف يطيح من يدك.",
-  "مو كل يوم تخطط وتنسى التنفيذ وبعدين تنام!",
-  "هدفك إذا سهل ماكو يصير اسمه هدف أصلاً.",
-  "شنو منتظر؟ النجوم تنزل لك من السماء؟",
-  "التوفيق يبيه شغل يد، مو بس خواطر.",
-  "تريد تطلع فايدة بس ما تريد تتعب؟ استحي على روحك!",
-  "وقتك يخلص وانت لسه تتفرج على الريلز.",
-  "الناس تشتغل وانت تسوي لايك وشير بس.",
-  "إذا تستمر هيج، السنة الجاية نفس القصة.",
-  "تحلم بس بدون عمل؟ هاي كذبة تصدقها على نفسك.",
-  "تدّي الأفضل، بس تستاهله فعلاً؟",
-  "طريق النجاح مو مفروش بوسائد تنوم عليها.",
-  "صحصح، حياتك مو نسخة تجريبية تلعب بيها.",
-];
-
-const DEFAULT_ROASTS_EN = [
-  "If you don't stick to your goal, you'll fail, stupid.",
-  "Laziness is not an excuse, wake up and work!",
-  "Every day you delay, your goal slips away.",
-  "You can't just plan every day and then sleep!",
-  "If your goal was easy, it wouldn't be called a goal.",
-  "What are you waiting for? A miracle from the sky?",
-  "Success needs action, not just dreams.",
-  "You want results but don't want the effort? Shame!",
-  "Your time is passing while you watch Reels.",
-  "The world works while you like and share.",
-  "If this continues, next year will be the same.",
-  "A dream without work is a lie you tell yourself.",
-  "You deserve the best, but do you really deserve it?",
-  "The road to success is not paved with pillows.",
-  "Wake up! Your life is not a trial version.",
-];
 
 /* ------------------------------------------------------------------ */
 /*  Sub-components                                                    */
@@ -207,76 +162,18 @@ export default function NotificationsSection({
 }: NotificationsSectionProps) {
   const [visibleNotifications, setVisibleNotifications] =
     useState<NotificationItem[]>(notifications);
-  const [roasts, setRoasts] = useState<string[]>([]);
-  const [currentRoastIndex, setCurrentRoastIndex] = useState(
-    () => new Date().getHours() % 15
-  );
 
   // Sync notifications from props
   useEffect(() => {
     setVisibleNotifications(notifications);
   }, [notifications]);
 
-  // Initialize roasts from localStorage
-  useEffect(() => {
-    const defaultRoasts = isArabic ? DEFAULT_ROASTS_AR : DEFAULT_ROASTS_EN;
-    const stored = localStorage.getItem(ROASTS_STORAGE_KEY);
-
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length === 15) {
-          setRoasts(parsed);
-        } else {
-          setRoasts(defaultRoasts);
-          localStorage.setItem(
-            ROASTS_STORAGE_KEY,
-            JSON.stringify(defaultRoasts)
-          );
-        }
-      } catch {
-        setRoasts(defaultRoasts);
-        localStorage.setItem(
-          ROASTS_STORAGE_KEY,
-          JSON.stringify(defaultRoasts)
-        );
-      }
-    } else {
-      setRoasts(defaultRoasts);
-      localStorage.setItem(ROASTS_STORAGE_KEY, JSON.stringify(defaultRoasts));
-    }
-  }, [isArabic]);
-
-  useEffect(() => {
-    if (roasts.length > 0) {
-      setCurrentRoastIndex((i) => i % roasts.length);
-    }
-  }, [roasts.length]);
-
   const handleMarkAllRead = useCallback(() => {
     setVisibleNotifications([]);
   }, []);
 
-  const GoalIcon = primaryGoal
-    ? getIconComponent(primaryGoal.icon || "Target")
-    : Target;
-
-  const roastCount = roasts.length || 15;
-  const safeRoastIndex =
-    roastCount > 0 ? ((currentRoastIndex % roastCount) + roastCount) % roastCount : 0;
-  const currentRoast =
-    roasts[safeRoastIndex] || (isArabic ? "استنى شوي…" : "Loading…");
-
-  const goPrevRoast = useCallback(() => {
-    setCurrentRoastIndex((i) => (i - 1 + roastCount) % roastCount);
-  }, [roastCount]);
-
-  const goNextRoast = useCallback(() => {
-    setCurrentRoastIndex((i) => (i + 1) % roastCount);
-  }, [roastCount]);
-
   return (
-    <div className="shrink-0 space-y-3">
+    <div className="group relative flex flex-col h-full w-full gap-3 rounded-2xl border border-border/80 bg-white p-3 shadow-sm transition-all hover:border-primary/35 hover:shadow-md dark:bg-card/50 sm:p-4">
       <div className="flex w-full shrink-0 items-center">
         <div className="ms-auto flex items-center gap-1">
           {visibleNotifications.length > 0 && (
@@ -313,7 +210,7 @@ export default function NotificationsSection({
           <div className="h-14 rounded-2xl bg-muted/60" />
         </div>
       ) : (
-        <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 scrollbar-thin">
           {visibleNotifications.length === 0 && !notifError && (
             <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/30 p-3 text-muted-foreground">
               <CheckCheck className="h-4 w-4 opacity-50" />
@@ -345,58 +242,8 @@ export default function NotificationsSection({
         </div>
       )}
 
-      {/* Iraqi roast strip — manual browse */}
-      {primaryGoal && (
-        <div
-          className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-100/60 via-orange-50/40 to-amber-100/60 py-4 px-4 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 sm:py-5 sm:px-5"
-          dir={isArabic ? "rtl" : "ltr"}
-        >
-          {/* Top row: icon + counter */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 ring-1 ring-amber-500/25 sm:h-9 sm:w-9">
-              <GoalIcon className="h-4 w-4 text-amber-600 dark:text-amber-400 sm:h-5 sm:w-5" />
-            </div>
-            <span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-mono text-xs tabular-nums text-amber-700 dark:text-amber-300">
-              {safeRoastIndex + 1}/{roastCount}
-            </span>
-          </div>
 
-          {/* Message row with nav buttons */}
-          <div
-            className="flex items-center gap-2 sm:gap-3"
-            dir="ltr"
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-full bg-background/60 text-amber-700 hover:bg-background hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
-              onClick={goPrevRoast}
-              aria-label={isArabic ? "الرسالة السابقة" : "Previous message"}
-            >
-              <ChevronLeft className="size-5" />
-            </Button>
 
-            <p
-              className="min-w-0 flex-1 text-center text-base font-semibold leading-relaxed text-foreground sm:text-lg"
-              dir={isArabic ? "rtl" : "ltr"}
-            >
-              {currentRoast}
-            </p>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-full bg-background/60 text-amber-700 hover:bg-background hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
-              onClick={goNextRoast}
-              aria-label={isArabic ? "الرسالة التالية" : "Next message"}
-            >
-              <ChevronRight className="size-5" />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { EndChallengeDialog } from './challenge/EndChallengeDialog';
 import { LoadingSkeleton } from './challenge/LoadingSkeleton';
 import { FeedbackBanner } from './challenge/FeedbackBanner';
 import { RewardsSection } from './challenge/RewardsSection';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ChallengeTab({ goalId, currentPoints, targetPoints, language = 'en' }: ChallengeTabProps) {
   const t = translations[language];
@@ -252,7 +253,8 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
     <div className="h-full min-h-0 flex flex-col gap-2.5" dir={isArabic ? 'rtl' : 'ltr'}>
       <FeedbackBanner feedback={feedback} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 scrollbar-thin space-y-2.5">
+      <ScrollArea className="flex-1 min-h-0" dir={isArabic ? 'rtl' : 'ltr'}>
+        <div className="space-y-2.5 pr-0.5">
         <section className="rounded-2xl border border-border/80 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm shadow-black/[0.03] dark:bg-card/50 dark:from-card/70 dark:via-card/60 dark:to-background/30 sm:p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
@@ -363,7 +365,8 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
           />
         )}
 
-      </div>
+        </div>
+      </ScrollArea>
 
       <EndChallengeDialog
         open={confirmEndOpen}
