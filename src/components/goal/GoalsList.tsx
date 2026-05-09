@@ -95,9 +95,9 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
 
     if (goals.length === 0) {
         return (
-            <div className="w-full max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
-                <div className="bg-card/30 backdrop-blur-xl p-8 rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl">
-                    <div className="text-center p-12 bg-muted/20 rounded-2xl border border-dashed border-border">
+            <div className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col">
+                <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0 items-center justify-center">
+                    <div className="w-full text-center p-12 bg-muted/20 rounded-2xl border border-dashed border-border">
                         <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground font-medium text-lg">{t.noGoalsYet}</p>
                     </div>
@@ -107,8 +107,8 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
     }
 
     return (
-        <div className="w-full max-w-4xl 2xl:max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="bg-card/30 backdrop-blur-xl p-4 sm:p-6 lg:p-8 rounded-[20px] sm:rounded-[32px] border border-border ring-1 ring-border/5 shadow-2xl space-y-4 sm:space-y-6">
+        <div className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col">
+            <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0">
                 <div className={isArabic ? 'text-right' : 'text-left'}>
                     <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-2">{t.myGoals}</h2>
                     <p className="text-sm text-muted-foreground">

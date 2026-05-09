@@ -31,7 +31,7 @@ export default function OrbitShell({
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60vw] h-[30vh] bg-chart-2/5 blur-[80px] mix-blend-multiply dark:mix-blend-screen" />
 
                 {/* Noise Texture */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay dark:mix-blend-overlay" />
+                <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay dark:mix-blend-overlay" />
             </div>
 
             {/* Content Container */}

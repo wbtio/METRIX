@@ -1,74 +1,29 @@
--- Atomic Major Milestone persistence for METRIX
---
--- Why this migration exists:
--- - A milestone is stored as a `daily_logs` row where `breakdown.milestone` is a JSON object.
--- - The previous application flow inserted into `daily_logs` and then called `increment_goal_points`.
---   That was not atomic from the application's perspective.
--- - These RPCs keep log insertion/deletion and goal point mutation in one PostgreSQL transaction.
--- - The trigger adds a database-level guard for the 2-milestone-per-goal limit, including writes
---   that do not go through the application route.
+-- Migration: Milestone atomic RPCs for goal milestones
+-- This migration provides hardened, atomic operations for recording and deleting milestones.
+-- Is_milestone_breakdown helper must be deployed first.
 
-create or replace function public.is_milestone_breakdown(p_breakdown jsonb)
-returns boolean
-language sql
-immutable
-as $$
+-- Helper: checks if a daily_logs.breakdown JSONB represents a milestone entry
+CREATE OR REPLACE FUNCTION public.is_milestone_breakdown(p_breakdown jsonb)
+ RETURNS boolean
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
   select coalesce(jsonb_typeof(p_breakdown->'milestone') = 'object', false);
-$$;
+$function$;
 
-create or replace function public.enforce_goal_milestone_limit()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_existing_count integer;
-begin
-  if tg_op in ('INSERT', 'UPDATE') and public.is_milestone_breakdown(new.breakdown) then
-    -- Serialize competing milestone writes for the same goal to prevent race conditions.
-    perform 1
-    from public.goals
-    where id = new.goal_id
-    for update;
-
-    select count(*)
-      into v_existing_count
-    from public.daily_logs
-    where goal_id = new.goal_id
-      and id <> new.id
-      and public.is_milestone_breakdown(breakdown);
-
-    if v_existing_count >= 2 then
-      raise exception 'milestone_limit_reached'
-        using errcode = 'P0001',
-              detail = 'A goal can have at most two milestone logs.';
-    end if;
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_enforce_goal_milestone_limit on public.daily_logs;
-
-create trigger trg_enforce_goal_milestone_limit
-before insert or update of goal_id, breakdown on public.daily_logs
-for each row
-execute function public.enforce_goal_milestone_limit();
-
-create or replace function public.record_goal_milestone(
+-- Atomically record a milestone log and increment goal points in one transaction
+CREATE OR REPLACE FUNCTION public.record_goal_milestone(
   p_goal_id uuid,
   p_user_input text,
   p_ai_score integer,
   p_ai_feedback text,
   p_breakdown jsonb
 )
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 declare
   v_user_id uuid := auth.uid();
   v_log_id uuid;
@@ -191,17 +146,18 @@ begin
 
   return jsonb_build_object('log_id', v_log_id);
 end;
-$$;
+$function$;
 
-create or replace function public.delete_goal_milestone(
+-- Atomically delete a milestone log and revert goal points in one transaction
+CREATE OR REPLACE FUNCTION public.delete_goal_milestone(
   p_goal_id uuid,
   p_log_id uuid
 )
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 declare
   v_user_id uuid := auth.uid();
   v_score_to_revert integer := 0;
@@ -257,12 +213,39 @@ begin
 
   return jsonb_build_object('reverted_score', greatest(0, v_score_to_revert));
 end;
-$$;
+$function$;
 
-revoke all on function public.is_milestone_breakdown(jsonb) from public;
-revoke all on function public.record_goal_milestone(uuid, text, integer, text, jsonb) from public;
-revoke all on function public.delete_goal_milestone(uuid, uuid) from public;
+-- Trigger function to enforce the 2-milestone limit at the SQL level
+CREATE OR REPLACE FUNCTION public.enforce_goal_milestone_limit()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_existing_count integer;
+begin
+  if tg_op in ('INSERT', 'UPDATE') and public.is_milestone_breakdown(new.breakdown) then
+    -- Serialize competing milestone writes for the same goal to prevent race conditions.
+    perform 1
+    from public.goals
+    where id = new.goal_id
+    for update;
 
-grant execute on function public.is_milestone_breakdown(jsonb) to authenticated;
-grant execute on function public.record_goal_milestone(uuid, text, integer, text, jsonb) to authenticated;
-grant execute on function public.delete_goal_milestone(uuid, uuid) to authenticated;
+    select count(*)
+      into v_existing_count
+    from public.daily_logs
+    where goal_id = new.goal_id
+      and id <> new.id
+      and public.is_milestone_breakdown(breakdown);
+
+    if v_existing_count >= 2 then
+      raise exception 'milestone_limit_reached'
+        using errcode = 'P0001',
+              detail = 'A goal can have at most two milestone logs.';
+    end if;
+  end if;
+
+  return new;
+end;
+$function$;

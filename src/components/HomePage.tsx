@@ -147,13 +147,23 @@ export default function HomePage({
     if (!loggedToday && streak > 0) sStatus = "at_risk";
     else if (!loggedToday && streak === 0) sStatus = "broken";
 
-    const { data: challengeRoom } = await supabase
-      .from("challenge_rooms")
-      .select("id, ended_at")
+    const { data: participant } = await supabase
+      .from("challenge_participants")
+      .select("challenge_id")
       .eq("goal_id", goal.id)
-      .order("created_at", { ascending: false })
+      .order("joined_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    let challengeRoom: { id: string; ended_at: string | null } | null = null;
+    if (participant?.challenge_id) {
+      const { data: room } = await supabase
+        .from("challenge_rooms")
+        .select("id, ended_at")
+        .eq("id", participant.challenge_id)
+        .maybeSingle();
+      challengeRoom = room;
+    }
 
     let cStatus: "none" | "pending" | "active" | "ended" = "none";
     if (challengeRoom) {

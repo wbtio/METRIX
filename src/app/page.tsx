@@ -274,7 +274,6 @@ export default function Home() {
   }, [executeNavigation, pendingNavigation]);
 
   const selectedGoal = goals.find((g) => g.id === selectedGoalId);
-  const shouldCenterMainContent = currentView === "goals";
   const isDashboardView = currentView === "dashboard" && !!selectedGoal;
 
   return (
@@ -289,7 +288,7 @@ export default function Home() {
                 ? "h-[calc(100dvh_-_5rem_-_env(safe-area-inset-bottom))] shrink-0 overflow-hidden pb-0 sm:h-[calc(100dvh_-_6rem)] lg:h-[100dvh] lg:pb-12"
                 : "flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-24 lg:pb-12"
           }
-          ${shouldCenterMainContent && !isDashboardView ? "justify-center" : "justify-start"}`}
+          justify-start`}
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center animate-pulse gap-4">

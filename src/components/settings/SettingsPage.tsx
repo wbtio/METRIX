@@ -3,7 +3,7 @@
 import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2, Send, MessageCircle, Clock, CircleHelp, CheckCircle2, Bot, Plus, ChevronDown, ChevronUp
+    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2, Send, MessageCircle, Clock, CircleHelp, CheckCircle2, Bot, Plus, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
@@ -79,6 +79,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
     const [telegramLoading, setTelegramLoading] = useState(false);
     const [telegramGuideOpen, setTelegramGuideOpen] = useState(false);
     const [telegramError, setTelegramError] = useState<string | null>(null);
+    const [telegramRefreshing, setTelegramRefreshing] = useState(false);
 
     // Per-goal reminders state
     interface GoalReminder {
@@ -244,7 +245,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         }
     };
 
-    const fetchTelegramStatus = useCallback(async () => {
+    const fetchTelegramStatus = useCallback(async (showLoader = false) => {
+        if (showLoader) setTelegramRefreshing(true);
         try {
             const res = await fetch('/api/telegram/status');
             if (res.ok) {
@@ -258,6 +260,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
             }
         } catch (error) {
             console.error('Error fetching Telegram status:', error);
+        } finally {
+            if (showLoader) setTelegramRefreshing(false);
         }
     }, []);
 
@@ -323,7 +327,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         let checks = 0;
         const intervalId = window.setInterval(async () => {
             checks += 1;
-            await fetchTelegramStatus();
+            await fetchTelegramStatus(false);
             if (checks >= 30) {
                 window.clearInterval(intervalId);
             }
@@ -654,83 +658,122 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
             />
             <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
                 <DialogContent
-                    className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+                    className="max-h-[90dvh] overflow-y-auto sm:max-w-lg gap-0 p-0"
                     dir={isArabic ? 'rtl' : 'ltr'}
                 >
-                    <DialogHeader className={isArabic ? 'sm:text-right' : undefined}>
-                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-600/10">
+                    {/* Header */}
+                    <div className={`${isArabic ? 'text-right' : 'text-left'} p-5 sm:p-6 border-b border-border/50`}>
+                        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 ring-1 ring-cyan-500/20">
                             <Bot className="h-5 w-5 text-cyan-600" />
                         </div>
-                        <DialogTitle>
+                        <DialogTitle className="text-lg sm:text-xl">
                             {isArabic ? 'ربط تيليغرام مع METRIX' : 'Connect Telegram to METRIX'}
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="mt-1.5 text-sm leading-relaxed">
                             {isArabic
                                 ? 'اربط حسابك حتى تصلك رسالة تأكيد داخل البوت، وبعدها تذكيرات الأهداف عند الحاجة.'
                                 : 'Link your account to receive a confirmation message in the bot, then goal reminders when needed.'}
                         </DialogDescription>
-                    </DialogHeader>
+                    </div>
 
-                    <div className="space-y-3">
+                    {/* Body */}
+                    <div className="p-5 sm:p-6 space-y-4">
                         {telegramError && (
-                            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-semibold leading-6 text-destructive">
+                            <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-xs font-semibold leading-5 text-destructive">
                                 {telegramError}
                             </div>
                         )}
 
-                        <div className="rounded-xl border border-border bg-muted/20 p-3">
-                            <div className="mb-2 flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                <p className="text-sm font-bold text-foreground">
-                                    {telegramLinked
-                                        ? (isArabic ? 'تم الربط' : 'Linked')
-                                        : (isArabic ? 'خطوات الربط' : 'Connection steps')}
-                                </p>
-                            </div>
-                            {telegramLinked ? (
+                        {telegramLinked ? (
+                            /* Linked state */
+                            <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-emerald-500/[0.02] p-4 sm:p-5">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                    </div>
+                                    <p className="text-sm font-bold text-foreground">
+                                        {isArabic ? 'تم الربط بنجاح' : 'Successfully Linked'}
+                                    </p>
+                                </div>
                                 <p className="text-xs leading-6 text-muted-foreground">
                                     {isArabic
                                         ? `تيليغرام مربوط الآن${telegramUsername ? ` بحساب @${telegramUsername}` : ''}. رسالة التأكيد وصلت داخل البوت.`
                                         : `Telegram is linked${telegramUsername ? ` to @${telegramUsername}` : ''}. The confirmation message was sent inside the bot.`}
                                 </p>
-                            ) : (
-                                <ol className="space-y-2 text-xs leading-6 text-muted-foreground">
-                                    <li>{isArabic ? '1. افتح البوت من الزر بالأسفل.' : '1. Open the bot from the button below.'}</li>
-                                    <li>{isArabic ? '2. اضغط Start داخل تيليغرام.' : '2. Tap Start inside Telegram.'}</li>
-                                    <li>{isArabic ? '3. راح توصلك رسالة تأكيد داخل البوت، والموقع يحدّث الحالة تلقائياً.' : '3. The bot will send a confirmation message, and this page will update automatically.'}</li>
-                                </ol>
-                            )}
-                            {telegramLinkCode && (
-                                <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
-                                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                        {isArabic ? 'كود الربط' : 'Link code'}
+                            </div>
+                        ) : (
+                            /* Steps */
+                            <div className="rounded-2xl border border-border/60 bg-muted/15 p-4 sm:p-5">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15">
+                                        <MessageCircle className="h-5 w-5 text-cyan-600" />
+                                    </div>
+                                    <p className="text-sm font-bold text-foreground">
+                                        {isArabic ? 'خطوات الربط' : 'Connection Steps'}
                                     </p>
-                                    <p className="mt-1 font-mono text-sm font-bold tracking-widest text-foreground">{telegramLinkCode}</p>
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="space-y-0">
+                                    {[
+                                        isArabic ? 'افتح البوت من الزر بالأسفل.' : 'Open the bot from the button below.',
+                                        isArabic ? 'اضغط Start داخل تيليغرام.' : 'Tap Start inside Telegram.',
+                                        isArabic ? 'راح توصلك رسالة تأكيد داخل البوت، والموقع يحدّث الحالة تلقائياً.' : 'The bot sends a confirmation, and this page updates automatically.',
+                                    ].map((text, i) => (
+                                        <div key={i} className={`flex items-start gap-3 py-2.5 ${i < 2 ? 'border-b border-border/40' : ''}`}>
+                                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-black text-foreground/60 mt-0.5">
+                                                {i + 1}
+                                            </div>
+                                            <p className={`text-xs leading-5 text-muted-foreground ${isArabic ? 'text-right' : 'text-left'} flex-1 pt-0.5`}>
+                                                {text}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {telegramLinkCode && (
+                                    <div className="mt-4 rounded-xl border border-border/60 bg-background/80 px-4 py-3">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                                            {isArabic ? 'كود الربط' : 'Link code'}
+                                        </p>
+                                        <p className="font-mono text-base font-bold tracking-[0.3em] text-foreground select-all">
+                                            {telegramLinkCode}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-2">
+                    {/* Footer */}
+                    <div className="flex-col sm:flex-row items-stretch sm:items-center gap-3 border-t border-border/50 px-5 sm:px-6 py-4 bg-muted/10">
                         {telegramDeepLink && !telegramLinked && (
                             <a
                                 href={telegramDeepLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-xs transition-all hover:opacity-90 active:scale-[0.97] sm:flex-1"
                             >
-                                <Send className="h-3.5 w-3.5" />
+                                <Send className="h-4 w-4 shrink-0" />
                                 {t.openInTelegram}
                             </a>
                         )}
                         <button
                             type="button"
-                            onClick={fetchTelegramStatus}
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted/50"
+                            onClick={() => {
+                                setTelegramError(null);
+                                fetchTelegramStatus(true);
+                            }}
+                            disabled={telegramLoading || telegramRefreshing}
+                            className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground shadow-xs transition-all hover:bg-muted/50 active:scale-[0.97] disabled:opacity-50 sm:flex-1"
                         >
+                            {telegramRefreshing ? (
+                                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                            )}
                             {isArabic ? 'تحديث الحالة' : 'Refresh status'}
                         </button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 

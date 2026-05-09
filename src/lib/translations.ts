@@ -378,6 +378,20 @@ export const translations = {
     goalDomain: 'Domain',
     noTasks: 'No tasks yet',
     noLogs: 'No activity logs yet',
+
+    // Telegram
+    telegramBot: 'Telegram Bot',
+    telegramBotDesc: 'Get goal reminders via Telegram',
+    connectTelegram: 'Connect',
+    disconnectTelegram: 'Disconnect',
+    telegramConnected: 'Connected',
+    openInTelegram: 'Open in Telegram',
+
+    // Goal Reminders
+    goalReminders: 'Goal Reminders',
+    goalRemindersDesc: 'Get reminded at specific times',
+    addTime: 'Add Time',
+    times: 'times',
   },
   ar: {
     // Settings Page
@@ -758,6 +772,20 @@ export const translations = {
     goalDomain: 'المجال',
     noTasks: 'لا توجد مهام بعد',
     noLogs: 'لا توجد سجلات نشاط بعد',
+
+    // Telegram
+    telegramBot: 'بوت تيليغرام',
+    telegramBotDesc: 'استقبل تذكيرات الأهداف عبر تيليغرام',
+    connectTelegram: 'ربط',
+    disconnectTelegram: 'فصل',
+    telegramConnected: 'متصل',
+    openInTelegram: 'فتح في تيليغرام',
+
+    // Goal Reminders
+    goalReminders: 'تذكيرات الأهداف',
+    goalRemindersDesc: 'يصلك تذكير في أوقات محددة',
+    addTime: 'إضافة وقت',
+    times: 'مرات',
   }
 };
 
