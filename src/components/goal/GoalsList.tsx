@@ -95,48 +95,6 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
         return arabicRegex.test(text);
     };
 
-    if (goals.length === 0 && activeTab === 'goals') {
-        return (
-            <div className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col">
-                <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0">
-                    <div className="flex gap-1 mb-4 p-1 rounded-2xl bg-muted/40 border border-border/40">
-                        <button
-                            onClick={() => setActiveTab('goals')}
-                            className={cn(
-                                "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
-                                activeTab === 'goals'
-                                    ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                            )}
-                        >
-                            <Target className="w-4 h-4" />
-                            {t.myGoals}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('statistics')}
-                            className={cn(
-                                "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
-                                activeTab === 'statistics'
-                                    ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                            )}
-                        >
-                            <BarChart3 className="w-4 h-4" />
-                            {t.goalsStatistics}
-                        </button>
-                    </div>
-
-                    <div className="flex-1 min-h-0 flex items-center justify-center">
-                        <div className="w-full text-center p-12 bg-muted/20 rounded-2xl border border-dashed border-border">
-                            <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-muted-foreground font-medium text-lg">{t.noGoalsYet}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col">
             <div className="bg-card/30 backdrop-blur-xl p-3 sm:p-4 rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0">
@@ -167,7 +125,14 @@ export default function GoalsList({ goals, taskStatsMap = {}, selectedGoalId, on
                     </button>
                 </div>
 
-                {activeTab === 'goals' ? (
+                {goals.length === 0 && activeTab === 'goals' ? (
+                    <div className="flex-1 min-h-0 flex items-center justify-center">
+                        <div className="w-full text-center p-12 bg-muted/20 rounded-2xl border border-dashed border-border">
+                            <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground font-medium text-lg">{t.noGoalsYet}</p>
+                        </div>
+                    </div>
+                ) : activeTab === 'goals' ? (
                     <ScrollArea className="flex-1 min-h-0" dir={isArabic ? 'rtl' : 'ltr'}>
                         <div className="space-y-3">
                             {goals.map((goal) => {
