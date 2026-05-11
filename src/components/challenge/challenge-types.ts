@@ -30,6 +30,12 @@ export interface ChallengeEvent {
     imageAspectRatio?: string;
     imageGeneratedAt?: string;
     imagePrompt?: string;
+    goalTitle?: string;
+    imagePromptContext?: {
+      goalTitle?: string;
+      goalSummary?: string;
+      tasksDescriptions?: string[];
+    };
     imageStylePreference?: string;
   };
 }

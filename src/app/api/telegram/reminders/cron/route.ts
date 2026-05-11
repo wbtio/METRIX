@@ -74,8 +74,9 @@ export async function GET() {
     const supabase = createServiceRoleClient();
     const { data: users, error: usersError } = await supabase
       .from('user_settings')
-      .select('user_id, telegram_chat_id, language')
-      .not('telegram_chat_id', 'is', null);
+      .select('user_id, telegram_chat_id, language, reminders_enabled')
+      .not('telegram_chat_id', 'is', null)
+      .eq('reminders_enabled', true);
     if (usersError || !users) {
       return NextResponse.json({ error: usersError?.message }, { status: 500 });
     }

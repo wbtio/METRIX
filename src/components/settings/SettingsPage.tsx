@@ -1249,11 +1249,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         {t.account}
                                     </p>
                                     <div className="flex gap-1">
-                                        {maxStreak >= 7 && (
-                                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-sm ring-1 ring-background" title={isArabic ? "شعلة المواظبة: 7 أيام" : "Consistency Flame: 7 Days"}>
-                                                <Flame className="w-2.5 h-2.5 text-white" />
-                                            </div>
-                                        )}
                                         {maxStreak >= 30 && (
                                             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 flex items-center justify-center shadow-sm ring-1 ring-background" title={isArabic ? "تاج الالتزام: 30 يوماً" : "Crown of Commitment: 30 Days"}>
                                                 <Crown className="w-2.5 h-2.5 text-white" />

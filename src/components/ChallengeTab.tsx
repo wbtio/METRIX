@@ -358,6 +358,8 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
             onToggleShowAll={() => setShowAllEvents((prev) => !prev)}
             meName={meName}
             opponentName={opponentName}
+            meGoalTitle={snapshot.me?.goalTitle}
+            opponentGoalTitle={snapshot.opponent?.goalTitle}
             locale={locale}
             numberFormatter={numberFormatter}
             ui={ui}

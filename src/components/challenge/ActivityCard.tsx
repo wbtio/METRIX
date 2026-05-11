@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  buildMilestoneImagePrompt,
+  normalizePromptStyle,
+  type PromptStyle,
+} from "@/lib/milestone-image-prompt";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,6 +49,8 @@ interface ActivityCardProps {
   onToggleShowAll: () => void;
   meName: string;
   opponentName: string;
+  meGoalTitle?: string;
+  opponentGoalTitle?: string;
   locale: string;
   numberFormatter: Intl.NumberFormat;
   ui: {
@@ -134,17 +141,12 @@ type PromptDialogState = null | {
   prompt: string;
   style: PromptStyle;
   goalTitle: string;
+  goalSummary?: string;
   milestoneName: string;
   milestoneDescription: string;
+  tasksDescriptions: string[];
+  aspectRatio?: string;
 };
-
-type PromptStyle =
-  | "cinematic"
-  | "minimal"
-  | "neon"
-  | "realistic"
-  | "anime"
-  | "luxury";
 
 const promptStyleOptions: Array<{
   value: PromptStyle;
@@ -154,78 +156,40 @@ const promptStyleOptions: Array<{
   {
     value: "cinematic",
     label: { ar: "سينمائي", en: "Cinematic" },
-    hint: { ar: "إضاءة درامية", en: "Dramatic lighting" },
+    hint: { ar: "مشهد غني", en: "Layered scene" },
   },
   {
     value: "minimal",
     label: { ar: "هادئ", en: "Minimal" },
-    hint: { ar: "نظيف وبسيط", en: "Clean composition" },
+    hint: { ar: "مرتب ومركب", en: "Clean layers" },
   },
   {
     value: "neon",
     label: { ar: "نيون", en: "Neon" },
-    hint: { ar: "ألوان قوية", en: "Vibrant colors" },
+    hint: { ar: "طاقة وتقدم", en: "High energy" },
   },
   {
     value: "realistic",
     label: { ar: "واقعي", en: "Realistic" },
-    hint: { ar: "مشهد واقعي", en: "Photoreal feel" },
+    hint: { ar: "تفاصيل ملموسة", en: "Tangible detail" },
   },
   {
     value: "anime",
     label: { ar: "أنمي", en: "Anime" },
-    hint: { ar: "ستايل أنمي", en: "Anime key visual" },
+    hint: { ar: "لقطة بطولية", en: "Hero key visual" },
   },
   {
     value: "luxury",
     label: { ar: "فاخر", en: "Luxury" },
-    hint: { ar: "طابع فاخر", en: "Premium luxury mood" },
+    hint: { ar: "تفاصيل فاخرة", en: "Premium detail" },
   },
 ];
-
-function buildPromptFromStyle(params: {
-  goalTitle: string;
-  milestoneName: string;
-  milestoneDescription: string;
-  style: PromptStyle;
-}) {
-  const styleDescriptions: Record<PromptStyle, string> = {
-    cinematic:
-      "solid flat pastel blue background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-    minimal:
-      "solid flat soft cream background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-    neon:
-      "solid flat pastel mint background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-    realistic:
-      "solid flat warm light gray background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-    anime:
-      "solid flat pastel lavender background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-    luxury:
-      "solid flat pastel champagne background only, no textures, no patterns, no gradients, no scenery, no environment, no details at all",
-  };
-
-  return [
-    `Minimalist flat vector achievement illustration representing "${params.milestoneName}".`,
-    `Context: ${params.goalTitle}.`,
-    `Achievement: ${params.milestoneDescription}.`,
-    "Visual concept: use extremely few, very simple and minimal connected elements that express achievement. For example, a single small trophy cup connected with one rising star, or one simple geometric symbol. Keep the objects tiny and connected together; do not scatter many items.",
-    `Background: ${styleDescriptions[params.style]}. The background must remain a single flat color with absolutely nothing else in it.`,
-    "Style rules: clean thin lines, muted limited colors, modern simple composition, generous negative space, no clutter, no extra objects, no people, no faces, no characters, no silhouettes, no hands, no bodies, no anatomy of any kind.",
-    "Content rules: NO readable text, NO letters, NO numbers, NO logos, NO watermarks, NO UI elements, NO interface screenshots, NO charts, NO graphs, NO progress bars. Only the minimal connected achievement symbol on a solid flat background.",
-    "Mood: calm, quiet triumph.",
-    "Format: vector art style, 4:3 aspect ratio.",
-  ].join(" ");
-}
-
-function normalizePromptStyle(value: unknown): PromptStyle {
-  return promptStyleOptions.some((option) => option.value === value)
-    ? (value as PromptStyle)
-    : "cinematic";
-}
 
 export function ActivityCard({
   goalId,
   recentEvents,
+  meGoalTitle,
+  opponentGoalTitle,
   locale,
   numberFormatter,
   ui,
@@ -517,8 +481,8 @@ export function ActivityCard({
                 </h3>
                 <p className="mt-1 text-xs font-medium leading-6 text-muted-foreground">
                   {isArabic
-                    ? "عدّل البرومبت، غيّر الستايل، وانسخه بأي وقت."
-                    : "Edit prompt, switch style, and copy anytime."}
+                    ? "مشهد مركب يحكي الإنجاز والهدف والمهام."
+                    : "A layered scene built from the milestone, goal, and tasks."}
                 </p>
               </div>
               <button
@@ -543,11 +507,14 @@ export function ActivityCard({
                         return {
                           ...prev,
                           style: styleOption.value,
-                          prompt: buildPromptFromStyle({
+                          prompt: buildMilestoneImagePrompt({
                             goalTitle: prev.goalTitle,
+                            goalSummary: prev.goalSummary,
                             milestoneName: prev.milestoneName,
                             milestoneDescription: prev.milestoneDescription,
+                            tasksDescriptions: prev.tasksDescriptions,
                             style: styleOption.value,
+                            aspectRatio: prev.aspectRatio,
                           }),
                         };
                       })
@@ -568,6 +535,34 @@ export function ActivityCard({
                   </button>
                 ))}
               </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPromptDialog((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          prompt: buildMilestoneImagePrompt({
+                            goalTitle: prev.goalTitle,
+                            goalSummary: prev.goalSummary,
+                            milestoneName: prev.milestoneName,
+                            milestoneDescription: prev.milestoneDescription,
+                            tasksDescriptions: prev.tasksDescriptions,
+                            style: prev.style,
+                            aspectRatio: prev.aspectRatio,
+                          }),
+                        }
+                      : prev,
+                  )
+                }
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-black text-primary transition hover:bg-primary/15"
+              >
+                <WandSparkles className="h-4 w-4" />
+                {isArabic
+                  ? "إعادة صياغة البرومبت بشكل أقوى"
+                  : "Rewrite stronger prompt"}
+              </button>
 
               <textarea
                 value={promptDialog.prompt}
@@ -652,6 +647,34 @@ export function ActivityCard({
                 const displayDesc =
                   event.milestone!.short_description?.trim() ||
                   event.milestone!.description;
+                const promptContext = event.milestone!.imagePromptContext;
+                const promptStyle = normalizePromptStyle(
+                  event.milestone!.imageStylePreference,
+                );
+                const promptGoalTitle =
+                  promptContext?.goalTitle?.trim() ||
+                  event.milestone!.goalTitle?.trim() ||
+                  (actorIsMe ? meGoalTitle : opponentGoalTitle)?.trim() ||
+                  (isArabic ? "هدفي الحالي" : "My current goal");
+                const promptGoalSummary =
+                  promptContext?.goalSummary?.trim() || "";
+                const promptTasks = Array.isArray(
+                  promptContext?.tasksDescriptions,
+                )
+                  ? promptContext.tasksDescriptions.filter(
+                      (task): task is string =>
+                        typeof task === "string" && task.trim().length > 0,
+                    )
+                  : [];
+                const generatedPrompt = buildMilestoneImagePrompt({
+                  goalTitle: promptGoalTitle,
+                  goalSummary: promptGoalSummary,
+                  milestoneName: event.milestone!.name,
+                  milestoneDescription: event.milestone!.description || "",
+                  tasksDescriptions: promptTasks,
+                  style: promptStyle,
+                  aspectRatio: event.milestone!.imageAspectRatio,
+                });
                 const isEditingThisCard = editMode?.logId === logId;
                 const milestoneActionsMenu =
                   actorIsMe && event.logId ? (
@@ -740,28 +763,17 @@ export function ActivityCard({
                           onClick={() =>
                             setPromptDialog({
                               logId,
-                              style: normalizePromptStyle(
-                                event.milestone!.imageStylePreference,
-                              ),
+                              style: promptStyle,
                               prompt:
                                 event.milestone!.imagePrompt?.trim() ||
-                                buildPromptFromStyle({
-                                  goalTitle: isArabic
-                                    ? "هدفي الحالي"
-                                    : "My current goal",
-                                  milestoneName: event.milestone!.name,
-                                  milestoneDescription:
-                                    event.milestone!.description || "",
-                                  style: normalizePromptStyle(
-                                    event.milestone!.imageStylePreference,
-                                  ),
-                                }),
-                              goalTitle: isArabic
-                                ? "هدفي الحالي"
-                                : "My current goal",
+                                generatedPrompt,
+                              goalTitle: promptGoalTitle,
+                              goalSummary: promptGoalSummary,
                               milestoneName: event.milestone!.name,
                               milestoneDescription:
                                 event.milestone!.description || "",
+                              tasksDescriptions: promptTasks,
+                              aspectRatio: event.milestone!.imageAspectRatio,
                             })
                           }
                           disabled={isBusy}

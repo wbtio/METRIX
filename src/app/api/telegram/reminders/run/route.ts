@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
         const { data: settings, error: settingsError } = await supabase
             .from('user_settings')
-            .select('telegram_chat_id, language')
+            .select('telegram_chat_id, language, reminders_enabled')
             .eq('user_id', user.id)
             .maybeSingle();
 
@@ -97,6 +97,10 @@ export async function POST(req: Request) {
 
         if (!settings?.telegram_chat_id) {
             return NextResponse.json({ sent: false, reason: 'telegram_not_linked' });
+        }
+
+        if (!settings.reminders_enabled) {
+            return NextResponse.json({ sent: false, reason: 'reminders_disabled' });
         }
 
         const { data: reminder, error: reminderError } = await supabase

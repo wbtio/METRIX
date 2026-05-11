@@ -392,6 +392,10 @@ export const translations = {
     goalRemindersDesc: 'Get reminded at specific times',
     addTime: 'Add Time',
     times: 'times',
+
+    // Goals Statistics
+    goalsStatistics: 'Statistics',
+    goalsStatsUnderDevelopment: 'Statistics are under development',
   },
   ar: {
     // Settings Page
@@ -786,6 +790,10 @@ export const translations = {
     goalRemindersDesc: 'يصلك تذكير في أوقات محددة',
     addTime: 'إضافة وقت',
     times: 'مرات',
+
+    // Goals Statistics
+    goalsStatistics: 'الإحصائيات',
+    goalsStatsUnderDevelopment: 'الإحصائيات قيد التطوير',
   }
 };
 

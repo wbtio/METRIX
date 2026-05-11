@@ -420,6 +420,43 @@ export default function ProgressLogDialog({
     [goal.id, supabase, tasks],
   );
 
+  const sendTelegramProgressNotify = useCallback(
+    async (params: {
+      goalTitle: string;
+      mode: "manual" | "ai";
+      dayLabel?: string;
+      coachMessage?: string;
+      comparisonMessage?: string | null;
+      warningMessage?: string | null;
+      fullFeedback?: string;
+      sessionTotalPoints?: number;
+      deltaAwarded?: number;
+      bonusPoints?: number;
+    }) => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: settings } = await supabase
+          .from("user_settings")
+          .select("telegram_chat_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!settings?.telegram_chat_id) return;
+
+        await fetch("/api/telegram/progress-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
+        });
+      } catch {
+        // Best-effort — don't block the UI
+      }
+    },
+    [supabase],
+  );
+
   const toggleTaskSelection = (taskId: string) => {
     setSelectedTasks((prev) => {
       const newMap = new Map(prev);
@@ -633,6 +670,22 @@ export default function ProgressLogDialog({
           }),
         );
       }
+
+      sendTelegramProgressNotify({
+        goalTitle: goal.title,
+        mode: "manual",
+        dayLabel: result.day_label,
+        coachMessage: result.coach_message,
+        comparisonMessage: result.comparison_message,
+        warningMessage: result.warning_message,
+        fullFeedback: result.full_feedback,
+        sessionTotalPoints,
+        deltaAwarded,
+        bonusPoints: deltaBonusPoints,
+      });
+
+      // Fire reminder cron to re-evaluate (now that this goal is logged)
+      fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;
@@ -654,6 +707,7 @@ export default function ProgressLogDialog({
     goal.current_points,
     goal.target_points,
     syncTaskCheckins,
+    sendTelegramProgressNotify,
     fetchPreviousLogsForAnalysis,
     fetchTodaySessionLog,
     dailyCap,
@@ -903,6 +957,22 @@ export default function ProgressLogDialog({
           }),
         );
       }
+
+      sendTelegramProgressNotify({
+        goalTitle: goal.title,
+        mode: "ai",
+        dayLabel: sessionResult.day_label,
+        coachMessage: sessionResult.coach_message,
+        comparisonMessage: sessionResult.comparison_message,
+        warningMessage: sessionResult.warning_message,
+        fullFeedback: sessionResult.full_feedback,
+        sessionTotalPoints,
+        deltaAwarded,
+        bonusPoints: deltaBonusPoints,
+      });
+
+      // Fire reminder cron to re-evaluate (now that this goal is logged)
+      fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;
@@ -921,6 +991,7 @@ export default function ProgressLogDialog({
     language,
     supabase,
     syncTaskCheckins,
+    sendTelegramProgressNotify,
     fetchPreviousLogsForAnalysis,
     fetchTodaySessionLog,
     dailyCap,
@@ -1003,6 +1074,15 @@ export default function ProgressLogDialog({
           detail: { goalId: goal.id },
         }),
       );
+
+      sendTelegramProgressNotify({
+        goalTitle: goal.title,
+        mode: "ai",
+        dayLabel: language === "ar" ? "إنجاز كبير 🏆" : "Major Milestone 🏆",
+        coachMessage: data.message,
+        sessionTotalPoints: data.score,
+        deltaAwarded: data.score,
+      });
     } catch (error: unknown) {
       submittedRef.current = false;
       console.error("Milestone submit error:", error);

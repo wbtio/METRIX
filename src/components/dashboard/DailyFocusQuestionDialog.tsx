@@ -100,12 +100,11 @@ export default function DailyFocusQuestionDialog({
                 )}
               >
                 {/* Badge row: logical separator works in both directions */}
-                <div
-                  className={cn(
-                    "mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-2",
-                    isArabic ? "justify-end" : "justify-start",
-                  )}
-                >
+                  <div
+                    className={cn(
+                      "mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-2 justify-start",
+                    )}
+                  >
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-primary dark:bg-primary/20">
                     <Sparkles className="size-3.5 shrink-0" aria-hidden />
                     {t.dailyFocus}

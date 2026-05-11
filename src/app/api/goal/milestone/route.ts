@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { GeminiService, GeminiQuotaError } from "@/lib/gemini";
 import { getErrorMessage } from "@/components/challenge/challenge-utils";
+import {
+  buildMilestoneImagePrompt,
+  buildMilestonePromptContext,
+} from "@/lib/milestone-image-prompt";
 
 type MilestoneTier = "minor" | "major" | "legendary";
 
@@ -263,23 +267,6 @@ function getTierScorePolicy(tier: unknown) {
   }
 }
 
-function buildMilestoneImagePrompt(
-  goalTitle: string,
-  milestoneName: string,
-  userInput: string,
-) {
-  return [
-    `A premium 4:3 achievement card artwork representing "${milestoneName}".`,
-    `Goal context: ${goalTitle}.`,
-    `Achievement narrative: ${userInput}.`,
-    "Visual concept: Transform this milestone into a striking symbolic scene. Depict the RESULT, the TOOL, the ENVIRONMENT, or the ABSTRACT CONCEPT — never a performing human. Use relevant objects, atmospheric effects, architectural elements, textures, light, and metaphor to tell the story of the accomplishment.",
-    "Style: Modern, cinematic, high contrast, deeply motivational, premium digital art with rich textures, polished lighting, and cinematic color grading.",
-    "Composition: Centered focal subject, balanced visual weight, generous negative space at top or center for text overlay, clear foreground / middle ground / background separation.",
-    "Mood: Triumphant, breakthrough energy, focused power.",
-    "Strict content rules: ABSOLUTELY NO humans, NO people, NO faces, NO bodies, NO hands, NO silhouettes of people, NO characters, NO figurines, NO portraits, NO anatomy of any kind. Only objects, environments, architecture, textures, light, and symbolic elements. NO readable text, NO letters, NO numbers, NO logos, NO watermarks, NO UI elements, NO interface screenshots, NO charts, NO graphs, NO progress bars.",
-  ].join(" ");
-}
-
 async function removeMilestoneImage(
   supabase: Awaited<ReturnType<typeof createClient>>,
   imageUrl: string | null,
@@ -313,6 +300,7 @@ export async function POST(req: Request) {
       milestoneName,
       targetPoints,
       dailyCap,
+      aspectRatio,
       tasksDescriptions,
       goalContext,
       language,
@@ -429,6 +417,18 @@ export async function POST(req: Request) {
     // Image is intentionally optional at creation.
     // Users can upload it later via `/api/goal/milestone/image`.
     const imageUrl: string | null = null;
+    const imagePromptContext = buildMilestonePromptContext({
+      goalTitle: goal.title,
+      goalContext,
+      tasksDescriptions,
+    });
+    const imagePrompt = buildMilestoneImagePrompt({
+      ...imagePromptContext,
+      milestoneName: finalMilestoneName,
+      milestoneDescription: userInput,
+      style: "cinematic",
+      aspectRatio,
+    });
 
     // 5. Atomically insert Daily Log and increment Goal Points via SQL RPC.
     // The migration in `supabase/migrations/*_milestone_atomic_rpc.sql` must be applied.
@@ -441,11 +441,9 @@ export async function POST(req: Request) {
         name: finalMilestoneName,
         description: userInput,
         imageStylePreference: "cinematic",
-        imagePrompt: buildMilestoneImagePrompt(
-          goal.title,
-          finalMilestoneName,
-          userInput,
-        ),
+        imageAspectRatio: aspectRatio,
+        imagePrompt,
+        imagePromptContext,
         short_description:
           typeof evaluation.short_description === "string"
             ? evaluation.short_description.slice(0, 240)
@@ -536,7 +534,7 @@ export async function POST(req: Request) {
       imageUrl: imageUrl,
       message: evaluation.coaching_message,
       logId,
-      imagePrompt: buildMilestoneImagePrompt(goal.title, finalMilestoneName, userInput),
+      imagePrompt,
     });
   } catch (error: unknown) {
     console.error("Milestone API POST error:", error);

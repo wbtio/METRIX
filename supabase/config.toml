@@ -1,0 +1,134 @@
+# Supabase configuration
+# Docs: https://supabase.com/docs/guides/database/database-config
+
+# Must restart Supabase to apply the changes.
+# You can do this with `supabase restart`:
+# supabase restart
+
+# You may uncomment and change the configuration options
+# to your liking.
+
+## Postgres configuration
+# [pg]
+# # See pgbouncer config options: https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooling
+# # Default is "transaction"
+# pooler = "transaction"
+# # Default is ""
+# plan = ""
+# # Default is ""
+# pooler_default_pool_size = ""
+# # Default is ""
+# pooler_max_client_conn = ""
+# # Default is ""
+# pooler_reserved_pool_size = ""
+# # Default is ""
+# pooler_idle_timeout = ""
+# # Default is ""
+# pooler_max_use = ""
+# # Default is ""
+# statement_timeout = ""
+# # Default is ""
+# jit = ""
+# # Default is ""
+# max_parallel_workers_per_gather = ""
+# # Default is ""
+# log_statement = ""
+# # Default is ""
+# log_min_duration_statement = ""
+# # Default is ""
+# shared_buffers = ""
+# # Default is ""
+# effective_cache_size = ""
+# # Default is ""
+# work_mem = ""
+# # Default is ""
+# maintenance_work_mem = ""
+# # Default is ""
+# huge_pages = ""
+# # Default is ""
+# random_page_cost = ""
+# # Default is ""
+# seq_page_cost = ""
+# # Default is ""
+# cpu_tuple_cost = ""
+# # Default is ""
+# cpu_index_tuple_cost = ""
+# # See: https://supabase.com/docs/guides/database/database-config#extensions
+# # List of extensions to be enabled. Note that it is not possible to enable PostGIS and any other extension at the same time.
+# extensions = []
+
+## API configuration
+# [api]
+# port = 54321
+# # The maximum request body size in bytes.
+# max_request_body_size = "100MB"
+# schemas = "public, storage, realtime, _analytics, vault, pg_net, pg_cron, supabase_functions, supabase_migrations, extensions, pgsodium, pg_graphql, pg_tle, vault, wrappers, parquet, lakes"
+
+## Pooler configuration
+# [pgbouncer]
+# # See pgbouncer config options: https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooling
+# pooler = "transaction"
+# # Default is ""
+# plan = ""
+# # Default is ""
+# pooler_default_pool_size = ""
+# # Default is ""
+# pooler_max_client_conn = ""
+# # Default is ""
+# pooler_reserved_pool_size = ""
+# # Default is ""
+# pooler_idle_timeout = ""
+# # Default is ""
+# pooler_max_use = ""
+
+## Analytics configuration
+# [analytics]
+# # Enabled analytics.
+# enabled = true
+# # The port to run the analytics on.
+# port = 54324
+
+## Storage configuration
+# [storage]
+# # The maximum file size in bytes.
+# max_file_size = "50MB"
+# # Limit the file extension that can be uploaded.
+# file_extensions = []
+# # The image transformation limit in bytes.
+# image_transformation_limit = "5MB"
+
+## SMTP configuration for sending emails
+# [smtp]
+# enabled = false
+# host = "smtp.example.com"
+# port = 587
+# user = "user@example.com"
+# password = "password"
+# sender = "noreply@example.com"
+# admin_email = "admin@example.com"
+# enable_rate_limit = true
+
+## Edge Functions scheduled tasks
+# Docs: https://supabase.com/docs/guides/functions/scheduled-functions
+# [functions]
+# enabled = true
+# import_map = true
+# import_map_path = "./import_map.json"
+# inspect = false
+# node_compat = false
+# verify_jwt = true
+
+## Scheduled Functions (cron)
+# Schedule edge functions to run at specified intervals.
+# Docs: https://supabase.com/docs/guides/functions/scheduled-functions#schedule-a-function
+[schedules]
+
+  [schedules.telegram-reminder]
+  # Cron expression: every 5 minutes
+  cron = "*/5 * * * *"
+  # Path to the function
+  path = "./functions/telegram-reminder/index.ts"
+  # Run on the region closest to your database
+  region = "us-east-1"
+  # Use the Deno runtime
+  runtime = "deno"

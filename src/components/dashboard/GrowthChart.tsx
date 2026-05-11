@@ -402,10 +402,10 @@ export default function GrowthChart({
   };
   const xAxisHeight = bucketMode === "day" ? 42 : 34;
   const chartViewportClass = fillHeight
-    ? "aspect-auto h-full min-h-[158px] w-full shrink-0 flex-1 sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
+    ? "aspect-auto h-full min-h-[178px] w-full shrink-0 flex-1 sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
     : "aspect-auto h-[180px] w-full shrink-0 sm:h-[196px] lg:h-[208px]";
   const emptyStateClass = fillHeight
-    ? "h-full min-h-[158px] sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
+    ? "h-full min-h-[178px] sm:min-h-[188px] md:min-h-[240px] lg:min-h-[262px]"
     : "h-[180px] sm:h-[196px] lg:h-[208px]";
 
   const containerClass = cn(
@@ -645,14 +645,14 @@ export default function GrowthChart({
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       )}
 
-      <div className="pb-1">
-        <div className="flex items-center gap-2">
+      <div className="pb-0.5 sm:pb-1">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div
             className="flex min-w-0 flex-1"
             role="tablist"
             aria-label={isArabic ? "النطاق الزمني" : "Time range"}
           >
-            <div className="inline-flex max-w-full shrink-0 gap-0.5 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm">
+            <div className="inline-flex max-w-full shrink-0 gap-0.5 rounded-full border border-border/70 bg-background/60 p-0.5 shadow-sm sm:p-1">
               {primaryTimeRangeOptions.map((option) => (
                 <button
                   key={option.key}
@@ -712,7 +712,7 @@ export default function GrowthChart({
             </div>
           </div>
 
-          <div className="inline-flex shrink-0 rounded-full border border-border/70 bg-background/60 p-1 shadow-sm sm:p-[2px]">
+          <div className="inline-flex shrink-0 rounded-full border border-border/70 bg-background/60 p-0.5 shadow-sm sm:p-[2px]">
             {chartTypeOptions.map((option) => (
               <button
                 key={option.key}

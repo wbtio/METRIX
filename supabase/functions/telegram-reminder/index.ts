@@ -97,11 +97,12 @@ async function sendTelegramMessage(chatId: string, text: string) {
 }
 
 Deno.serve(async () => {
-  // Get users with linked Telegram
+  // Get users with linked Telegram and reminders enabled
   const { data: users, error: usersError } = await supabase
     .from('user_settings')
-    .select('user_id, telegram_chat_id, language')
-    .not('telegram_chat_id', 'is', null);
+    .select('user_id, telegram_chat_id, language, reminders_enabled')
+    .not('telegram_chat_id', 'is', null)
+    .eq('reminders_enabled', true);
 
   if (usersError || !users) {
     return new Response(JSON.stringify({ error: usersError?.message }), {
