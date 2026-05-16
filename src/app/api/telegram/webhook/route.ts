@@ -154,13 +154,19 @@ async function handleStart(supabase: ReturnType<typeof createServiceRoleClient>,
 async function handleChatCommand(supabase: ReturnType<typeof createServiceRoleClient>, chatId: number, userId: string, language: string) {
     const isArabic = language === 'ar';
 
-    const { data: goals } = await supabase
+    console.error('handleChatCommand — userId:', userId);
+
+    const { data: goals, error: goalsError } = await supabase
         .from('goals')
-        .select('id, title, icon')
+        .select('id, title, icon, status')
         .eq('user_id', userId)
-        .eq('status', 'active')
+        .in('status', ['active', 'investigating'])
         .order('created_at', { ascending: false })
         .limit(20);
+
+    if (goalsError) {
+        console.error('Fetch Goals Error:', goalsError);
+    }
 
     if (!goals || goals.length === 0) {
         await sendTelegramMessage(
