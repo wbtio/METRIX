@@ -35,14 +35,18 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: o
     if (replyMarkup) {
         body.reply_markup = replyMarkup;
     }
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-        const errText = await res.text().catch(() => 'unknown');
-        console.error(`Telegram API error (${res.status}): ${errText.substring(0, 200)}`);
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const errText = await res.text().catch(() => 'unknown');
+            console.error(`Telegram API error (${res.status}): ${errText.substring(0, 200)}`);
+        }
+    } catch (err) {
+        console.error('Telegram sendMessage network error:', err);
     }
 }
 
@@ -98,24 +102,31 @@ async function handleStart(supabase: ReturnType<typeof createServiceRoleClient>,
         .single();
 
     if (linkError || !linkCode) {
+        console.error('Linking Error - Phase 1 (fetch link code):', linkError);
         await sendTelegramMessage(chatId, BOT_MESSAGES.invalidCode);
         return;
     }
 
     if (linkCode.used) {
+        console.error('Linking Error - Phase 1b (code already used):', { code, user_id: linkCode.user_id });
         await sendTelegramMessage(chatId, BOT_MESSAGES.usedCode);
         return;
     }
 
     if (new Date(linkCode.expires_at) < new Date()) {
+        console.error('Linking Error - Phase 1c (code expired):', { code, expires_at: linkCode.expires_at });
         await sendTelegramMessage(chatId, BOT_MESSAGES.expiredCode);
         return;
     }
 
-    await supabase
+    const { error: markUsedError } = await supabase
         .from('telegram_link_codes')
         .update({ used: true })
         .eq('code', code);
+
+    if (markUsedError) {
+        console.error('Linking Error - Phase 2 (mark code used):', markUsedError);
+    }
 
     const { error: upsertError } = await supabase
         .from('user_settings')
@@ -128,12 +139,16 @@ async function handleStart(supabase: ReturnType<typeof createServiceRoleClient>,
         }, { onConflict: 'user_id' });
 
     if (upsertError) {
-        console.error('Webhook upsert error:', upsertError);
+        console.error('Linking Error - Phase 3 (upsert user_settings):', upsertError);
         await sendTelegramMessage(chatId, BOT_MESSAGES.linkFailed);
         return;
     }
 
-    await sendTelegramMessage(chatId, BOT_MESSAGES.linked);
+    try {
+        await sendTelegramMessage(chatId, BOT_MESSAGES.linked);
+    } catch (err) {
+        console.error('Linking Error - Phase 4 (send confirmation):', err);
+    }
 }
 
 async function handleChatCommand(supabase: ReturnType<typeof createServiceRoleClient>, chatId: number, userId: string, language: string) {
