@@ -684,8 +684,8 @@ export default function ProgressLogDialog({
         bonusPoints: deltaBonusPoints,
       });
 
-      // Fire reminder cron to re-evaluate (now that this goal is logged)
-      fetch("/api/telegram/reminders/cron").catch(() => {});
+      // Fire reminder cron to re-evaluate — disabled: handled server-side via Edge Function cron
+      // fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;
@@ -971,8 +971,8 @@ export default function ProgressLogDialog({
         bonusPoints: deltaBonusPoints,
       });
 
-      // Fire reminder cron to re-evaluate (now that this goal is logged)
-      fetch("/api/telegram/reminders/cron").catch(() => {});
+      // Fire reminder cron to re-evaluate — disabled: handled server-side via Edge Function cron
+      // fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;

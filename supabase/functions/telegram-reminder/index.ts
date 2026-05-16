@@ -51,37 +51,24 @@ function getSequenceToSend(
   const currentMinutes = ch * 60 + cm;
 
   let diff = currentMinutes - reminderMinutes;
-  if (diff < -720) diff += 1440; // Crossed midnight
+  if (diff < -720) diff += 1440;
 
   if (diff < 0 || diff >= 150) return null;
   return Math.floor(diff / 30) + 1;
 }
 
-async function hasLogTodayForGoal(goalId: string, timezone: string): Promise<boolean> {
-  const localToday = new Date().toLocaleDateString('en-CA', {
-    timeZone: timezone,
-  });
+function getLocalDateStr(timezone: string): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: timezone });
+}
 
-  const twoDaysAgo = new Date(
-    Date.now() - 2 * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const { data: logs } = await supabase
-    .from('daily_logs')
-    .select('created_at')
-    .eq('goal_id', goalId)
-    .gte('created_at', twoDaysAgo);
-
-  for (const log of logs || []) {
-    const logLocalDate = new Date(log.created_at).toLocaleDateString('en-CA', {
-      timeZone: timezone,
-    });
-    if (logLocalDate === localToday) {
-      return true;
-    }
+function getTodayLogDates(dailyLogs: { created_at: string }[], goalId: string, timezone: string): Set<string> {
+  const dates = new Set<string>();
+  for (const log of dailyLogs || []) {
+    if (log.created_at < goalId) continue;
+    const logDate = new Date(log.created_at).toLocaleDateString('en-CA', { timeZone: timezone });
+    dates.add(`${goalId}:${logDate}`);
   }
-
-  return false;
+  return dates;
 }
 
 async function sendTelegramMessage(chatId: string, text: string) {
@@ -96,71 +83,120 @@ async function sendTelegramMessage(chatId: string, text: string) {
   });
 }
 
+interface UserWithReminders {
+  user_id: string;
+  telegram_chat_id: string;
+  language: string;
+  goal_reminders: {
+    id: string;
+    goal_id: string;
+    reminder_time: string;
+    reminder_count: number;
+    timezone: string;
+    goals: { title?: string } | { title?: string }[] | null;
+  }[];
+}
+
 Deno.serve(async () => {
-  // Get users with linked Telegram and reminders enabled
+  // 1. Single query: get users + their enabled goal reminders in one JOIN
   const { data: users, error: usersError } = await supabase
     .from('user_settings')
-    .select('user_id, telegram_chat_id, language, reminders_enabled')
+    .select(`
+      user_id,
+      telegram_chat_id,
+      language,
+      goal_reminders!inner(
+        id,
+        goal_id,
+        reminder_time,
+        reminder_count,
+        timezone,
+        goals(title)
+      )
+    `)
     .not('telegram_chat_id', 'is', null)
-    .eq('reminders_enabled', true);
+    .eq('reminders_enabled', true)
+    .eq('goal_reminders.enabled', true);
 
-  if (usersError || !users) {
-    return new Response(JSON.stringify({ error: usersError?.message }), {
+  if (usersError) {
+    console.error('Failed to fetch users:', usersError);
+    return new Response(JSON.stringify({ error: usersError.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
+  if (!users || users.length === 0) {
+    return new Response(JSON.stringify({ processed: 0, sent: 0 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const typedUsers = users as unknown as UserWithReminders[];
+
+  // 2. Collect unique goal IDs for batch daily_logs fetch
+  const allGoalIds = [...new Set(
+    typedUsers.flatMap((u) => u.goal_reminders.map((r) => r.goal_id))
+  )];
+
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const twoDaysAgoDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    .toLocaleDateString('en-CA');
+
+  // 3. Batch fetch existing reminder logs (last 2 days covers all timezone offsets)
+  const { data: existingLogsRaw } = await supabase
+    .from('telegram_reminder_logs')
+    .select('user_id, goal_id, sequence, reminder_date')
+    .gte('reminder_date', twoDaysAgoDate);
+
+  const alreadySent = new Set<string>();
+  for (const log of existingLogsRaw || []) {
+    alreadySent.add(`${log.user_id}:${log.goal_id}:${log.sequence}:${log.reminder_date}`);
+  }
+
+  // 4. Batch fetch daily logs for all goals
+  const { data: dailyLogsRaw } = await supabase
+    .from('daily_logs')
+    .select('goal_id, created_at')
+    .in('goal_id', allGoalIds)
+    .gte('created_at', twoDaysAgo);
+
+  // Index daily_logs by goal_id for O(1) lookup
+  const logsByGoal: Record<string, { created_at: string }[]> = {};
+  for (const log of dailyLogsRaw || []) {
+    if (!logsByGoal[log.goal_id]) logsByGoal[log.goal_id] = [];
+    logsByGoal[log.goal_id].push({ created_at: log.created_at });
+  }
+
   let sentCount = 0;
 
-  for (const user of users) {
-    try {
-      // Get active goal reminders for this user
-      const { data: reminders } = await supabase
-        .from('goal_reminders')
-        .select('id, goal_id, reminder_time, reminder_count, timezone, goals(title)')
-        .eq('user_id', user.user_id)
-        .eq('enabled', true);
-
-      if (!reminders || reminders.length === 0) continue;
-
-      for (const reminder of reminders) {
-        const sequence = getSequenceToSend(
-          reminder.reminder_time,
-          reminder.timezone || 'UTC'
-        );
+  for (const user of typedUsers) {
+    for (const reminder of user.goal_reminders) {
+      try {
+        const timezone = reminder.timezone || 'UTC';
+        const sequence = getSequenceToSend(reminder.reminder_time, timezone);
         if (!sequence) continue;
-
-        // Skip if sequence exceeds this reminder's count
         if (sequence > reminder.reminder_count) continue;
 
-        const userLocalToday = new Date().toLocaleDateString('en-CA', {
-          timeZone: reminder.timezone || 'UTC',
+        const localToday = getLocalDateStr(timezone);
+        const sentKey = `${user.user_id}:${reminder.goal_id}:${sequence}:${localToday}`;
+        if (alreadySent.has(sentKey)) continue;
+
+        // Check if this goal was already logged today (in-memory)
+        const goalLogs = logsByGoal[reminder.goal_id] || [];
+        const hasLogToday = goalLogs.some((log) => {
+          const logDate = new Date(log.created_at).toLocaleDateString('en-CA', { timeZone: timezone });
+          return logDate === localToday;
         });
-
-        // Check if already sent
-        const { data: existing } = await supabase
-          .from('telegram_reminder_logs')
-          .select('sequence')
-          .eq('user_id', user.user_id)
-          .eq('goal_id', reminder.goal_id)
-          .eq('reminder_date', userLocalToday)
-          .eq('sequence', sequence)
-          .maybeSingle();
-
-        if (existing) continue;
-
-        // Check if this specific goal has been logged today
-        const logged = await hasLogTodayForGoal(
-          reminder.goal_id,
-          reminder.timezone || 'UTC'
-        );
-        if (logged) continue;
+        if (hasLogToday) continue;
 
         const lang = user.language === 'ar' ? 'ar' : 'en';
-        const baseMessage = MESSAGES[lang][sequence - 1];
-        const goalTitle = reminder.goals?.title || 'Your goal';
-        const message = `${baseMessage}\n\n<b>Goal:</b> ${goalTitle}`;
+        const goalData = reminder.goals;
+        const goalTitle = Array.isArray(goalData)
+          ? goalData[0]?.title || 'Your goal'
+          : goalData?.title || 'Your goal';
+        const message = `${MESSAGES[lang][sequence - 1]}\n\n<b>Goal:</b> ${goalTitle}`;
 
         await sendTelegramMessage(user.telegram_chat_id, message);
         sentCount++;
@@ -168,17 +204,17 @@ Deno.serve(async () => {
         await supabase.from('telegram_reminder_logs').insert({
           user_id: user.user_id,
           goal_id: reminder.goal_id,
-          reminder_date: userLocalToday,
+          reminder_date: localToday,
           sequence,
         });
+      } catch (err) {
+        console.error(`Error processing reminder ${reminder.id} for user ${user.user_id}:`, err);
       }
-    } catch (err) {
-      console.error(`Error processing user ${user.user_id}:`, err);
     }
   }
 
   return new Response(
-    JSON.stringify({ processed: users.length, sent: sentCount }),
+    JSON.stringify({ processed: typedUsers.length, sent: sentCount }),
     {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

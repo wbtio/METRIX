@@ -7,7 +7,6 @@ import {
   Link2,
   Loader2,
   Plus,
-  Swords,
   X,
   Zap,
 } from 'lucide-react';
@@ -20,11 +19,7 @@ import { formatDate } from './challenge-utils';
 
 interface HeaderCardProps {
   snapshot: ChallengeSnapshot;
-  summaryText: string;
-  statusLabel: string;
-  statusToneClass: string;
   leadText: string;
-  isPendingHost: boolean;
   isPendingGuest: boolean;
   busyAction: 'create' | 'join' | 'end' | null;
   joinCode: string;
@@ -68,9 +63,6 @@ interface HeaderCardProps {
 
 export function HeaderCard({
   snapshot,
-  summaryText,
-  statusLabel,
-  statusToneClass,
   leadText,
   isPendingGuest,
   busyAction,
@@ -99,29 +91,6 @@ export function HeaderCard({
 
   return (
     <section className={cn(!embedded && cardClass, !embedded && shellClass)}>
-      <div className={cn('flex flex-col sm:flex-row sm:items-start sm:justify-between', embedded ? 'gap-2.5' : 'gap-3')}>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-chart-5/12 text-chart-5 ring-1 ring-chart-5/20">
-              <Swords className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-base font-black text-foreground">{t.challengeTab}</div>
-              <div className="mt-1 text-[12px] leading-5 text-muted-foreground sm:text-sm">{summaryText}</div>
-            </div>
-          </div>
-        </div>
-
-        <span
-          className={cn(
-            'inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[11px] font-black',
-            statusToneClass,
-          )}
-        >
-          {statusLabel}
-        </span>
-      </div>
-
       {snapshot.status === 'none' && (
         <div className={innerPanelClass}>
           <div className="mb-3 flex items-center justify-between gap-2">

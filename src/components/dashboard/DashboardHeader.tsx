@@ -99,14 +99,14 @@ export default function DashboardHeader({
           <div className="min-w-0 flex-1">
             <h1
               className={cn(
-                "text-base sm:text-lg font-black text-foreground line-clamp-2",
+                "text-[15px] min-[400px]:text-base sm:text-lg font-black text-foreground line-clamp-2",
                 titleDir === "rtl" ? "text-right" : "text-left",
               )}
               dir={titleDir}
             >
               {goal.title}
             </h1>
-            <div className="mt-1 flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap">
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
               {goal.is_pinned && (
                 <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600/90 dark:text-amber-400/90">
                   <Pin className="w-3 h-3" /> {isArabic ? "مثبت" : "Pinned"}
@@ -115,7 +115,7 @@ export default function DashboardHeader({
               {goalEndDaysChip && (
                 <span
                   className={cn(
-                    "inline-flex min-w-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tabular-nums",
+                    "inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tabular-nums",
                     goalEndDaysChip.tone === "soon" &&
                       "bg-primary/10 text-primary/90 dark:text-primary",
                     goalEndDaysChip.tone === "today" &&

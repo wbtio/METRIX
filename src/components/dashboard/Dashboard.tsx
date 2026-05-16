@@ -1373,13 +1373,13 @@ export default function Dashboard({
       </button>
 
       {/* ===== Tabs ===== */}
-      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/20 p-1">
+      <div className="flex shrink-0 gap-0.5 sm:gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/20 p-0.5 sm:p-1">
         {tabItems.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap [&_svg]:h-[17px] [&_svg]:w-[17px]",
+              "flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1 sm:px-1.5 rounded-lg text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap [&_svg]:h-[15px] [&_svg]:w-[15px] sm:[&_svg]:h-[17px] sm:[&_svg]:w-[17px]",
               activeTab === tab.key
                 ? "bg-white dark:bg-background text-foreground border border-border/70"
                 : "text-muted-foreground hover:text-foreground",

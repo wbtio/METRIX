@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Loader2, Send, Sparkles, X } from "lucide-react";
 import { translations, type Language } from "@/lib/translations";
 import type { DailyFocusSession } from "@/lib/daily-focus";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export default function DailyFocusQuestionDialog({
   onSubmit,
 }: DailyFocusQuestionDialogProps) {
   const t = translations[language];
+  const [questionWhyOpen, setQuestionWhyOpen] = useState(false);
   const submitDisabled = submitting || loading || !answer.trim();
 
   const currentQuestionNumber = Math.max(
@@ -77,26 +79,25 @@ export default function DailyFocusQuestionDialog({
         )}
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <div className="flex max-h-[90svh] flex-col sm:max-h-[min(85vh,40rem)]">
+        <div className="flex max-h-[80svh] flex-col sm:max-h-[min(75vh,34rem)]">
           {/* Single custom close button — logical inset for LTR/RTL */}
-          <DialogClose className="absolute top-4 end-4 z-10 flex size-9 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none sm:top-5 sm:end-5">
-            <X className="size-5" />
+          <DialogClose className="absolute top-3 end-3 z-10 flex size-7 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none sm:top-4 sm:end-4">
+            <X className="size-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
 
           {/* ── Scroll area ── */}
           <div className="flex-1 overflow-y-auto pb-4">
             {/* Mobile drag handle */}
-            <div className="flex justify-center pt-3 sm:hidden">
-              <div className="h-1.5 w-12 rounded-full bg-foreground/10" />
+            <div className="flex justify-center pt-2 sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-foreground/10" />
             </div>
 
             {/* Header — padding respects dir; title scale is medium */}
-            <div className="px-5 pt-5 pb-4 pe-14 sm:px-7 sm:pt-7 sm:pb-5 sm:pe-16">
+            <div className="px-5 pt-4 pb-3 pe-12 sm:px-7 sm:pt-5 sm:pb-4 sm:pe-14">
               <DialogHeader
                 className={cn(
-                  "gap-0 space-y-0 !text-start sm:!text-start",
-                  isArabic ? "items-end" : "items-start",
+                  "gap-0 space-y-0 !text-start sm:!text-start items-start",
                 )}
               >
                 {/* Badge row: logical separator works in both directions */}
@@ -125,12 +126,12 @@ export default function DailyFocusQuestionDialog({
             </div>
 
             {/* Divider */}
-            <div className="mx-5 h-px bg-linear-to-r from-transparent via-border/60 to-transparent sm:mx-7" />
+            <div className="mx-5 h-px bg-border/40 sm:mx-7" />
 
             {/* Question block */}
-            <div className="px-5 py-5 sm:px-7 sm:py-6">
+            <div className="px-5 py-4 sm:px-7 sm:py-4">
               {/* Question number label */}
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-primary/75 sm:text-[11px]">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-primary/75 sm:text-[11px]">
                 {questionLabel}
               </p>
 
@@ -152,22 +153,36 @@ export default function DailyFocusQuestionDialog({
                   </p>
 
                   {dailyFocus?.question_why && (
-                    <div
-                      className={cn(
-                        "mt-5 rounded-xl border border-primary/10 bg-primary/5 px-3.5 py-3 dark:bg-white/5 sm:rounded-2xl sm:px-4 sm:py-3.5",
-                      )}
-                    >
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary/65 sm:text-[11px]">
-                        {t.questionWhyLabel}
-                      </p>
-                      <p
+                    <div className={cn("mt-3 rounded-xl border border-primary/10 bg-primary/5 dark:bg-white/5 sm:rounded-2xl")}>
+                      <button
+                        type="button"
+                        onClick={() => setQuestionWhyOpen(!questionWhyOpen)}
                         className={cn(
-                          "whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground font-medium",
-                          "text-start",
+                          "flex w-full items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3",
+                          "text-[10px] font-bold uppercase tracking-wider text-primary/65 sm:text-[11px]",
+                          "transition-colors hover:text-primary",
                         )}
                       >
-                        {dailyFocus.question_why}
-                      </p>
+                        <span>{t.questionWhyLabel}</span>
+                        <ChevronDown
+                          className={cn(
+                            "size-3.5 shrink-0 transition-transform duration-200",
+                            questionWhyOpen && "rotate-180",
+                          )}
+                        />
+                      </button>
+                      {questionWhyOpen && (
+                        <div className="px-3.5 pb-2.5 sm:px-4 sm:pb-3">
+                          <p
+                            className={cn(
+                              "whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground font-medium",
+                              "text-start",
+                            )}
+                          >
+                            {dailyFocus.question_why}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
@@ -175,11 +190,11 @@ export default function DailyFocusQuestionDialog({
             </div>
 
             {/* Divider */}
-            <div className="mx-5 h-px bg-border/40 sm:mx-7" />
+            <div className="mx-5 h-px bg-border/30 sm:mx-7" />
 
             {/* Answer area */}
-            <div className="px-5 pt-5 pb-2 sm:px-7">
-              <label className="mb-2 block text-start text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/85 sm:text-[11px]">
+            <div className="px-5 pt-3 pb-2 sm:px-7">
+              <label className="mb-1.5 block text-start text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/85 sm:text-[11px]">
                 {t.answerQuestion}
               </label>
 
@@ -189,7 +204,7 @@ export default function DailyFocusQuestionDialog({
                   onChange={(e) => onAnswerChange(e.target.value)}
                   placeholder={t.answerQuestionPlaceholder}
                   disabled={loading || submitting}
-                  rows={4}
+                  rows={2}
                   className={cn(
                     "w-full resize-none rounded-2xl border-2 border-border/40 bg-muted/30",
                     "px-4 py-3.5 pb-14 pe-14",
@@ -222,13 +237,13 @@ export default function DailyFocusQuestionDialog({
           </div>
 
           {/* ── Footer ── */}
-          <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 sm:py-5">
+          <div className="border-t border-border/50 bg-background px-5 py-3 sm:px-7 sm:py-4">
             <button
               type="button"
               onClick={onSubmit}
               disabled={submitDisabled}
               className={cn(
-                "group relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-5 sm:h-[3.25rem] sm:rounded-2xl",
+                "group relative flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 sm:h-11 sm:rounded-2xl",
                 "text-sm font-bold text-primary-foreground sm:text-[0.9375rem]",
                 "transition-all duration-200",
                 "hover:brightness-110 active:scale-[0.99] shadow-md shadow-primary/15",

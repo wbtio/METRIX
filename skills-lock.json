@@ -5,6 +5,30 @@
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "6412eb4eb3b91595ebab937f0c69501240e7ba761b3d82510b5cf506ec5c7adc"
+    },
+    "hebrew-rtl-best-practices": {
+      "source": "skills-il/localization",
+      "sourceType": "github",
+      "skillPath": "hebrew-rtl-best-practices/SKILL.md",
+      "computedHash": "2a6a019a917014329ddd3a5746396895633f9b91e1e623cb580e1d36576536ba"
+    },
+    "responsive-design": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "responsive-design/SKILL.md",
+      "computedHash": "4addd6e3c12934ee7ca98cc940b2db9475fa0c5836312c6111d32e572b6e38ca"
+    },
+    "shadcn": {
+      "source": "vercel/vercel-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "4d966b8dbf5b7396ade1c8aeb2f6500aebbee70819110545e9f278b80d2bfdf1"
+    },
+    "tailwindcss": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "tailwindcss/SKILL.md",
+      "computedHash": "b1d95ac9242e613966fb11ed413fd2ff61f04641e4e8c1418e0e8258573fcc68"
     }
   }
 }

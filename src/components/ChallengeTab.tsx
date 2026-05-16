@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Swords } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import type { ChallengeSnapshot, ChallengeHistoryItem, ChallengeTabProps } from './challenge/challenge-types';
 import { EMPTY_SNAPSHOT, compactCopy } from './challenge/challenge-types';
@@ -190,26 +190,6 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
     }
   };
 
-  const statusLabel = useMemo(() => {
-    if (snapshot.status === 'active') return t.challengeStatusActive;
-    if (snapshot.status === 'pending') return t.challengeStatusPending;
-    if (snapshot.status === 'ended') return t.challengeStatusEnded;
-    return t.challengeStatusNone;
-  }, [snapshot.status, t]);
-
-  const statusToneClass = useMemo(() => {
-    if (snapshot.status === 'active') {
-      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
-    }
-    if (snapshot.status === 'pending') {
-      return 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300';
-    }
-    if (snapshot.status === 'ended') {
-      return 'border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300';
-    }
-    return 'border-primary/20 bg-primary/10 text-primary';
-  }, [snapshot.status]);
-
   const visibleEvents = useMemo(
     () => (showAllEvents ? snapshot.recentEvents : snapshot.recentEvents.slice(0, 4)),
     [showAllEvents, snapshot.recentEvents],
@@ -220,7 +200,6 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
   const totalDelta = snapshot.scoreboard.me.total - snapshot.scoreboard.opponent.total;
   const canToggleEvents = snapshot.recentEvents.length > 4;
   const hasHeadToHead = Boolean(snapshot.me && snapshot.opponent);
-  const isPendingHost = snapshot.status === 'pending' && snapshot.me?.role === 'host';
   const isPendingGuest = snapshot.status === 'pending' && snapshot.me?.role === 'guest';
 
   const leadText =
@@ -229,17 +208,6 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
       : totalDelta === 0
         ? ui.tied
         : `${numberFormatter.format(Math.abs(totalDelta))} ${ui.points}`;
-
-  const summaryText = useMemo(() => {
-    if (snapshot.status === 'active') return ui.activeSummary;
-    if (snapshot.status === 'pending') {
-      if (isPendingHost) return ui.pendingHostSummary;
-      if (isPendingGuest) return ui.pendingGuestSummary;
-      return ui.pendingSummary;
-    }
-    if (snapshot.status === 'ended') return ui.endedSummary;
-    return ui.noneSummary;
-  }, [isPendingGuest, isPendingHost, snapshot.status, ui]);
 
   if (loading) {
     return (
@@ -257,16 +225,14 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
         <div className="space-y-2.5 pr-0.5">
         <section className="rounded-2xl border border-border/80 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm shadow-black/[0.03] dark:bg-card/50 dark:from-card/70 dark:via-card/60 dark:to-background/30 sm:p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-5/12 text-chart-5 ring-1 ring-chart-5/20">
-                <Swords className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-5/14 text-chart-5 ring-1 ring-chart-5/25">
+                <Users className="h-4 w-4" />
               </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-black text-foreground">{t.challengeTab}</div>
-                <div className="text-[11px] text-muted-foreground">{statusLabel}</div>
+              <div className="text-sm font-black text-foreground">
+                {isArabic ? 'التحدي مع الأصدقاء' : 'Challenge with Friends'}
               </div>
             </div>
-
             <button
               type="button"
               onClick={() => setIsChallengePanelCollapsed((prev) => !prev)}
@@ -292,11 +258,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
               <div className="mt-3">
                 <HeaderCard
                   snapshot={snapshot}
-                  summaryText={summaryText}
-                  statusLabel={statusLabel}
-                  statusToneClass={statusToneClass}
                   leadText={leadText}
-                  isPendingHost={isPendingHost}
                   isPendingGuest={isPendingGuest}
                   busyAction={busyAction}
                   joinCode={joinCode}

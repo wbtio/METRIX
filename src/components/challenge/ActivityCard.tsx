@@ -363,7 +363,7 @@ export function ActivityCard({
           </span>
           {milestoneEvents.length > 0 && (
             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-400 ring-1 ring-amber-500/20">
-              {milestoneEvents.length}/2
+              {milestoneEvents.length}
             </span>
           )}
         </div>
@@ -633,7 +633,7 @@ export function ActivityCard({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {milestoneEvents.map((event, index) => {
                 const actorIsMe = event.actor === "me";
                 const logId =
@@ -682,12 +682,12 @@ export function ActivityCard({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/80 shadow-sm backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white"
+                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/80 shadow-sm backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white"
                           aria-label={
                             isArabic ? "خيارات الإنجاز" : "Milestone options"
                           }
                         >
-                          <MoreVertical className="h-3.5 w-3.5" />
+                          <MoreVertical className="h-2.5 w-2.5" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
@@ -875,7 +875,7 @@ export function ActivityCard({
                           alt={event.milestone!.name}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                          className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                         />
                       ) : (
                         <div
@@ -890,37 +890,30 @@ export function ActivityCard({
                       <div className="absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
                       <div
                         className={cn(
-                          "absolute top-2 flex items-center gap-1.5",
-                          isArabic ? "left-2" : "right-2",
+                          "absolute top-1.5 flex items-center gap-1",
+                          isArabic ? "left-1.5" : "right-1.5",
                         )}
                       >
                         {milestoneActionsMenu}
-                        <div
-                          className={cn(
-                            "rounded-full px-3 py-1.5 text-sm font-black tabular-nums text-white shadow-md backdrop-blur-md",
-                            actorIsMe
-                              ? "bg-emerald-500/90 shadow-emerald-500/20"
-                              : "bg-sky-500/90 shadow-sky-500/20",
-                          )}
-                        >
-                          +{numberFormatter.format(event.points)}
+                        <div className="rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-bold text-white/90 backdrop-blur-md">
+                          +{Intl.NumberFormat('en').format(event.points)}
                         </div>
                       </div>
                       <div
                         className={cn(
-                          "absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white/90 backdrop-blur-md",
+                          "absolute bottom-1.5 flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-bold text-white/90 backdrop-blur-md",
                           isArabic ? "right-2" : "left-2",
                         )}
                       >
                         <span>
-                          {formatNumericDate(event.createdAt, locale)} ·{" "}
-                          {formatTime(event.createdAt, locale)}
+                          {formatNumericDate(event.createdAt, 'en')} ·{" "}
+                          {formatTime(event.createdAt, 'en')}
                         </span>
                       </div>
                     </div>
 
                     {/* Content — BOTTOM */}
-                    <div className="flex min-w-0 flex-col gap-1.5 px-0 pb-0">
+                    <div className="flex min-w-0 flex-col gap-1.5 px-0 pb-0 pt-2">
                       {/* Inline editor */}
                       {isEditingThisCard ? (
                         <InlineEditor
@@ -937,10 +930,10 @@ export function ActivityCard({
                         />
                       ) : (
                         <>
-                          <h4 className="line-clamp-2 text-xs font-black leading-tight text-foreground">
+                          <h4 className="line-clamp-2 text-[11px] font-black leading-tight text-foreground">
                             {event.milestone!.name}
                           </h4>
-                          <p className="line-clamp-3 text-[11px] leading-relaxed text-muted-foreground">
+                          <p className="line-clamp-3 text-[10px] leading-relaxed text-muted-foreground">
                             {displayDesc}
                           </p>
                         </>

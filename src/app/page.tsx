@@ -16,7 +16,7 @@ import { createClient } from "@/utils/supabase/client";
 import { translations, type Language } from "@/lib/translations";
 import { getLocalDateKey, getLocalWeekStartMonday } from "@/lib/task-periods";
 import { useStreakReminder } from "@/hooks/useStreakReminder";
-import { useTelegramReminder } from "@/hooks/useTelegramReminder";
+// import { useTelegramReminder } from "@/hooks/useTelegramReminder";
 import type { User } from "@supabase/supabase-js";
 
 type AppView = "home" | "dashboard" | "settings" | "goals" | "create-goal";
@@ -70,8 +70,8 @@ export default function Home() {
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
 
-  // Periodic Telegram reminder dispatch
-  useTelegramReminder();
+  // Periodic Telegram reminder dispatch — disabled: now handled server-side via Supabase Edge Function cron
+  // useTelegramReminder();
 
   const fetchTaskStats = useCallback(
     async (goalIds: string[]) => {
@@ -284,7 +284,7 @@ export default function Home() {
     <OrbitShell user={user}>
       <WelcomeDialog />
       <div
-        className={`mx-auto flex min-h-0 w-full max-w-7xl 2xl:max-w-[1600px] flex-col items-center px-3 pt-3 transition-all duration-300 sm:px-6 sm:pt-6 lg:px-12 lg:pt-8 lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
+        className={`mx-auto flex min-h-0 w-full max-w-7xl 2xl:max-w-[1600px] flex-col items-center px-2 pt-2 transition-all duration-300 min-[400px]:px-3 min-[400px]:pt-3 sm:px-6 sm:pt-6 lg:px-12 lg:pt-8 lg:pl-28 rtl:lg:pl-12 rtl:lg:pr-28
           ${
             currentView === "home"
               ? "h-[100dvh] shrink-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-24 lg:pb-12"
@@ -292,7 +292,7 @@ export default function Home() {
                 ? "h-[calc(100dvh_-_5rem_-_env(safe-area-inset-bottom))] shrink-0 overflow-hidden pb-0 sm:h-[calc(100dvh_-_6rem)] lg:h-[100dvh] lg:pb-12"
                 : "flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-24 lg:pb-12"
           }
-          justify-start`}
+          ${loading ? "justify-center" : "justify-start"}`}
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center animate-pulse gap-4">

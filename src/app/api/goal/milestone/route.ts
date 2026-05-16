@@ -199,7 +199,6 @@ function isRpcMissing(error: DbErrorLike) {
 
 function getRpcHttpStatus(error: DbErrorLike) {
   if (isRpcMissing(error)) return 501;
-  if (error.message?.includes("milestone_limit_reached")) return 409;
   if (error.message?.includes("not_a_milestone")) return 400;
   if (error.message?.includes("goal_not_found_or_access_denied")) return 404;
   if (error.message?.includes("log_not_found_or_access_denied")) return 404;
@@ -209,10 +208,6 @@ function getRpcHttpStatus(error: DbErrorLike) {
 function getRpcClientMessage(error: DbErrorLike, fallback: string) {
   if (isRpcMissing(error)) {
     return "Required milestone database migration is not installed.";
-  }
-
-  if (error.message?.includes("milestone_limit_reached")) {
-    return "You cannot record more than 2 big milestones per goal. Delete an existing one to add a new one.";
   }
 
   if (error.message?.includes("not_a_milestone")) {
@@ -332,34 +327,6 @@ export async function POST(req: Request) {
         { error: "Goal not found or access denied" },
         { status: 404 },
       );
-    }
-
-    // 0. Enforce 2-milestone-per-goal limit
-    const { data: existingLogs, error: existingError } = await supabase
-      .from("daily_logs")
-      .select("id, breakdown")
-      .eq("goal_id", goalId);
-
-    if (existingError) {
-      console.error("Failed to count existing milestones:", existingError);
-    } else {
-      const milestoneCount = (existingLogs || []).filter(
-        (row: { breakdown: unknown }) =>
-          isRecord(row.breakdown) && Boolean(row.breakdown.milestone),
-      ).length;
-      if (milestoneCount >= 2) {
-        return NextResponse.json(
-          {
-            success: false,
-            status: "limit_reached",
-            message:
-              language === "ar"
-                ? "لا يمكن تسجيل أكثر من إنجازين كبيرين لكل هدف. احذف إنجازاً سابقاً لتسجيل واحد جديد."
-                : "You cannot record more than 2 big milestones per goal. Delete an existing one to add a new one.",
-          },
-          { status: 400 },
-        );
-      }
     }
 
     // 1. Evaluate Milestone

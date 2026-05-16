@@ -347,12 +347,14 @@ export class GeminiService {
   private static async callWithRetry(config: any, content: any): Promise<any> {
     let lastError: any = null;
 
+    const contents = Array.isArray(content) ? content : [content];
+
     for (const model of MODEL_FALLBACK_CHAIN) {
       try {
         const response = await ai.models.generateContent({
           model,
           config,
-          contents: [content],
+          contents,
         });
         console.log(`Gemini call succeeded with model: ${model}`);
         return response;
@@ -374,7 +376,7 @@ export class GeminiService {
             const retryResponse = await ai.models.generateContent({
               model,
               config,
-              contents: [content],
+              contents,
             });
             console.log(`Gemini 503 retry succeeded with model: ${model}`);
             return retryResponse;
@@ -1354,6 +1356,102 @@ ${userInput}
     } catch (error) {
       console.error("Gemini evaluateMilestone Error:", error);
       throw error;
+    }
+  }
+
+  static async chatAboutGoal(
+    goal: {
+      title: string;
+      ai_summary?: string;
+      created_at?: string;
+      current_points?: number;
+      target_points?: number;
+    },
+    userLanguage: 'ar' | 'en',
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    userMessage: string,
+  ): Promise<string> {
+    const safetyCheck = GeminiService.checkContentSafety(userMessage);
+    if (!safetyCheck.isSafe) {
+      return userLanguage === 'ar'
+        ? 'عذراً، لا يمكنني الرد على هذا. دعنا نرجع لهدفك.'
+        : 'Sorry, I cannot respond to that. Let\'s get back to your goal.';
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let daysSinceStart = 0;
+    if (goal.created_at) {
+      const start = new Date(goal.created_at);
+      const now = new Date();
+      daysSinceStart = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    const systemPrompt = userLanguage === 'ar'
+      ? `أنت مدرب شخصي ذكي داخل تطبيق METRIX. دورك الوحيد هو مساعدة المستخدم في التحدث عن هدفه الحالي ومتابعة تقدمه.
+
+📌 معلومات الهدف الحالي:
+- عنوان الهدف: ${goal.title}
+- تاريخ البدء: ${goal.created_at || 'غير محدد'} (تاريخ اليوم هو ${todayStr})
+- النقاط الحالية: ${goal.current_points || 0} من أصل ${goal.target_points || 0}
+- عدد الأيام منذ البدء: ${daysSinceStart} يوماً
+- ملخص الهدف: ${goal.ai_summary || 'لا يوجد ملخص'}
+
+🛑 قواعد صارمة جداً:
+1. أجب فقط على الأسئلة المتعلقة بـ "${goal.title}".
+2. قدم معلومات ونصائح وتوجيهات تخص هذا الهدف وحالته فقط.
+3. إذا سألك المستخدم عن أي موضوع خارجي، اعتذر بلطف: "أنا هنا فقط لمساعدتك في هدفك [${goal.title}]، دعنا نعود للتركيز عليه 🙌"
+4. اجعل إجاباتك قصيرة، محفزة، ومباشرة (2-4 جمل).
+5. يمكنك حساب كم يوم/شهر مضى على الهدف بناءً على dates أعلاه.`
+      : `You are a smart personal coach inside METRIX. Your only role is to help the user talk about their current goal and track progress.
+
+📌 Current Goal Info:
+- Goal Title: ${goal.title}
+- Start Date: ${goal.created_at || 'Not set'} (Today is ${todayStr})
+- Current Points: ${goal.current_points || 0} out of ${goal.target_points || 0}
+- Days Since Start: ${daysSinceStart} days
+- Goal Summary: ${goal.ai_summary || 'No summary available'}
+
+🛑 Strict Rules:
+1. Only answer questions related to "${goal.title}".
+2. Provide tips, insights, and guidance specific to this goal only.
+3. If the user asks about anything outside the goal: "I'm here only to help you with your goal [${goal.title}], let's stay focused on it 🙌"
+4. Keep responses short, motivating, and direct (2-4 sentences).
+5. You can calculate how many days/months have passed since the goal started.`;
+
+    const history = messages.slice(-6).map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    try {
+      const response = await GeminiService.callWithRetry(
+        {
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+            role: 'system',
+          },
+        },
+        [
+          ...history,
+          { role: 'user', parts: [{ text: userMessage }] },
+        ],
+      );
+
+      const responseText = response.text || '';
+      if (!responseText) throw new Error('Empty response from Gemini API');
+
+      return responseText;
+    } catch (error) {
+      console.error('Gemini chatAboutGoal Error:', error);
+      if (error instanceof GeminiQuotaError) {
+        return userLanguage === 'ar'
+          ? 'عذراً، وصلت للحد الأقصى للاستخدام حالياً. حاول بعد شوي.'
+          : 'Sorry, I\'ve reached the usage limit. Try again in a bit.';
+      }
+      return userLanguage === 'ar'
+        ? 'عذراً، صار خطأ. حاول مرة ثانية.'
+        : 'Sorry, something went wrong. Please try again.';
     }
   }
 
