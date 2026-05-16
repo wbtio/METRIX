@@ -14,17 +14,32 @@ export async function POST() {
     }
 
     const linkCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    const { error: upsertError } = await supabase
+    // Insert into telegram_link_codes — this is the table the webhook's /start handler reads from
+    const { error: insertError } = await supabase
+      .from('telegram_link_codes')
+      .insert({
+        code: linkCode,
+        user_id: user.id,
+        expires_at: expiresAt,
+      });
+
+    if (insertError) {
+      console.error('Insert Link Code Error:', insertError);
+      return NextResponse.json({ error: 'Failed to create link code' }, { status: 500 });
+    }
+
+    // Also upsert into telegram_links for legacy/persistent tracking (non-critical)
+    const { error: legacyError } = await supabase
       .from('telegram_links')
       .upsert(
         { user_id: user.id, link_code: linkCode },
         { onConflict: 'user_id' }
       );
 
-    if (upsertError) {
-      console.error('Telegram link upsert error:', upsertError);
-      return NextResponse.json({ error: 'Failed to create link code' }, { status: 500 });
+    if (legacyError) {
+      console.error('Legacy telegram_links upsert error:', legacyError);
     }
 
     const botName = process.env.TELEGRAM_BOT_NAME || 'metrixe_bot';
