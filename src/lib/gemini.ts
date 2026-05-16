@@ -1419,7 +1419,8 @@ ${userInput}
 4. Keep responses short, motivating, and direct (2-4 sentences).
 5. You can calculate how many days/months have passed since the goal started.`;
 
-    const history = messages.slice(-6).map((m) => ({
+    const safeMessages = Array.isArray(messages) ? messages : [];
+    const history = safeMessages.slice(-6).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
