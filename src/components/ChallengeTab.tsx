@@ -223,20 +223,20 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
 
       <ScrollArea className="flex-1 min-h-0" dir={isArabic ? 'rtl' : 'ltr'}>
         <div className="space-y-2.5 pr-0.5">
-        <section className="rounded-2xl border border-border/80 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm shadow-black/[0.03] dark:bg-card/50 dark:from-card/70 dark:via-card/60 dark:to-background/30 sm:p-4">
+        <section className="rounded-xl border border-border/60 bg-card p-3 shadow-sm shadow-black/[0.02] sm:p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-5/14 text-chart-5 ring-1 ring-chart-5/25">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-muted/40 border border-border/40 text-muted-foreground">
                 <Users className="h-4 w-4" />
               </div>
-              <div className="text-sm font-black text-foreground">
+              <div className="text-sm font-bold tracking-tight text-foreground">
                 {isArabic ? 'التحدي مع الأصدقاء' : 'Challenge with Friends'}
               </div>
             </div>
             <button
               type="button"
               onClick={() => setIsChallengePanelCollapsed((prev) => !prev)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-[11px] font-black text-muted-foreground transition-colors hover:bg-muted dark:bg-background/20"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-muted px-2.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:opacity-90 active:scale-[0.98]"
               aria-expanded={!isChallengePanelCollapsed}
             >
               {isChallengePanelCollapsed ? (
@@ -277,7 +277,7 @@ export default function ChallengeTab({ goalId, currentPoints, targetPoints, lang
                 />
               </div>
 
-              <div className="my-4 h-px bg-border/60" />
+              <div className="my-3 h-px bg-border/40" />
 
               <HistoryCard
                 history={history}

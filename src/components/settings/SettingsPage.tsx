@@ -649,7 +649,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
     return (
         <div
-            className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 flex-1 flex flex-col"
+            className="w-full max-w-4xl 2xl:max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-500 flex-1 flex flex-col gap-4"
             dir={isArabic ? 'rtl' : 'ltr'}
         >
             <MatrixManifestoDialog
@@ -658,18 +658,18 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
             />
             <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
                 <DialogContent
-                    className="max-h-[90dvh] overflow-y-auto w-[95vw] sm:max-w-lg gap-0 p-0"
+                    className="max-h-[90dvh] overflow-y-auto w-[95vw] sm:max-w-lg gap-0 p-0 rounded-2xl sm:rounded-[22px]"
                     dir={isArabic ? 'rtl' : 'ltr'}
                 >
                     {/* Header */}
-                    <div className={`${isArabic ? 'text-right' : 'text-left'} p-5 sm:p-6 border-b border-border/50`}>
-                        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 ring-1 ring-cyan-500/20">
+                    <div className={`${isArabic ? 'text-right' : 'text-left'} p-5 sm:p-6 border-b border-border/40`}>
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/[0.08] border border-cyan-500/15">
                             <Bot className="h-5 w-5 text-cyan-600" />
                         </div>
-                        <DialogTitle className="text-lg sm:text-xl">
+                        <DialogTitle className="text-lg sm:text-xl font-bold">
                             {isArabic ? 'ربط تيليغرام مع METRIX' : 'Connect Telegram to METRIX'}
                         </DialogTitle>
-                        <DialogDescription className="mt-1.5 text-sm leading-relaxed">
+                        <DialogDescription className="mt-1.5 text-sm leading-relaxed text-muted-foreground/80">
                             {isArabic
                                 ? 'اربط حسابك حتى تصلك رسالة تأكيد داخل البوت، وبعدها تذكيرات الأهداف عند الحاجة.'
                                 : 'Link your account to receive a confirmation message in the bot, then goal reminders when needed.'}
@@ -679,23 +679,23 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     {/* Body */}
                     <div className="p-5 sm:p-6 space-y-4">
                         {telegramError && (
-                            <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-xs font-semibold leading-5 text-destructive">
+                            <div className="rounded-xl border border-destructive/15 bg-destructive/[0.04] px-4 py-3 text-xs font-semibold leading-5 text-destructive">
                                 {telegramError}
                             </div>
                         )}
 
                         {telegramLinked ? (
                             /* Linked state */
-                            <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-emerald-500/[0.02] p-4 sm:p-5">
+                            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4 sm:p-5">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500/[0.08] border border-emerald-500/15">
                                         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                                     </div>
                                     <p className="text-sm font-bold text-foreground">
                                         {isArabic ? 'تم الربط بنجاح' : 'Successfully Linked'}
                                     </p>
                                 </div>
-                                <p className="text-xs leading-6 text-muted-foreground">
+                                <p className="text-xs leading-relaxed text-muted-foreground">
                                     {isArabic
                                         ? `تيليغرام مربوط الآن${telegramUsername ? ` بحساب @${telegramUsername}` : ''}. رسالة التأكيد وصلت داخل البوت.`
                                         : `Telegram is linked${telegramUsername ? ` to @${telegramUsername}` : ''}. The confirmation message was sent inside the bot.`}
@@ -703,9 +703,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             </div>
                         ) : (
                             /* Steps */
-                            <div className="rounded-2xl border border-border/60 bg-muted/15 p-4 sm:p-5">
+                            <div className="rounded-xl border border-border/50 bg-card/40 p-4 sm:p-5">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-cyan-500/[0.08] border border-cyan-500/15">
                                         <MessageCircle className="h-5 w-5 text-cyan-600" />
                                     </div>
                                     <p className="text-sm font-bold text-foreground">
@@ -719,8 +719,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         isArabic ? 'اضغط Start داخل تيليغرام.' : 'Tap Start inside Telegram.',
                                         isArabic ? 'راح توصلك رسالة تأكيد داخل البوت، والموقع يحدّث الحالة تلقائياً.' : 'The bot sends a confirmation, and this page updates automatically.',
                                     ].map((text, i) => (
-                                        <div key={i} className={`flex items-start gap-3 py-2.5 ${i < 2 ? 'border-b border-border/40' : ''}`}>
-                                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-black text-foreground/60 mt-0.5">
+                                        <div key={i} className={`flex items-start gap-3 py-2.5 ${i < 2 ? 'border-b border-border/30' : ''}`}>
+                                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] border border-primary/10 text-[11px] font-bold text-primary/70 mt-0.5">
                                                 {i + 1}
                                             </div>
                                             <p className={`text-xs leading-5 text-muted-foreground ${isArabic ? 'text-right' : 'text-left'} flex-1 pt-0.5`}>
@@ -731,11 +731,11 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 </div>
 
                                 {telegramLinkCode && (
-                                    <div className="mt-4 rounded-xl border border-border/60 bg-background/80 px-4 py-3">
+                                    <div className="mt-4 rounded-xl border border-border/50 bg-background/70 px-4 py-3">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                                             {isArabic ? 'كود الربط' : 'Link code'}
                                         </p>
-                                        <p className="font-mono text-base font-bold tracking-[0.3em] text-foreground select-all">
+                                        <p className="font-mono text-base font-bold tracking-[0.2em] text-foreground select-all">
                                             {telegramLinkCode}
                                         </p>
                                     </div>
@@ -745,13 +745,13 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     </div>
 
                     {/* Footer */}
-                    <div className="flex-col sm:flex-row items-stretch sm:items-center gap-3 border-t border-border/50 px-5 sm:px-6 py-4 bg-muted/10">
+                    <div className="flex-col sm:flex-row items-stretch sm:items-center gap-2.5 border-t border-border/40 px-5 sm:px-6 py-4 bg-muted/[0.03]">
                         {telegramDeepLink && !telegramLinked && (
                             <a
                                 href={telegramDeepLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-xs transition-all hover:opacity-90 active:scale-[0.97] sm:flex-1"
+                                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 active:scale-[0.97] sm:flex-1"
                             >
                                 <Send className="h-4 w-4 shrink-0" />
                                 {t.openInTelegram}
@@ -764,7 +764,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 fetchTelegramStatus(true);
                             }}
                             disabled={telegramLoading || telegramRefreshing}
-                            className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground shadow-xs transition-all hover:bg-muted/50 active:scale-[0.97] disabled:opacity-50 sm:flex-1"
+                            className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-muted/40 active:scale-[0.97] disabled:opacity-50 sm:flex-1"
                         >
                             {telegramRefreshing ? (
                                 <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -777,53 +777,53 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                 </DialogContent>
             </Dialog>
 
-            <div className="bg-card/30 backdrop-blur-xl p-2.5 min-[400px]:p-3 sm:p-4 rounded-[16px] min-[400px]:rounded-[20px] sm:rounded-[28px] border border-border ring-1 ring-border/5 flex-1 flex flex-col min-h-0">
+            <div className="bg-card/40 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-[22px] border border-border/60 shadow-sm shadow-black/[0.02] flex-1 flex flex-col min-h-0">
                 {/* Tabs */}
-                <div className="flex gap-1 mb-3 sm:mb-4 p-0.5 sm:p-1 rounded-2xl bg-muted/40 border border-border/40">
+                <div className="flex gap-1 mb-3 p-1 rounded-xl bg-muted/50 border border-border/40 h-11">
                     <button
                         onClick={() => setActiveTab('general')}
                         className={cn(
-                            "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                            "flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
                             activeTab === 'general'
-                                ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
+                                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                         )}
                     >
-                        <Globe className="w-4 h-4" />
+                        <Globe className="w-4 h-4 opacity-80" />
                         {t.generalSettings}
                     </button>
                     <button
                         onClick={() => setActiveTab('profile')}
                         className={cn(
-                            "flex flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                            "flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
                             activeTab === 'profile'
-                                ? "bg-background/80 text-foreground shadow-sm ring-1 ring-border/60"
+                                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                         )}
                     >
-                        <User className="w-4 h-4" />
+                        <User className="w-4 h-4 opacity-80" />
                         {t.profileSettings}
                     </button>
                 </div>
 
-                <ScrollArea className="flex-1 min-h-0" dir={isArabic ? 'rtl' : 'ltr'}>
+                <ScrollArea className="flex-1 min-h-0 pr-1" dir={isArabic ? 'rtl' : 'ltr'}>
                     {activeTab === 'general' ? (
                     <>
-                    <div className="bg-card/40 rounded-2xl border border-border overflow-hidden divide-y divide-border/50">
+                    <div className="bg-card/40 rounded-2xl border border-border/60 overflow-hidden divide-y divide-border/40 shadow-sm shadow-black/[0.02]">
                         {/* Appearance */}
-                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/10 transition-colors">
+                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/5 transition-colors">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
                                     {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-primary" /> : <Sun className="w-3.5 h-3.5 text-primary" />}
                                 </div>
                                 <p className="font-bold text-foreground text-sm">{t.appearance}</p>
                             </div>
-                            <div className="flex gap-1 shrink-0 bg-muted/30 p-0.5 rounded-lg">
+                            <div className="flex gap-1 shrink-0 bg-muted/40 p-0.5 rounded-lg">
                                 <button
                                     onClick={() => handleThemeChange('light')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold transition-all duration-200",
-                                        theme === 'light' ? "bg-background text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        theme === 'light' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.lightMode}
                                 >
@@ -834,7 +834,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     onClick={() => handleThemeChange('dark')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold transition-all duration-200",
-                                        theme === 'dark' ? "bg-background text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        theme === 'dark' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.darkMode}
                                 >
@@ -845,19 +845,19 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                         </div>
 
                         {/* Language */}
-                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/10 transition-colors">
+                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/5 transition-colors">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
                                     <Globe className="w-3.5 h-3.5 text-primary" />
                                 </div>
                                 <p className="font-bold text-foreground text-sm">{t.language}</p>
                             </div>
-                            <div className="flex gap-1 shrink-0 bg-muted/30 p-0.5 rounded-lg">
+                            <div className="flex gap-1 shrink-0 bg-muted/40 p-0.5 rounded-lg">
                                 <button
                                     onClick={() => handleLanguageChange('en')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold transition-all duration-200",
-                                        language === 'en' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        language === 'en' ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.english}
                                 >
@@ -868,7 +868,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     onClick={() => handleLanguageChange('ar')}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold transition-all duration-200",
-                                        language === 'ar' ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+                                        language === 'ar' ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                                     )}
                                     title={t.arabic}
                                 >
@@ -879,24 +879,24 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                         </div>
 
                         {/* Notifications */}
-                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/10 transition-colors">
+                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/5 transition-colors">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className={cn("shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors", notifEnabled ? "bg-primary/10" : "bg-muted/50")}>
+                                <div className={cn("shrink-0 w-8 h-8 rounded-[10px] border flex items-center justify-center transition-colors", notifEnabled ? "bg-primary/[0.08] border-primary/10" : "bg-muted/40 border-border/30")}>
                                     {notifEnabled ? <Bell className="w-3.5 h-3.5 text-primary" /> : <BellOff className="w-3.5 h-3.5 text-muted-foreground" />}
                                 </div>
                                 <p className="font-bold text-foreground text-sm">{t.notifications}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                                 {notifPermission === 'unsupported' ? (
-                                    <span className="text-[10px] text-muted-foreground/60 font-medium bg-muted/30 px-2 py-0.5 rounded">{t.notificationsUnsupported}</span>
+                                    <span className="text-[10px] text-muted-foreground/60 font-medium bg-muted/30 px-2 py-0.5 rounded-full">{t.notificationsUnsupported}</span>
                                 ) : notifPermission === 'denied' ? (
-                                    <span className="text-[10px] text-destructive/70 font-medium bg-destructive/10 px-2 py-0.5 rounded">{t.notificationsBlocked}</span>
+                                    <span className="text-[10px] text-destructive/70 font-medium bg-destructive/[0.06] px-2 py-0.5 rounded-full">{t.notificationsBlocked}</span>
                                 ) : (
                                     <button
                                         onClick={handleToggleNotifications}
                                         className={cn(
                                             "relative w-9 h-5 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30",
-                                            notifEnabled ? "bg-primary" : "bg-muted-foreground/40"
+                                            notifEnabled ? "bg-primary" : "bg-muted-foreground/30"
                                         )}
                                         role="switch"
                                         aria-checked={notifEnabled}
@@ -914,26 +914,26 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                         {/* Per-Goal Reminders */}
                         <div className="p-3 sm:p-4">
                             <div className="flex items-center gap-2.5">
-                                <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
                                     <Clock className="w-3.5 h-3.5 text-primary" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-bold text-foreground text-sm">{t.goalReminders}</p>
-                                    <p className="text-[10px] text-muted-foreground">{t.goalRemindersDesc}</p>
+                                    <p className="text-[10px] text-muted-foreground/80">{t.goalRemindersDesc}</p>
                                 </div>
-                                <div className="flex flex-wrap items-center justify-end gap-1 max-w-[160px] sm:max-w-none">
+                                <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[160px] sm:max-w-none">
                                     <span className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-bold whitespace-nowrap",
+                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap",
                                         notifEnabled
-                                            ? "border-primary/20 bg-primary/10 text-primary"
+                                            ? "border-primary/15 bg-primary/[0.06] text-primary"
                                             : "border-border bg-muted/30 text-muted-foreground"
                                     )}>
                                         {isArabic ? 'المتصفح' : 'Browser'}
                                     </span>
                                     <span className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-bold whitespace-nowrap",
+                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap",
                                         telegramLinked
-                                            ? "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300"
+                                            ? "border-emerald-500/15 bg-emerald-500/[0.06] text-emerald-700 dark:text-emerald-300"
                                             : "border-border bg-muted/30 text-muted-foreground"
                                     )}>
                                         {telegramLinked ? (isArabic ? 'متصل' : 'Linked') : (isArabic ? 'غير متصل' : 'Off')}
@@ -941,7 +941,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 </div>
                             </div>
                             {!telegramLinked && notifPermission !== 'granted' && (
-                                <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-[11px] font-medium leading-5 text-muted-foreground">
+                                <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.03] px-3 py-2.5 text-[11px] font-medium leading-5 text-muted-foreground">
                                     {isArabic
                                         ? 'اربط تيليغرام حتى تصلك التذكيرات داخل البوت إذا إشعارات المتصفح غير متاحة.'
                                         : 'Link Telegram to receive reminders in the bot when browser notifications are unavailable.'}
@@ -950,8 +950,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
                             <div className="mt-3 space-y-2.5">
                                 {goals.length === 0 ? (
-                                    <div className="py-4 text-center">
-                                        <p className="text-xs text-muted-foreground">{t.noGoalsProfileHint}</p>
+                                    <div className="flex flex-col items-center justify-center gap-2 py-6 text-muted-foreground/60">
+                                        <Target className="w-5 h-5 opacity-50" />
+                                        <p className="text-xs font-medium">{t.noGoalsProfileHint}</p>
                                     </div>
                                 ) : (
                                     goals.map((goal) => {
@@ -963,11 +964,11 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         return (
                                             <div
                                                 key={goal.id}
-                                                className="rounded-xl border border-border/60 bg-background/70 p-3 transition-all duration-200 hover:border-border/80"
+                                                className="rounded-xl border border-border/60 bg-card p-3 transition-all duration-200 hover:border-border/80 hover:shadow-sm hover:-translate-y-px active:translate-y-0 dark:bg-card/50"
                                             >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div className="flex min-w-0 items-center gap-3">
-                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                <div className="flex items-center justify-between gap-2.5">
+                                                    <div className="flex min-w-0 items-center gap-2.5">
+                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/[0.08] border border-primary/10">
                                                             <GoalIcon className="h-4 w-4 text-primary" />
                                                         </div>
                                                         <div className="min-w-0">
@@ -991,7 +992,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                                 prev === goal.id ? null : goal.id,
                                                             )
                                                         }
-                                                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-foreground"
                                                         aria-label={isArabic ? 'تبديل عرض الأوقات' : 'Toggle reminder times'}
                                                     >
                                                         {isExpanded ? (
@@ -1003,22 +1004,25 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                 </div>
 
                                                 {isExpanded && (
-                                                    <div className="mt-3 pt-3 border-t border-border/40">
+                                                    <div className="mt-3 pt-3 border-t border-border/30">
                                                         {reminderCount === 0 ? (
-                                                            <div className="rounded-lg border border-dashed border-border/50 px-4 py-3 text-[11px] text-muted-foreground text-center">
-                                                                {isArabic
-                                                                    ? 'لا توجد أوقات مضافة لهذا الهدف. أضف وقتاً جديداً.'
-                                                                    : 'No reminder times added. Add a new time below.'}
+                                                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-muted-foreground/60">
+                                                                <Clock className="w-5 h-5 opacity-40" />
+                                                                <p className="text-[11px] text-center">
+                                                                    {isArabic
+                                                                        ? 'لا توجد أوقات مضافة. أضف وقتاً جديداً.'
+                                                                        : 'No reminder times added. Add a new time below.'}
+                                                                </p>
                                                             </div>
                                                         ) : (
                                                             <div className="space-y-1.5">
                                                                 {remindersForGoal.map((reminder) => (
                                                                     <div
                                                                         key={reminder.id}
-                                                                        className="grid h-9 grid-cols-[minmax(0,1fr)_80px_28px] sm:grid-cols-[minmax(0,1fr)_92px_30px] items-center gap-0.5 sm:gap-1 rounded-md border border-border/60 bg-background/80 p-0.5 shadow-xs"
+                                                                        className="grid h-9 grid-cols-[minmax(0,1fr)_80px_28px] sm:grid-cols-[minmax(0,1fr)_92px_30px] items-center gap-0.5 sm:gap-1 rounded-lg border border-border/50 bg-background/70 p-0.5"
                                                                     >
-                                                                        <div className="flex h-8 min-w-0 items-center gap-1 rounded-[6px] bg-background px-2">
-                                                                            <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                        <div className="flex h-8 min-w-0 items-center gap-1 rounded-md bg-background/80 px-2">
+                                                                            <Clock className="h-3 w-3 shrink-0 text-muted-foreground/60" />
                                                                             <Input
                                                                                 type="time"
                                                                                 value={reminder.reminder_time}
@@ -1028,7 +1032,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                                                     })
                                                                                 }
                                                                                 aria-label={isArabic ? 'وقت التذكير' : 'Reminder time'}
-                                                                                className="h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs font-bold shadow-none focus-visible:ring-0"
+                                                                                className="h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs font-semibold shadow-none focus-visible:ring-0"
                                                                             />
                                                                         </div>
                                                                         <Select
@@ -1042,7 +1046,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                                             <SelectTrigger
                                                                                 size="sm"
                                                                                 aria-label={isArabic ? 'عدد التذكيرات' : 'Reminder attempts'}
-                                                                                className="h-8 w-full border-border/70 bg-background px-2 text-xs font-bold shadow-none"
+                                                                                className="h-8 w-full border-border/50 bg-background/80 px-2 text-xs font-semibold shadow-none"
                                                                             >
                                                                                 <SelectValue />
                                                                             </SelectTrigger>
@@ -1059,7 +1063,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                                             variant="ghost"
                                                                             size="icon-xs"
                                                                             onClick={() => handleDeleteGoalReminder(reminder.id)}
-                                                                            className="h-8 w-[30px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                            className="h-8 w-[30px] text-destructive/70 hover:bg-destructive/[0.08] hover:text-destructive"
                                                                             title={isArabic ? 'حذف' : 'Remove'}
                                                                         >
                                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -1074,7 +1078,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                             variant="secondary"
                                                             size="sm"
                                                             onClick={() => handleAddGoalReminder(goal.id)}
-                                                            className="mt-2.5 h-8 w-full bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20"
+                                                            className="mt-2.5 h-8 w-full bg-primary/[0.08] text-xs font-semibold text-primary hover:bg-primary/15 border border-primary/10"
                                                         >
                                                             <Plus className="me-1 h-3 w-3" />
                                                             {t.addTime}
@@ -1090,9 +1094,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     </div>
 
                     {/* Matrix Story */}
-                    <div className="mt-3 rounded-2xl border border-border/60 bg-card/30 p-3 sm:p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="mt-3 rounded-2xl border border-border/60 bg-card/30 p-3 sm:p-4 shadow-sm shadow-black/[0.02]">
+                        <div className="flex items-center gap-2.5">
+                            <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
                                 <ScrollText className="w-3.5 h-3.5 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1101,7 +1105,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             <button
                                 type="button"
                                 onClick={() => setIsManifestoOpen(true)}
-                                className="shrink-0 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.97]"
+                                className="shrink-0 rounded-lg bg-primary/[0.08] border border-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary/15 active:scale-[0.97]"
                             >
                                 {t.readStory}
                             </button>
@@ -1109,14 +1113,14 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     </div>
 
                     {/* Telegram Bot */}
-                    <div className="mt-3 rounded-2xl border border-border/60 bg-card/30 p-3 sm:p-4">
+                    <div className="mt-3 rounded-2xl border border-border/60 bg-card/30 p-3 sm:p-4 shadow-sm shadow-black/[0.02]">
                         <div className="flex items-center gap-2.5">
-                            <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
                                 <MessageCircle className="w-3.5 h-3.5 text-primary" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="font-bold text-foreground text-sm leading-tight">{t.telegramBot}</p>
-                                <p className="text-[10px] text-muted-foreground line-clamp-1">{t.telegramBotDesc}</p>
+                                <p className="text-[10px] text-muted-foreground/80 line-clamp-1">{t.telegramBotDesc}</p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                                 <Button
@@ -1124,14 +1128,14 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     variant="outline"
                                     size="icon-sm"
                                     onClick={() => setTelegramGuideOpen(true)}
-                                    className="bg-background/70 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                                    className="bg-background/70 text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground border-border/50"
                                     title={isArabic ? 'شرح الربط' : 'Connection guide'}
                                 >
                                     <CircleHelp className="h-3.5 w-3.5" />
                                 </Button>
                                 {telegramLinked ? (
-                                    <div className="flex max-w-[140px] sm:max-w-[200px] items-center overflow-hidden rounded-lg border border-border bg-background/75">
-                                        <span className="min-w-0 flex-1 truncate border-e border-border px-2 text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                    <div className="flex max-w-[140px] sm:max-w-[200px] items-center overflow-hidden rounded-lg border border-border/60 bg-background/80">
+                                        <span className="min-w-0 flex-1 truncate border-e border-border/40 px-2 text-[11px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                                             {telegramUsername ? `@${telegramUsername}` : t.telegramConnected}
                                         </span>
                                         <Button
@@ -1140,7 +1144,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                             size="sm"
                                             onClick={handleDisconnectTelegram}
                                             disabled={telegramLoading}
-                                            className="h-8 shrink-0 rounded-none px-1.5 sm:px-2 text-[11px] sm:text-xs font-bold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            className="h-8 shrink-0 rounded-none px-1.5 sm:px-2 text-[11px] sm:text-xs font-semibold text-destructive/70 hover:bg-destructive/[0.08] hover:text-destructive"
                                         >
                                             {telegramLoading ? '...' : t.disconnectTelegram}
                                         </Button>
@@ -1149,7 +1153,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     <Button
                                         asChild
                                         size="sm"
-                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-bold"
+                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-semibold"
                                     >
                                         <a
                                         href={telegramDeepLink}
@@ -1157,8 +1161,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         rel="noopener noreferrer"
                                         >
                                             <Send className="w-3 h-3" />
-                                            <span className="hidden xs:inline">{t.openInTelegram}</span>
-                                            <span className="xs:hidden">{t.openInTelegram}</span>
+                                            <span className="hidden sm:inline">{t.openInTelegram}</span>
                                         </a>
                                     </Button>
                                 ) : (
@@ -1167,7 +1170,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         size="sm"
                                         onClick={handleGenerateTelegramLink}
                                         disabled={telegramLoading}
-                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-bold"
+                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-semibold"
                                     >
                                         {telegramLoading ? '...' : t.connectTelegram}
                                     </Button>
@@ -1177,31 +1180,31 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     </div>
                     </>
                 ) : (
-                    <div className="space-y-5 px-1 py-1 sm:px-2">
+                    <div className="space-y-4 px-0.5 py-0.5 sm:px-1">
                         {/* Profile section */}
-                        <section className="space-y-4">
+                        <section className="space-y-3">
                             {profileMessage && (
                                 <div className={cn(
-                                    "text-xs font-medium px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200",
-                                    profileMessage.type === 'success' ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"
+                                    "text-xs font-medium px-3 py-2 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200",
+                                    profileMessage.type === 'success' ? "bg-emerald-500/[0.06] text-emerald-600 border border-emerald-500/10" : "bg-destructive/[0.06] text-destructive border border-destructive/10"
                                 )}>
                                     {profileMessage.text}
                                 </div>
                             )}
 
                             {/* Profile Picture + Name Row */}
-                            <div className="flex items-center gap-4 rounded-2xl bg-background/55 px-4 py-4 ring-1 ring-border/40 transition-all hover:ring-border/60">
+                            <div className="flex items-center gap-3 rounded-xl bg-card/40 border border-border/40 px-3 py-3 sm:px-4 sm:py-4 transition-all hover:border-border/60 shadow-sm shadow-black/[0.02]">
                                 <div className="relative group shrink-0">
-                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-muted/50 border-2 border-border/80 flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.02]">
+                                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-muted/40 border border-border/60 flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.02]">
                                         {avatarUrl ? (
                                             <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-xl font-black text-muted-foreground">
+                                            <span className="text-lg sm:text-xl font-bold text-muted-foreground">
                                                 {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                                             </span>
                                         )}
                                     </div>
-                                    <div className="absolute inset-0 rounded-full bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-1.5">
+                                    <div className="absolute inset-0 rounded-full bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-1">
                                         <input
                                             ref={fileInputRef}
                                             type="file"
@@ -1212,7 +1215,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={updatingProfile}
-                                            className="p-1.5 rounded-full bg-white/90 hover:bg-white text-foreground shadow-sm transition-all hover:scale-110"
+                                            className="p-1 rounded-full bg-white/90 hover:bg-white text-foreground shadow-sm transition-all hover:scale-110"
                                             title={t.changePhoto}
                                         >
                                             <Camera className="w-3 h-3" />
@@ -1221,7 +1224,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                             <button
                                                 onClick={handleRemovePhoto}
                                                 disabled={updatingProfile}
-                                                className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white shadow-sm transition-all hover:scale-110"
+                                                className="p-1 rounded-full bg-destructive/90 hover:bg-destructive text-white shadow-sm transition-all hover:scale-110"
                                                 title={t.removePhoto}
                                             >
                                                 <Trash2 className="w-3 h-3" />
@@ -1236,12 +1239,12 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                             value={displayName}
                                             onChange={(e) => setDisplayName(e.target.value)}
                                             placeholder={user?.email?.split('@')[0] || ''}
-                                            className="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                                            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-border/60 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
                                         />
                                         <button
                                             onClick={handleDisplayNameSave}
                                             disabled={updatingProfile}
-                                            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold transition-all disabled:opacity-50 active:scale-[0.97]"
+                                            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold transition-all disabled:opacity-50 active:scale-[0.97] hover:opacity-90"
                                         >
                                             {updatingProfile && (
                                                 <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -1249,13 +1252,13 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                             {t.saveChanges}
                                         </button>
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground/70 mt-1.5 truncate">{user?.email || '—'}</p>
+                                    <p className="text-[11px] text-muted-foreground/70 mt-1 truncate">{user?.email || '—'}</p>
                                 </div>
                             </div>
 
                             {/* Account Stats — Ultra Compact */}
-                            <div className="pt-2">
-                                <div className="mb-3 flex items-center justify-between">
+                            <div className="pt-1">
+                                <div className="mb-2 flex items-center justify-between">
                                     <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                                         <Target className="w-3.5 h-3.5 text-primary" />
                                         {t.account}
@@ -1277,26 +1280,29 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                     ].map((stat, i) => (
                                         <div
                                             key={i}
-                                            className="rounded-xl bg-background/55 px-2 py-2.5 text-center ring-1 ring-border/45 transition-all duration-200 hover:bg-background/80 hover:ring-border/70 hover:-translate-y-0.5"
+                                            className="rounded-xl bg-card/40 border border-border/40 px-2 py-2.5 text-center transition-all duration-200 hover:bg-card/60 hover:border-border/60 hover:-translate-y-px hover:shadow-sm"
                                         >
-                                            <p className="text-base font-black leading-tight text-foreground tabular-nums">{stat.value}</p>
-                                            <p className={cn("text-[10px] leading-tight font-semibold text-muted-foreground mt-0.5", !isArabic && "uppercase")}>{stat.label}</p>
+                                            <p className="text-base font-bold leading-tight text-foreground tabular-nums">{stat.value}</p>
+                                            <p className={cn("text-[10px] leading-tight font-medium text-muted-foreground mt-0.5", !isArabic && "uppercase")}>{stat.label}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </section>
 
-                        <div className="h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+                        <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
                         {/* My Goals — Compact Export Section */}
-                        <section className="pt-0">
-                            <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-foreground">
+                        <section>
+                            <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
                                 <Target className="w-3.5 h-3.5 text-primary" />
                                 {t.myGoalsSection}
                             </p>
                             {goals.length === 0 ? (
-                                <p className="text-xs text-muted-foreground text-center py-4">{t.noGoalsProfileHint}</p>
+                                <div className="flex flex-col items-center justify-center gap-2 py-6 text-muted-foreground/60">
+                                    <Target className="w-5 h-5 opacity-50" />
+                                    <p className="text-xs font-medium">{t.noGoalsProfileHint}</p>
+                                </div>
                             ) : (
                                 <div className="space-y-2">
                                     {goals.map((goal) => {
@@ -1306,9 +1312,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                         return (
                                             <div
                                                 key={goal.id}
-                                                className="flex items-center gap-3 rounded-xl bg-background/55 px-3 py-2.5 ring-1 ring-border/40 transition-all duration-200 hover:bg-muted/20 hover:ring-border/60 hover:shadow-sm"
+                                                className="flex items-center gap-2.5 rounded-xl bg-card/40 border border-border/40 px-3 py-2.5 transition-all duration-200 hover:bg-card/60 hover:border-border/60 hover:shadow-sm hover:-translate-y-px"
                                             >
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/[0.08] border border-primary/10">
                                                     <GoalIcon className="w-3.5 h-3.5 text-primary" />
                                                 </div>
                                                 <p className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">{goal.title}</p>
@@ -1318,8 +1324,8 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                                     className={cn(
                                                         "shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all duration-200",
                                                         isExporting
-                                                            ? "bg-primary/10 text-primary cursor-wait"
-                                                            : "bg-muted/40 text-muted-foreground hover:bg-primary/10 hover:text-primary border border-border/50 hover:border-primary/30 active:scale-[0.96]"
+                                                            ? "bg-primary/[0.06] text-primary cursor-wait"
+                                                            : "bg-muted/30 text-muted-foreground hover:bg-primary/[0.08] hover:text-primary border border-border/40 hover:border-primary/15 active:scale-[0.96]"
                                                     )}
                                                     title={t.exportGoal}
                                                 >
@@ -1337,17 +1343,17 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             )}
                         </section>
 
-                        <div className="h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+                        <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
                         {/* Sign Out */}
                         <button
                             onClick={handleSignOut}
                             disabled={signingOut}
                             className={cn(
-                                "w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 font-bold text-xs shrink-0",
+                                "w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all duration-200 font-semibold text-xs shrink-0",
                                 signingOut
-                                    ? "bg-muted/30 border-border/30 text-muted-foreground cursor-not-allowed"
-                                    : "border-destructive/25 text-destructive/90 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive active:scale-[0.98] shadow-sm hover:shadow-md"
+                                    ? "bg-muted/20 border-border/30 text-muted-foreground cursor-not-allowed"
+                                    : "border-destructive/20 text-destructive/80 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive active:scale-[0.98] shadow-sm hover:shadow-md"
                             )}
                         >
                             {signingOut ? (

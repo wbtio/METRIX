@@ -82,61 +82,61 @@ export default function DashboardHeader({
   const dateLocale = localeWithEnglishDigits(language);
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-white dark:bg-card/50 p-2.5 sm:p-4 space-y-2.5 sm:space-y-3">
+    <div className="rounded-2xl border border-border/60 bg-card p-3 sm:p-4 space-y-3 shadow-sm shadow-black/[0.02] dark:bg-card/60">
       <div className="flex items-start justify-between gap-2.5 sm:gap-3">
         <div
-          className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0"
+          className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0"
           dir={isArabic ? "rtl" : "ltr"}
         >
           <GoalIconPicker
             currentIconName={goal.icon || "Target"}
             onSelect={onUpdateIcon}
           >
-            <button className="h-10 w-10 sm:h-12 sm:w-12 p-2.5 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-colors rounded-xl sm:rounded-2xl flex items-center justify-center cursor-pointer border border-primary/15 shadow-sm hover:shadow-md">
+            <button className="h-10 w-10 sm:h-11 sm:w-11 p-2 shrink-0 bg-primary/[0.08] text-primary hover:bg-primary/[0.12] transition-colors duration-200 rounded-[10px] flex items-center justify-center cursor-pointer border border-primary/10">
               {getGoalIcon(goal.icon)}
             </button>
           </GoalIconPicker>
           <div className="min-w-0 flex-1">
             <h1
               className={cn(
-                "text-[15px] min-[400px]:text-base sm:text-lg font-black text-foreground line-clamp-2",
+                "text-[15px] sm:text-base font-bold text-foreground line-clamp-2 tracking-tight leading-snug",
                 titleDir === "rtl" ? "text-right" : "text-left",
               )}
               dir={titleDir}
             >
               {goal.title}
             </h1>
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
+            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
               {goal.is_pinned && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600/90 dark:text-amber-400/90">
-                  <Pin className="w-3 h-3" /> {isArabic ? "مثبت" : "Pinned"}
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/[0.08] px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/10">
+                  <Pin className="w-2.5 h-2.5" /> {isArabic ? "مثبت" : "Pinned"}
                 </span>
               )}
               {goalEndDaysChip && (
                 <span
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tabular-nums",
+                    "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums border",
                     goalEndDaysChip.tone === "soon" &&
-                      "bg-primary/10 text-primary/90 dark:text-primary",
+                      "bg-primary/[0.06] text-primary border-primary/10",
                     goalEndDaysChip.tone === "today" &&
-                      "bg-amber-500/10 text-amber-700/90 dark:text-amber-400",
+                      "bg-amber-500/[0.06] text-amber-700 dark:text-amber-400 border-amber-500/10",
                     goalEndDaysChip.tone === "late" &&
-                      "bg-destructive/10 text-destructive/90 dark:text-destructive",
+                      "bg-destructive/[0.06] text-destructive border-destructive/10",
                   )}
                   title={goalEndDaysChip.title}
                 >
-                  <Clock className="w-3 h-3 shrink-0" aria-hidden />
+                  <Clock className="w-2.5 h-2.5 shrink-0" aria-hidden />
                   <span className="truncate">{goalEndDaysChip.text}</span>
                 </span>
               )}
               {streak > 0 && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-chart-5/10 px-1.5 py-0.5 text-[9px] font-semibold text-chart-5 dark:bg-chart-3/10 dark:text-chart-3">
-                  <Flame className="w-3 h-3" /> {formatNumberEn(streak)}
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-chart-5/[0.06] px-2 py-0.5 text-[10px] font-semibold text-chart-5 dark:text-chart-3 border border-chart-5/10">
+                  <Flame className="w-2.5 h-2.5" /> {formatNumberEn(streak)}
                 </span>
               )}
               {taskCount > 0 && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5 text-[9px] font-semibold text-primary tabular-nums">
-                  <ListChecks className="w-3 h-3 shrink-0" aria-hidden />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-primary tabular-nums border border-border/30">
+                  <ListChecks className="w-2.5 h-2.5 shrink-0" aria-hidden />
                   <span dir="ltr">
                     {formatNumberEn(completedTaskCount)}/
                     {formatNumberEn(taskCount)}
@@ -151,10 +151,10 @@ export default function DashboardHeader({
           <DropdownMenu dir={isArabic ? "rtl" : "ltr"}>
             <DropdownMenuTrigger asChild>
               <button
-                className="p-2 sm:p-2.5 rounded-xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-transparent hover:border-border/60"
+                className="p-2 rounded-lg hover:bg-muted/50 text-muted-foreground/70 hover:text-foreground transition-all border border-transparent hover:border-border/40"
                 title={isArabic ? "خيارات الهدف" : "Goal Options"}
               >
-                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                <MoreVertical className="w-4 h-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -213,12 +213,12 @@ export default function DashboardHeader({
       {/* Goal Details (collapsible) */}
       {showGoalDetails && (
         <div
-          className="pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200"
           dir={isArabic ? "rtl" : "ltr"}
         >
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "تاريخ البدء" : "Start Date"}
               </p>
               <p className="text-xs font-bold text-foreground">
@@ -229,8 +229,8 @@ export default function DashboardHeader({
                 })}
               </p>
             </div>
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "تاريخ الانتهاء" : "End Date"}
               </p>
               <p className="text-xs font-bold text-foreground">
@@ -240,32 +240,32 @@ export default function DashboardHeader({
                 )}
               </p>
             </div>
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "إجمالي الأيام" : "Total Days"}
               </p>
               <p className="text-xs font-bold text-foreground">
                 {formatNumberEn(goal.total_days)} {isArabic ? "يوم" : "days"}
               </p>
             </div>
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "النقاط الحالية" : "Current Points"}
               </p>
               <p className="text-xs font-bold text-foreground">
                 {formatNumberEn(goal.current_points)}
               </p>
             </div>
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "النقاط المستهدفة" : "Target Points"}
               </p>
               <p className="text-xs font-bold text-foreground">
                 {formatNumberEn(goal.target_points)}
               </p>
             </div>
-            <div className="bg-muted/30 rounded-xl p-2.5">
-              <p className="text-[10px] text-muted-foreground font-semibold mb-0.5">
+            <div className="bg-muted/20 rounded-xl p-2.5 border border-border/30">
+              <p className="text-[10px] text-muted-foreground/80 font-semibold mb-1">
                 {isArabic ? "الحالة" : "Status"}
               </p>
               <p className="text-xs font-bold text-foreground capitalize">
@@ -274,7 +274,7 @@ export default function DashboardHeader({
             </div>
           </div>
           {goal.ai_summary && (
-            <div className="mt-2 bg-primary/5 rounded-xl p-2.5 border border-primary/10">
+            <div className="mt-3 bg-primary/[0.03] rounded-xl p-2.5 border border-primary/10">
               <p className="text-[10px] text-primary/70 font-semibold mb-1">
                 {t.goalDescription}
               </p>

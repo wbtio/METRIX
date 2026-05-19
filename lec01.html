@@ -1,0 +1,1879 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دليل شبكات الحاسوب | شرح الفصول 1 و2 و3 و5</title>
+  <style>
+    :root {
+      --paper: oklch(97.5% 0.012 92);
+      --ink: oklch(20% 0.025 250);
+      --muted: oklch(43% 0.025 250);
+      --line: oklch(82% 0.025 82);
+      --soft: oklch(93.5% 0.025 95);
+      --panel: oklch(99% 0.007 92);
+      --nav: oklch(23% 0.045 235);
+      --nav-2: oklch(32% 0.07 207);
+      --accent: oklch(62% 0.16 42);
+      --green: oklch(58% 0.13 150);
+      --blue: oklch(58% 0.12 235);
+      --violet: oklch(55% 0.12 295);
+      --red: oklch(58% 0.15 25);
+      --ch1: oklch(58% 0.13 150);
+      --ch2: oklch(57% 0.13 235);
+      --ch3: oklch(56% 0.13 292);
+      --ch5: oklch(62% 0.16 42);
+      --remember: oklch(93% 0.055 88);
+      --practice: oklch(93% 0.045 230);
+      --shadow: 0 18px 40px oklch(22% 0.03 250 / 0.12);
+      --radius: 8px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --arabic: "Avenir Next Arabic", "Geeza Pro", Tahoma, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, oklch(83% 0.08 63 / 0.45), transparent 28rem),
+        linear-gradient(180deg, var(--paper), oklch(95% 0.018 104));
+      color: var(--ink);
+      font-family: var(--arabic);
+      line-height: 1.85;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 24px 20px;
+      background: linear-gradient(180deg, var(--nav), var(--nav-2));
+      color: oklch(96% 0.012 95);
+      border-left: 1px solid oklch(100% 0 0 / 0.12);
+    }
+
+    .brand {
+      display: grid;
+      gap: 10px;
+      padding-bottom: 22px;
+      border-bottom: 1px solid oklch(100% 0 0 / 0.16);
+    }
+
+    .brand strong {
+      font-size: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .brand span, .nav small {
+      color: oklch(86% 0.02 94 / 0.78);
+      font-size: 0.88rem;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: oklch(95% 0.012 95);
+    }
+
+    .nav a:hover, .nav a:focus {
+      background: oklch(100% 0 0 / 0.09);
+      border-color: oklch(100% 0 0 / 0.14);
+      outline: none;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .hero {
+      min-height: 92vh;
+      display: grid;
+      align-items: end;
+      padding: clamp(34px, 6vw, 72px);
+      background:
+        linear-gradient(135deg, oklch(94% 0.022 94), oklch(90% 0.035 82)),
+        var(--paper);
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(90deg, oklch(30% 0.04 250 / 0.08) 1px, transparent 1px),
+        linear-gradient(180deg, oklch(30% 0.04 250 / 0.08) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(180deg, black, transparent 78%);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: clamp(28px, 6vw, 70px);
+      align-items: end;
+      z-index: 1;
+    }
+
+    h1 {
+      max-width: 920px;
+      margin: 0;
+      font-size: 5.7rem;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 70ch;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+
+    .network-art {
+      aspect-ratio: 1;
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .network-art svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .band {
+      padding: clamp(34px, 6vw, 72px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .band.alt { background: oklch(94.8% 0.025 92); }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(260px, 0.45fr);
+      gap: 28px;
+      align-items: start;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 3.1rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 1.55rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; max-width: 75ch; }
+
+    ul, ol { margin: 0; padding-inline-start: 1.3rem; }
+
+    li { margin: 6px 0; }
+
+    .chapter-meta {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .chapter-meta span {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+    }
+
+    .chapter-meta span:last-child { border-bottom: 0; padding-bottom: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .card strong { color: oklch(34% 0.08 230); }
+
+    .note {
+      margin: 20px 0;
+      padding: 18px;
+      border: 1px solid oklch(76% 0.08 58);
+      background: oklch(96% 0.045 82);
+      border-radius: var(--radius);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .step {
+      min-height: 96px;
+      padding: 14px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: oklch(98% 0.012 90);
+      text-align: center;
+    }
+
+    .step b { font-size: 1.05rem; }
+    .step small { color: var(--muted); line-height: 1.5; }
+
+    .compare {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      margin: 14px 0 24px;
+    }
+
+    .compare th, .compare td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px;
+      vertical-align: top;
+      text-align: right;
+    }
+
+    .compare th {
+      background: oklch(90% 0.035 82);
+      font-weight: 800;
+    }
+
+    .compare tr:last-child td { border-bottom: 0; }
+
+    code, pre {
+      font-family: var(--mono);
+      direction: ltr;
+      text-align: left;
+    }
+
+    pre {
+      overflow: auto;
+      white-space: pre-wrap;
+      margin: 12px 0 20px;
+      padding: 16px;
+      background: oklch(21% 0.035 240);
+      color: oklch(94% 0.02 120);
+      border-radius: var(--radius);
+      line-height: 1.65;
+      border: 1px solid oklch(100% 0 0 / 0.08);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: oklch(90% 0.04 92);
+      border: 1px solid var(--line);
+      color: oklch(32% 0.04 250);
+      font-size: 0.92rem;
+    }
+
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 800; }
+    details p { margin-top: 10px; }
+
+    .quiz {
+      display: grid;
+      gap: 12px;
+    }
+
+    .quiz-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .quiz-tabs button {
+      cursor: pointer;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.96rem;
+    }
+
+    .quiz-tabs button.active {
+      background: oklch(32% 0.07 225);
+      color: oklch(96% 0.02 92);
+      border-color: oklch(32% 0.07 225);
+    }
+
+    .quiz-meta {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .quiz button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      padding: 12px;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 1rem;
+      text-align: right;
+    }
+
+    .quiz button:hover { border-color: var(--accent); }
+    .quiz button.correct { background: oklch(93% 0.06 150); border-color: var(--green); }
+    .quiz button.wrong { background: oklch(94% 0.055 25); border-color: var(--red); }
+
+    .answer-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      display: none;
+    }
+
+    .answered .answer-note { display: block; }
+
+    .exam-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .exam-label {
+      display: inline-flex;
+      width: fit-content;
+      margin-bottom: 10px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: oklch(90% 0.035 82);
+      color: oklch(32% 0.04 250);
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .memory-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-height: 150px;
+    }
+
+    .memory-card b {
+      display: inline-flex;
+      margin-bottom: 8px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      color: oklch(98% 0.01 95);
+      background: oklch(32% 0.07 225);
+      font-size: 0.9rem;
+    }
+
+    .memory-card.ch1 b { background: var(--ch1); }
+    .memory-card.ch2 b { background: var(--ch2); }
+    .memory-card.ch3 b { background: var(--ch3); }
+    .memory-card.ch5 b { background: var(--ch5); }
+
+    .recall-box {
+      margin: 18px 0 24px;
+      padding: 18px;
+      border: 1px solid oklch(77% 0.07 83);
+      border-radius: var(--radius);
+      background: var(--remember);
+    }
+
+    .recall-box strong {
+      color: oklch(30% 0.07 66);
+    }
+
+    .exam-focus {
+      background: var(--practice);
+      border-color: oklch(75% 0.06 230);
+    }
+
+    .footer {
+      padding: 28px clamp(24px, 6vw, 72px);
+      background: var(--nav);
+      color: oklch(94% 0.012 94);
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 240px minmax(0, 1fr);
+      }
+
+      aside {
+        padding: 18px 14px;
+      }
+
+      .nav a {
+        gap: 8px;
+        padding: 8px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+        display: block;
+        padding: 16px;
+        border-left: 0;
+      }
+
+      .brand {
+        padding-bottom: 14px;
+      }
+
+      .nav {
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(145px, max-content);
+        grid-template-columns: none;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        padding: 2px 0 8px;
+        scrollbar-width: thin;
+      }
+
+      .nav a {
+        white-space: nowrap;
+      }
+
+      .hero-grid, .section-head { grid-template-columns: 1fr; }
+      .hero { min-height: auto; }
+      .network-art { max-width: 360px; }
+    }
+
+    @media (max-width: 620px) {
+      body {
+        line-height: 1.75;
+        overflow-wrap: anywhere;
+      }
+
+      aside {
+        padding: 14px 12px;
+      }
+
+      .brand strong {
+        font-size: 1.08rem;
+      }
+
+      .brand span {
+        font-size: 0.82rem;
+      }
+
+      .band, .hero {
+        padding: 24px 14px;
+      }
+
+      .hero {
+        align-items: start;
+      }
+
+      .hero::before {
+        background-size: 44px 44px;
+      }
+
+      .hero-grid {
+        gap: 22px;
+      }
+
+      h1 {
+        font-size: 3rem;
+        line-height: 1.08;
+      }
+
+      h2 {
+        font-size: 2rem;
+      }
+
+      h3 {
+        font-size: 1.18rem;
+      }
+
+      h4 {
+        font-size: 1rem;
+      }
+
+      .lead {
+        margin-top: 16px;
+        font-size: 1rem;
+      }
+
+      .network-art {
+        max-width: 280px;
+        padding: 8px;
+        box-shadow: 0 10px 26px oklch(22% 0.03 250 / 0.10);
+      }
+
+      .section-head {
+        gap: 16px;
+        margin-bottom: 22px;
+      }
+
+      .chapter-meta,
+      .card,
+      .note,
+      details {
+        padding: 14px;
+      }
+
+      .chapter-meta span {
+        align-items: start;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .step {
+        min-height: 82px;
+        padding: 10px;
+      }
+
+      .tag-row,
+      .quiz-tabs {
+        gap: 6px;
+      }
+
+      .tag,
+      .quiz-tabs button {
+        font-size: 0.88rem;
+      }
+
+      .quiz-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .quiz-tabs button,
+      .quiz button {
+        width: 100%;
+        min-height: 44px;
+      }
+
+      pre {
+        margin: 10px 0 16px;
+        padding: 12px;
+        font-size: 0.82rem;
+        line-height: 1.55;
+        white-space: pre;
+      }
+
+      code {
+        font-size: 0.88em;
+      }
+
+      .compare {
+        display: block;
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        margin: 12px 0 20px;
+      }
+
+      .compare thead {
+        display: none;
+      }
+
+      .compare tbody,
+      .compare tr,
+      .compare td {
+        display: block;
+        width: 100%;
+      }
+
+      .compare tr {
+        margin-bottom: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .compare td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .compare td:last-child {
+        border-bottom: 0;
+      }
+
+      .footer {
+        padding: 22px 14px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .band, .hero {
+        padding: 20px 10px;
+      }
+
+      .nav {
+        grid-auto-columns: minmax(128px, max-content);
+      }
+
+      .nav a {
+        min-height: 38px;
+        font-size: 0.9rem;
+      }
+
+      .nav small {
+        display: none;
+      }
+
+      .flow,
+      .quiz-tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .card,
+      .note,
+      details,
+      .chapter-meta {
+        padding: 12px;
+      }
+
+      .network-art {
+        max-width: 230px;
+      }
+
+      h1 {
+        font-size: 2.35rem;
+      }
+
+      h2 {
+        font-size: 1.65rem;
+      }
+
+      .compare td {
+        padding: 9px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <strong>دليل شبكات الحاسوب</strong>
+        <span>شرح عربي شامل مبني على ملفات PDF المرفقة</span>
+      </div>
+      <nav class="nav" aria-label="التنقل بين أجزاء الموقع">
+        <a href="#overview">نظرة عامة <small>الخريطة</small></a>
+        <a href="#study-method">طريقة الحفظ <small>Memory</small></a>
+        <a href="#chapter1">الفصل 1 <small>Introduction</small></a>
+        <a href="#chapter2">الفصل 2 <small>IOS</small></a>
+        <a href="#chapter3">الفصل 3 <small>Protocols</small></a>
+        <a href="#chapter5">الفصل 5 <small>Ethernet</small></a>
+        <a href="#commands">أوامر مهمة <small>CLI</small></a>
+        <a href="#comparisons">المقارنات <small>Tables</small></a>
+        <a href="#terms">مصطلحات <small>Glossary</small></a>
+        <a href="#quiz">اختبار سريع <small>Review</small></a>
+        <a href="#previous-exams">أسئلة سابقة <small>Exams</small></a>
+        <a href="#sources">الملفات الأصلية <small>PDF</small></a>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <div class="hero-grid">
+          <div>
+            <h1>الشبكات من الفكرة إلى الإيثرنت</h1>
+            <p class="lead">هذا الموقع يشرح محتوى الفصول الأربعة: مقدمة الشبكات، إعداد نظام تشغيل الشبكة Cisco IOS، بروتوكولات الاتصال، وتقنية Ethernet. الشرح مكتوب بأسلوب دراسي: تعريف، لماذا يهم، كيف يعمل، ثم أمثلة وأوامر ومراجعة.</p>
+            <div class="tag-row" aria-label="موضوعات الموقع">
+              <span class="tag">LAN / WAN</span>
+              <span class="tag">Cisco IOS</span>
+              <span class="tag">OSI و TCP/IP</span>
+              <span class="tag">Ethernet و ARP</span>
+              <span class="tag">RIP و EIGRP</span>
+            </div>
+          </div>
+          <figure class="network-art" aria-label="رسم مبسط للشبكة">
+            <svg viewBox="0 0 420 420" role="img" aria-labelledby="svg-title">
+              <title id="svg-title">رسم يوضح أجهزة طرفية متصلة بسويتش وراوتر وإنترنت</title>
+              <defs>
+                <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#223" flood-opacity="0.16"/>
+                </filter>
+              </defs>
+              <rect x="20" y="20" width="380" height="380" rx="8" fill="oklch(96% 0.02 92)" stroke="oklch(80% 0.03 82)"/>
+              <path d="M107 120 L210 205 L315 118 M110 302 L210 205 L315 304 M210 205 L210 78 M210 205 L210 342" fill="none" stroke="oklch(47% 0.08 230)" stroke-width="5" stroke-linecap="round"/>
+              <g filter="url(#s)">
+                <rect x="155" y="165" width="110" height="80" rx="8" fill="oklch(32% 0.07 225)"/>
+                <text x="210" y="211" text-anchor="middle" font-size="22" fill="oklch(96% 0.02 92)" font-family="Arial">Switch</text>
+                <circle cx="107" cy="120" r="42" fill="oklch(62% 0.16 42)"/>
+                <circle cx="315" cy="118" r="42" fill="oklch(58% 0.12 235)"/>
+                <circle cx="110" cy="302" r="42" fill="oklch(58% 0.13 150)"/>
+                <circle cx="315" cy="304" r="42" fill="oklch(55% 0.12 295)"/>
+                <rect x="168" y="40" width="84" height="70" rx="8" fill="oklch(94% 0.04 92)" stroke="oklch(38% 0.06 235)"/>
+                <text x="210" y="82" text-anchor="middle" font-size="18" fill="oklch(24% 0.04 245)" font-family="Arial">Router</text>
+                <path d="M169 346 C178 318 245 318 253 346 C282 347 288 385 258 388 L165 388 C134 387 138 349 169 346Z" fill="oklch(96% 0.025 210)" stroke="oklch(38% 0.06 235)" stroke-width="2"/>
+                <text x="210" y="374" text-anchor="middle" font-size="18" fill="oklch(24% 0.04 245)" font-family="Arial">Internet</text>
+              </g>
+            </svg>
+          </figure>
+        </div>
+      </header>
+
+      <section id="overview" class="band">
+        <div class="section-head">
+          <div>
+            <h2>خريطة المادة</h2>
+            <p>الفصول مترابطة. الفصل الأول يشرح لماذا الشبكات مهمة وما مكوناتها. الفصل الثاني يدخل إلى إعداد الراوترات والسويتشات عبر Cisco IOS. الفصل الثالث يشرح قواعد الاتصال والبروتوكولات ونماذج الطبقات. الفصل الخامس يركز على Ethernet، عناوين MAC، عمل السويتش، وARP.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>عدد الملفات</b><b>4 PDF</b></span>
+            <span><b>عدد الصفحات</b><b>184 صفحة</b></span>
+            <span><b>التركيز</b><b>CCNA / IS 356</b></span>
+          </div>
+        </div>
+        <div class="flow" aria-label="تسلسل التعلم">
+          <div class="step"><b>1</b><small>افهم الشبكة ومكوناتها وأنواعها</small></div>
+          <div class="step"><b>2</b><small>ادخل إلى Cisco IOS ونفذ الإعدادات</small></div>
+          <div class="step"><b>3</b><small>افهم البروتوكولات والطبقات والتغليف</small></div>
+          <div class="step"><b>5</b><small>افهم Ethernet وMAC وARP والسويتش</small></div>
+        </div>
+      </section>
+
+      <section id="study-method" class="band alt">
+        <div class="section-head">
+          <div>
+            <h2>طريقة الحفظ السريع</h2>
+            <p>استخدم الموقع مثل بطاقات ذاكرة. اللون ليس للزينة: كل لون يربط جزءًا من المادة بصورة ذهنية حتى تسترجعها أسرع في الكويز.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الأخضر</b><b>أساسيات وأنواع الشبكات</b></span>
+            <span><b>الأزرق</b><b>أوامر IOS والتوجيه</b></span>
+            <span><b>البنفسجي</b><b>الطبقات والبروتوكولات</b></span>
+            <span><b>البرتقالي</b><b>Ethernet وARP</b></span>
+          </div>
+        </div>
+
+        <div class="memory-grid">
+          <article class="memory-card ch1">
+            <b>1. افهم الصورة الكبيرة</b>
+            <h3>من يتكلم؟ وكيف يصل؟</h3>
+            <p>احفظ الفصل الأول كخريطة: أجهزة، وسط نقل، خدمات، ثم LAN/WAN/Internet، ثم الاعتمادية والأمن.</p>
+          </article>
+          <article class="memory-card ch2">
+            <b>2. احفظ الأوامر كمسار</b>
+            <h3>ادخل، اضبط، تحقق، احفظ</h3>
+            <p><code>enable</code> ثم <code>config t</code> ثم interface/routing، وبعدها <code>show</code> و<code>copy run start</code>.</p>
+          </article>
+          <article class="memory-card ch3">
+            <b>3. اربط الطبقات بالقصة</b>
+            <h3>Data تتحول إلى Frame</h3>
+            <p>HTML page ثم Segment ثم IP Packet ثم Ethernet Frame. هذه السلسلة تتكرر بأسئلة كثيرة.</p>
+          </article>
+          <article class="memory-card ch5">
+            <b>4. ثبت عناوين Layer 2</b>
+            <h3>MAC داخل LAN، IP للنهاية</h3>
+            <p>السويتش يتعلم من Source MAC، وARP يجد MAC المناسب للـIP داخل الشبكة المحلية.</p>
+          </article>
+        </div>
+
+        <div class="recall-box">
+          <h3>قاعدة 3 دقائق قبل الكويز</h3>
+          <p><strong>دقيقة 1:</strong> اقرأ جداول المقارنات فقط. <strong>دقيقة 2:</strong> جاوب 10 أسئلة من الاختبارات. <strong>دقيقة 3:</strong> افتح أسئلة السنوات السابقة واحفظ إجابات الفراغات وRIP وMAC table.</p>
+        </div>
+      </section>
+
+      <section id="chapter1" class="band alt">
+        <div class="section-head">
+          <div>
+            <h2>الفصل الأول: مقدمة إلى الشبكات</h2>
+            <p>الفصل يثبت الفكرة الأساسية: الشبكات ليست مجرد أجهزة وأسلاك، بل منصة للتعلم والعمل والترفيه والخدمات. كل رسالة تنتقل بين جهازين تحتاج أجهزة، وسط نقل، وخدمات، وتحتاج بنية موثوقة قابلة للتوسع وآمنة.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الملف</b><b>Chapter 1</b></span>
+            <span><b>الصفحات</b><b>58</b></span>
+            <span><b>الأقسام</b><b>1.1 إلى 1.5</b></span>
+          </div>
+        </div>
+
+        <div class="recall-box">
+          <h3>احفظ الفصل بجملة واحدة</h3>
+          <p><strong>الشبكة = أجهزة + وسط نقل + خدمات.</strong> إذا كبرت المسافة صارت WAN، وإذا صارت عالمية صارت Internet، وإذا أردناها موثوقة نحتاج fault tolerance وscalability وQoS وsecurity.</p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h3>1. الشبكات في حياتنا</h3>
+            <p>الشبكات جعلت العالم مترابطًا: تعليم عن بعد، عمل جماعي، مشاركة ملفات، بث فيديو، ألعاب، ومجتمعات عالمية. الفكرة التي تسميها Cisco باسم <strong>Human Network</strong> تعني أن قيمة الشبكة تظهر عندما تربط الناس والمعرفة والخدمات.</p>
+            <p>التعلم لم يعد مرتبطًا بقاعة دراسية، والعمل لم يعد مرتبطًا بالمكتب، والترفيه صار يعتمد على تنزيل وبث وتفاعل مباشر.</p>
+          </article>
+          <article class="card">
+            <h3>2. الأجهزة الطرفية والموارد</h3>
+            <p>كل حاسوب أو هاتف أو طابعة أو خادم متصل بالشبكة يسمى <strong>Host أو End Device</strong>. الجهاز قد يكون عميلًا يطلب خدمة، أو خادمًا يقدم خدمة، أو الاثنين معًا في شبكات Peer-to-Peer.</p>
+            <p>الخوادم تقدم البريد، الويب، الملفات، قواعد البيانات. العملاء يرسلون الطلبات ويستقبلون النتائج.</p>
+          </article>
+          <article class="card">
+            <h3>3. أحجام الشبكات</h3>
+            <p>الشبكات تبدأ من شبكة منزلية صغيرة، ثم SOHO للمكاتب الصغيرة، ثم شبكات متوسطة وكبيرة تربط آلاف الأجهزة، وصولًا إلى الإنترنت بوصفه شبكة عالمية من LANs وWANs مترابطة.</p>
+          </article>
+        </div>
+
+        <h3>مكونات الشبكة</h3>
+        <table class="compare">
+          <thead><tr><th>المكون</th><th>الشرح</th><th>أمثلة</th></tr></thead>
+          <tbody>
+            <tr><td>Devices</td><td>الأجهزة التي ترسل أو تستقبل أو تمرر البيانات.</td><td>PC، Server، Switch، Router، Firewall، Access Point</td></tr>
+            <tr><td>Media</td><td>وسط النقل الذي تسير عليه الإشارة.</td><td>نحاس، ألياف ضوئية، لاسلكي</td></tr>
+            <tr><td>Services</td><td>الخدمات والبرامج التي تجعل الاتصال مفيدًا.</td><td>Web، Email، DNS، File sharing</td></tr>
+          </tbody>
+        </table>
+
+        <h3>LAN وWAN والإنترنت</h3>
+        <div class="grid">
+          <article class="card">
+            <h4>LAN</h4>
+            <p>شبكة محلية ضمن مساحة صغيرة مثل منزل، مدرسة، مكتب، أو مبنى. غالبًا تدار من جهة واحدة وتقدم سرعة عالية للأجهزة داخل النطاق المحلي.</p>
+          </article>
+          <article class="card">
+            <h4>WAN</h4>
+            <p>شبكة واسعة تربط LANs عبر مدن أو دول، وغالبًا تشترك في إدارتها شركات اتصالات أو مزودو خدمة. الروابط عادة أبطأ من LAN وأغلى.</p>
+          </article>
+          <article class="card">
+            <h4>Internet / Intranet / Extranet</h4>
+            <p>الإنترنت شبكة عالمية عامة. الإنترانت شبكة خاصة داخل منظمة. الإكسترانت يعطي وصولًا آمنًا لأطراف خارجية محددة مثل شركاء أو موردين.</p>
+          </article>
+        </div>
+
+        <div class="note">
+          <h3>متطلبات الشبكة الموثوقة</h3>
+          <p><strong>Fault Tolerance:</strong> وجود مسارات بديلة يقلل أثر الأعطال. <strong>Scalability:</strong> القدرة على التوسع دون انهيار الأداء. <strong>QoS:</strong> إعطاء أولوية للتطبيقات الحساسة مثل الصوت والفيديو. <strong>Security:</strong> حماية البنية والبيانات عبر السرية والسلامة والتوفر.</p>
+        </div>
+
+        <h3>اتجاهات حديثة في الشبكات</h3>
+        <div class="grid">
+          <article class="card"><h4>BYOD</h4><p>استخدام أجهزة شخصية للوصول إلى موارد المؤسسة، مثل اللابتوب والهاتف والتابلت. يزيد المرونة لكنه يحتاج سياسات أمن.</p></article>
+          <article class="card"><h4>Collaboration</h4><p>أدوات التعاون مثل الاجتماعات المرئية ومشاركة الملفات تجعل العمل الجماعي أسرع عبر الشبكة.</p></article>
+          <article class="card"><h4>Cloud Computing</h4><p>تخزين وتشغيل التطبيقات على مراكز بيانات عبر الإنترنت. أنواعه: Public، Private، Hybrid، Community.</p></article>
+          <article class="card"><h4>Home Technologies</h4><p>إنترنت الأشياء، Powerline Networking، وWireless Broadband توسع الشبكة داخل المنزل والمكاتب الصغيرة.</p></article>
+        </div>
+
+        <h3>الأمن وبنية الشبكة في نهاية الفصل</h3>
+        <div class="grid">
+          <article class="card">
+            <h4>مصادر التهديد</h4>
+            <p>التهديدات قد تكون خارجية مثل الفيروسات، الديدان، Trojan horses، spyware، adware، zero-day attacks، هجمات المخترقين، Denial of Service، اعتراض البيانات، وسرقة الهوية. وقد تكون داخلية، intentional أو accidental، لأن المستخدمين داخل المؤسسة قد يسببون أغلب الخروقات، ومع BYOD تصبح بيانات المؤسسة أكثر عرضة.</p>
+          </article>
+          <article class="card">
+            <h4>حلول الشبكات الصغيرة</h4>
+            <p>الأمن لا يعتمد على أداة واحدة. في المنزل أو المكتب الصغير نحتاج antivirus وantispyware على الأجهزة الطرفية، وجدارًا ناريًا يرشح المرور ويمنع الوصول غير المصرح به.</p>
+          </article>
+          <article class="card">
+            <h4>حلول الشبكات الكبيرة</h4>
+            <p>الشبكات الكبيرة تحتاج Dedicated Firewall بقدرات أوسع، وAccess Control Lists لتصفية الوصول وتمرير الترافيك، وIntrusion Prevention Systems لاكتشاف التهديدات السريعة مثل zero-day، وVPN لتوفير وصول آمن للموظفين عن بعد.</p>
+          </article>
+          <article class="card">
+            <h4>Cisco Architecture وCCNA</h4>
+            <p>بنية الشبكة تعني الأجهزة والاتصالات والمنتجات المتكاملة التي تدعم التطبيقات والخدمات في شبكة converged. الأساس في أغلب البنى، بما فيها الإنترنت، هو الراوترات والسويتشات. شهادة CCNA Routing and Switching كانت تتضمن امتحان CCENT أولًا، ثم امتحان يركز على IPv4 وIPv6 وWAN وLAN switching وخدمات البنية.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="chapter2" class="band">
+        <div class="section-head">
+          <div>
+            <h2>الفصل الثاني: إعداد نظام تشغيل الشبكة</h2>
+            <p>هذا الفصل عملي جدًا. يشرح كيف يعمل نظام التشغيل في أجهزة الشبكة، كيف تدخل إلى Cisco IOS، كيف تتنقل بين أوضاع الأوامر، وكيف تضبط الراوتر والسويتش بعناوين IP والواجهات والتوجيه.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الملف</b><b>Chapter 2</b></span>
+            <span><b>الصفحات</b><b>46</b></span>
+            <span><b>التركيز</b><b>CLI + Routing</b></span>
+          </div>
+        </div>
+
+        <div class="recall-box exam-focus">
+          <h3>احفظ الفصل بجملة واحدة</h3>
+          <p><strong>IOS = أوضاع + أوامر + تحقق.</strong> ادخل بـConsole/SSH، انتقل من <code>Router&gt;</code> إلى <code>Router#</code> ثم <code>Router(config)#</code>، اضبط الواجهات والتوجيه، ثم تحقق بـ<code>show</code> واحفظ.</p>
+        </div>
+
+        <h3>نظام التشغيل: Kernel وShell</h3>
+        <p>كل جهاز يحتاج Operating System. في الحاسوب أو الراوتر، <strong>Kernel</strong> هو الجزء القريب من العتاد ويدير الموارد، بينما <strong>Shell</strong> هو الواجهة التي يتعامل معها المستخدم، إما GUI أو CLI. في أجهزة Cisco نعتمد غالبًا على CLI لأنها دقيقة وسريعة وتصلح للإعدادات الاحترافية.</p>
+
+        <h3>طرق الوصول إلى Cisco IOS</h3>
+        <table class="compare">
+          <thead><tr><th>الطريقة</th><th>متى تستخدم؟</th><th>الأمان</th></tr></thead>
+          <tbody>
+            <tr><td>Console</td><td>اتصال مباشر بمنفذ إدارة مخصص، مفيد عند الإعداد الأول أو عند تعطل الشبكة.</td><td>آمن لأنه Out-of-Band ولا يعتمد على IP.</td></tr>
+            <tr><td>SSH</td><td>إدارة عن بعد عبر الشبكة بعد تفعيل IP وخدمات الشبكة.</td><td>مشفّر ومفضل للإدارة.</td></tr>
+            <tr><td>Telnet</td><td>إدارة عن بعد قديمة.</td><td>غير آمن لأن كلمات المرور والأوامر ترسل Plaintext.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>أوضاع Cisco IOS</h3>
+        <div class="flow">
+          <div class="step"><b>Router&gt;</b><small>User EXEC: مراقبة أساسية فقط</small></div>
+          <div class="step"><b>Router#</b><small>Privileged EXEC: أوامر show/copy/reload/debug</small></div>
+          <div class="step"><b>Router(config)#</b><small>Global Config: إعدادات عامة للجهاز</small></div>
+          <div class="step"><b>Router(config-if)#</b><small>Interface Config: إعداد منفذ معين</small></div>
+          <div class="step"><b>Router(config-line)#</b><small>Line Config: Console وVTY وAUX</small></div>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h3>المساعدة التفاعلية</h3>
+            <p>علامة الاستفهام <code>?</code> تعرض الأوامر المتاحة. كتابة جزء من الأمر ثم <code>?</code> تعرض الأوامر التي تبدأ بتلك الأحرف. مفتاح <code>Tab</code> يكمل الأمر إذا كان واضحًا.</p>
+            <pre>Router# show ?
+Router(config)# zo?
+Router(config)# interface ?</pre>
+          </article>
+          <article class="card">
+            <h3>رسائل الخطأ</h3>
+            <p><strong>Ambiguous command</strong> تعني أن الاختصار غير كاف. <strong>Incomplete command</strong> تعني أن الأمر ناقص. <strong>Invalid input</strong> مع علامة ^ تعني أن الخطأ في الموضع المشار إليه.</p>
+          </article>
+        </div>
+
+        <h3>إعدادات أساسية للراوتر</h3>
+        <pre>Router&gt; enable
+Router# configure terminal
+Router(config)# hostname R1
+R1(config)# interface fastethernet 0/0
+R1(config-if)# ip address 192.168.12.2 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# exit
+R1# copy running-config startup-config</pre>
+
+        <h3>إعداد Serial Interface</h3>
+        <p>الواجهة التسلسلية تحتاج أحيانًا أمر <code>clock rate</code> في جهة DCE فقط. مزود الخدمة عادة يعطي الـClock، لذلك لا نستخدمه دائمًا في الواقع.</p>
+        <pre>Router(config)# interface serial 0/0/0
+Router(config-if)# ip address 192.168.5.10 255.255.255.0
+Router(config-if)# clock rate 64000
+Router(config-if)# no shutdown</pre>
+        <p>في Packet Tracer أو المختبرات، افحص جهة الكابل بالأمر <code>show controllers serial 0/0/0</code>. إذا ظهر DCE فأنت تضبط <code>clock rate</code>، وإذا ظهر DTE فلا تضبطه على ذلك الطرف.</p>
+
+        <h3>التحقق والتشخيص</h3>
+        <table class="compare">
+          <thead><tr><th>الأمر</th><th>الفائدة</th></tr></thead>
+          <tbody>
+            <tr><td><code>ping 192.168.7.27</code></td><td>اختبار الاتصال الأساسي. علامات !!!!! تعني نجاح، والنقاط ..... تعني فشل أو Timeout.</td></tr>
+            <tr><td><code>show interfaces</code></td><td>يعرض حالة الواجهات، الأخطاء، MTU، واستخدام المنفذ.</td></tr>
+            <tr><td><code>show ip interface brief</code></td><td>ملخص سريع لعناوين IP وحالة كل واجهة.</td></tr>
+            <tr><td><code>show running-config</code></td><td>الإعداد الحالي في RAM، ويختصر إلى <code>sh run</code>.</td></tr>
+            <tr><td><code>show ip route</code></td><td>يعرض جدول التوجيه، ويظهر C للمتصلة مباشرة، R لـRIP، D لـEIGRP.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Static Routes وDynamic Routes</h3>
+        <p>التوجيه هو نقل الحزم بين شبكات مختلفة. إذا كان الراوتر يعرف الشبكات المتصلة مباشرة فقط فلن يصل إلى الشبكات البعيدة إلا بإضافة Route يدوي أو تشغيل بروتوكول توجيه.</p>
+        <div class="grid">
+          <article class="card">
+            <h4>Static Route</h4>
+            <p>مسار تكتبه يدويًا. مناسب للشبكات الصغيرة أو المسارات الثابتة، لكنه يحتاج تحديثًا يدويًا إذا تغيرت الشبكة.</p>
+            <pre>ip route 192.168.30.0 255.255.255.0 192.168.20.2</pre>
+          </article>
+          <article class="card">
+            <h4>RIP</h4>
+            <p>بروتوكول توجيه Distance Vector يستخدم Metric بعدد القفزات، ويرسل تحديثات دورية. RIPv1 Classful ولا يرسل Subnet Mask، لذلك تظهر مشاكل مع الشبكات المتقطعة.</p>
+            <pre>router rip
+network 172.30.0.0
+passive-interface fastethernet 0/0</pre>
+          </article>
+          <article class="card">
+            <h4>EIGRP</h4>
+            <p>بروتوكول Cisco محسّن يستخدم DUAL لتقارب أسرع ومسارات خالية من الحلقات، يدعم VLSM وCIDR والتحديثات الجزئية وHello Messages.</p>
+            <pre>router eigrp 1
+network 172.16.1.0
+passive-interface g0/0
+no auto-summary</pre>
+          </article>
+        </div>
+
+        <h3>Static Routing بالتفصيل</h3>
+        <p>Static routes تعطي مسارات ثابتة يكتبها مدير الشبكة يدويًا. هي آمنة وبسيطة ولا تستهلك CPU أو memory بتبادل تحديثات مع الجيران، لكنها مناسبة أكثر للشبكات الصغيرة، وإذا تعطل رابط فلن تختار طريقًا بديلًا وحدها.</p>
+        <table class="compare">
+          <thead><tr><th>الصيغة</th><th>المعنى</th></tr></thead>
+          <tbody>
+            <tr><td><code>ip route destination mask next-hop</code></td><td>استخدم عنوان الراوتر التالي للوصول إلى الشبكة البعيدة.</td></tr>
+            <tr><td><code>ip route destination mask exit-interface</code></td><td>اخرج مباشرة من واجهة محددة للوصول إلى الشبكة البعيدة.</td></tr>
+            <tr><td><code>administrative_distance</code></td><td>قيمة اختيارية تحدد أولوية المسار مقارنة بمصادر التوجيه الأخرى.</td></tr>
+            <tr><td><code>permanent</code></td><td>يبقي المسار في الجدول حتى لو تعطلت الواجهة، ويستخدم بحذر.</td></tr>
+          </tbody>
+        </table>
+        <pre>Router0(config)# ip route 20.0.0.0 255.0.0.0 192.168.0.254
+Router1(config)# ip route 10.0.0.0 255.0.0.0 192.168.0.253
+
+Router# show ip route
+Router# ping 20.0.0.2</pre>
+
+        <h3>مختبر RIP كما في المادة</h3>
+        <p>RIP يعمل بإعلان الشبكات المتصلة مباشرة. الأمر <code>network</code> لا يضيف شبكة بعيدة يدويًا، بل يقول للراوتر: فعّل RIP على الواجهات التي تنتمي لهذه الشبكة، وأعلن هذه الشبكة للجيران. المسارات المتعلمة تظهر في جدول التوجيه بالحرف <code>R</code>، وAdministrative Distance الافتراضي لها 120.</p>
+        <pre>R1(config)# router rip
+R1(config-router)# network 192.168.1.0
+R1(config-router)# network 192.168.2.0
+R1(config-router)# end
+R1# copy run start
+
+R2(config)# router rip
+R2(config-router)# network 192.168.2.0
+R2(config-router)# network 192.168.3.0
+R2(config-router)# network 192.168.4.0
+
+R3(config)# router rip
+R3(config-router)# network 192.168.4.0
+R3(config-router)# network 192.168.5.0</pre>
+        <div class="note">
+          <h3>ملاحظات RIP المهمة</h3>
+          <p>RIP بسيط لكنه محدود. يرسل تحديثات دورية، يزيد Metric بمقدار hop واحد عند تعلم route، ويعد metric 16 غير قابل للوصول. في RIPv1 لا يرسل subnet mask مع التحديث، لذلك يوصف بأنه classful. إذا تغير سيناريو المختبر، يمكن إزالة RIP كاملًا بالأمر <code>no router rip</code> ثم إعادة بنائه.</p>
+        </div>
+
+        <h3>التحقق من RIP والتعامل مع Debug</h3>
+        <table class="compare">
+          <thead><tr><th>الأمر</th><th>ماذا تتأكد منه؟</th></tr></thead>
+          <tbody>
+            <tr><td><code>show ip route</code></td><td>وجود شبكات بعيدة مع الرمز <code>R</code>، ووجود next-hop صحيح وعدد hops منطقي.</td></tr>
+            <tr><td><code>show ip protocols</code></td><td>هل RIP مفعل؟ ما الشبكات المعلنة؟ ما الواجهات التي ترسل وتستقبل؟ هل هناك passive interfaces؟</td></tr>
+            <tr><td><code>show ip interface brief</code></td><td>إذا لم تتقارب الجداول، افحص أولًا أن الواجهات up/up وأن عناوين IP صحيحة.</td></tr>
+            <tr><td><code>debug ip rip</code></td><td>يعرض تحديثات RIP المرسلة والمستقبلة. أوقفه دائمًا بـ <code>undebug all</code>.</td></tr>
+          </tbody>
+        </table>
+        <pre>R1# show ip protocols
+Routing Protocol is "rip"
+Routing for Networks:
+  192.168.1.0
+  192.168.2.0
+
+R1# debug ip rip
+RIP: sending v1 update via Serial0/0/0
+RIP: received v1 update from 172.30.2.2
+R1# undebug all</pre>
+
+        <h3>Passive Interface ولماذا نستخدمه؟</h3>
+        <p>في المختبرات، نستخدم <code>passive-interface fastethernet 0/0</code> حتى لا يرسل الراوتر تحديثات RIP أو EIGRP إلى شبكة LAN فيها أجهزة مستخدمين. هذا يوفر bandwidth ويقلل الحمل، والأهم أنه يقلل خطر اعتراض تحديثات التوجيه أو تعديلها لإدخال metrics خاطئة تؤدي إلى توجيه مضلل.</p>
+
+        <h3>EIGRP بالتفصيل العملي</h3>
+        <p>EIGRP جاء لتحسين IGRP، وأهم تحسيناته سرعة التقارب باستخدام DUAL، ضمان جداول خالية من routing loops عندما يتحكم EIGRP بالتوجيه، دعم partial updates بدل إرسال الجدول كاملًا، دعم VLSM وCIDR، واستخدام Hello packets لاكتشاف الجيران بسرعة.</p>
+        <div class="grid">
+          <article class="card">
+            <h4>Autonomous System</h4>
+            <p>الرقم في <code>router eigrp 1</code> يجب أن يتطابق بين الراوترات التي تريد أن تكون جيران EIGRP. AS يعني مجموعة شبكات تحت إدارة واحدة وسياسة توجيه مشتركة.</p>
+          </article>
+          <article class="card">
+            <h4>Network Statements</h4>
+            <p>تعلن الشبكات المتصلة مباشرة. في مختبر R1 مثلًا يمكن إعلان <code>172.16.1.0</code> و<code>172.16.3.0</code> و<code>192.168.10.4</code>.</p>
+          </article>
+          <article class="card">
+            <h4>No Auto Summary</h4>
+            <p>عند وجود discontiguous networks يجب تعطيل التلخيص التلقائي بالأمر <code>no auto-summary</code> حتى لا تُعلن الشبكات بطريقة classful تسبب مسارات خاطئة.</p>
+          </article>
+          <article class="card">
+            <h4>Route Summarization</h4>
+            <p>يمكن تلخيص عدة شبكات في إعلان واحد باستخدام <code>ip summary-address eigrp</code> على الواجهة، مثل تلخيص 32 شبكة Class C في كتلة واحدة.</p>
+          </article>
+        </div>
+        <pre>R1(config)# router eigrp 1
+R1(config-router)# network 172.16.1.0
+R1(config-router)# network 172.16.3.0
+R1(config-router)# network 192.168.10.4
+R1(config-router)# passive-interface g0/0
+R1(config-router)# no auto-summary
+
+R1# show ip eigrp neighbors
+R1# show ip protocols
+R1# show ip route
+Routes learned by EIGRP appear with D.</pre>
+      </section>
+
+      <section id="chapter3" class="band alt">
+        <div class="section-head">
+          <div>
+            <h2>الفصل الثالث: بروتوكولات الشبكة والاتصال</h2>
+            <p>الفصل يشرح أن الاتصال الناجح يحتاج قواعد. كما أن البشر يحتاجون لغة وتوقيتًا وطريقة تسليم، أجهزة الشبكة تحتاج بروتوكولات تحدد التنسيق، العناوين، حجم الرسائل، التوقيت، وطريقة التسليم.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الملف</b><b>Chapter 3</b></span>
+            <span><b>الصفحات</b><b>38</b></span>
+            <span><b>الأقسام</b><b>3.1 إلى 3.4</b></span>
+          </div>
+        </div>
+
+        <div class="recall-box">
+          <h3>احفظ الفصل بجملة واحدة</h3>
+          <p><strong>القواعد تجعل الاتصال مفهومًا.</strong> البروتوكولات تحدد encoding وformat وtiming وsize وdelivery، ثم الطبقات تضيف headers حتى تتحول البيانات إلى bits.</p>
+        </div>
+
+        <h3>قواعد الاتصال</h3>
+        <div class="grid">
+          <article class="card"><h4>Source / Destination / Channel</h4><p>كل اتصال يحتاج مرسلًا ومستقبلًا وقناة نقل. في الشبكات: جهاز يرسل، جهاز يستقبل، ووسط مثل كابل أو لاسلكي.</p></article>
+          <article class="card"><h4>Encoding</h4><p>الرسالة تتحول إلى Bits، ثم إلى إشارات كهربائية أو ضوئية أو موجات راديوية حسب الوسط.</p></article>
+          <article class="card"><h4>Formatting & Encapsulation</h4><p>كما نضع الرسالة في ظرف مع عنوان، تضع الشبكة البيانات داخل Frame مع عنوان مصدر ووجهة.</p></article>
+          <article class="card"><h4>Timing & Size</h4><p>البروتوكول يحدد متى نرسل، كيف نتحكم بالتدفق، متى نعتبر الطلب فشل، وكيف نقسم الرسائل الكبيرة.</p></article>
+        </div>
+
+        <h3>أنواع التسليم</h3>
+        <table class="compare">
+          <thead><tr><th>النوع</th><th>المعنى</th><th>مثال</th></tr></thead>
+          <tbody>
+            <tr><td>Unicast</td><td>واحد إلى واحد.</td><td>حاسوب يطلب صفحة ويب من خادم.</td></tr>
+            <tr><td>Multicast</td><td>واحد إلى مجموعة محددة.</td><td>بث لفئة مشتركة في عنوان multicast.</td></tr>
+            <tr><td>Broadcast</td><td>واحد إلى كل الأجهزة داخل الشبكة المحلية.</td><td>ARP Request أو DHCP Discover.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Protocol Suite وتفاعل البروتوكولات</h3>
+        <p>البروتوكول يحدد قواعد تبادل الرسائل، أما Protocol Suite فهي مجموعة بروتوكولات تعمل معًا. عند فتح صفحة ويب مثلًا، HTTP يتعامل مع التطبيق، TCP يقسم ويدير المحادثة، IP يضيف عناوين الشبكة، وEthernet ينقل الإطار عبر الوسط المحلي.</p>
+        <div class="flow">
+          <div class="step"><b>HTTP</b><small>بيانات صفحة HTML</small></div>
+          <div class="step"><b>TCP</b><small>Segments وترقيم وتحكم</small></div>
+          <div class="step"><b>IP</b><small>Packets وعناوين Source/Destination</small></div>
+          <div class="step"><b>Ethernet</b><small>Frames وMAC ونقل محلي</small></div>
+        </div>
+
+        <h3>منظمات المعايير</h3>
+        <div class="grid">
+          <article class="card"><h4>IETF / IAB / IRTF</h4><p>تطور وتحافظ على تقنيات الإنترنت وTCP/IP وتدير توجهات معايير الإنترنت.</p></article>
+          <article class="card"><h4>ICANN / IANA</h4><p>تنسيق أسماء النطاقات وتخصيص عناوين IP ومعرفات البروتوكولات.</p></article>
+          <article class="card"><h4>IEEE</h4><p>مسؤولة عن معايير مهمة في الشبكات مثل Ethernet ومعايير 802.</p></article>
+          <article class="card"><h4>EIA / TIA / ITU-T</h4><p>معايير الأسلاك والرفوف والاتصالات والراديو وVoIP والفيديو والبرودباند.</p></article>
+        </div>
+
+        <h3>OSI وTCP/IP</h3>
+        <table class="compare">
+          <thead><tr><th>OSI</th><th>الفكرة</th><th>TCP/IP المقابل</th></tr></thead>
+          <tbody>
+            <tr><td>Application, Presentation, Session</td><td>خدمات التطبيقات، تمثيل البيانات، وإدارة الجلسة.</td><td>Application</td></tr>
+            <tr><td>Transport</td><td>تقسيم وإعادة تجميع البيانات وإدارة الاتصال.</td><td>Transport</td></tr>
+            <tr><td>Network</td><td>العنونة المنطقية والتوجيه بين الشبكات.</td><td>Internet</td></tr>
+            <tr><td>Data Link, Physical</td><td>إطارات MAC والبتات على الوسط الفيزيائي.</td><td>Network Access</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Encapsulation وPDU</h3>
+        <p>عند الإرسال تنزل البيانات من أعلى الطبقات إلى أسفلها، وكل طبقة تضيف Header خاصًا بها. عند الاستلام يحدث العكس، حيث تزال الرؤوس تدريجيًا حتى تصل البيانات للتطبيق.</p>
+        <div class="flow">
+          <div class="step"><b>Data</b><small>Application</small></div>
+          <div class="step"><b>Segment</b><small>Transport</small></div>
+          <div class="step"><b>Packet</b><small>Network</small></div>
+          <div class="step"><b>Frame</b><small>Data Link</small></div>
+          <div class="step"><b>Bits</b><small>Physical</small></div>
+        </div>
+
+        <h3>الوصول إلى الموارد المحلية والبعيدة</h3>
+        <p>إذا كان الجهازان في نفس الشبكة، يظل عنوان IP للمصدر والوجهة كما هو، ويستخدم الإطار عنوان MAC للجهازين مباشرة. إذا كانت الوجهة بعيدة، يرسل الجهاز الإطار إلى Default Gateway، ثم يغير الراوتر معلومات Layer 2 في كل قفزة بينما تبقى عناوين IP الأصلية دالة على المصدر النهائي والوجهة النهائية.</p>
+      </section>
+
+      <section id="chapter5" class="band">
+        <div class="section-head">
+          <div>
+            <h2>الفصل الخامس: Ethernet</h2>
+            <p>Ethernet هي التقنية الأكثر استخدامًا داخل LAN. تعمل في الطبقة الفيزيائية وطبقة Data Link، وتستخدم MAC Addresses وFrames، وتسمح للسويتش بتعلم الأجهزة وتمرير الإطارات بكفاءة.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الملف</b><b>Chapter 5</b></span>
+            <span><b>الصفحات</b><b>42</b></span>
+            <span><b>الأقسام</b><b>5.1 إلى 5.4</b></span>
+          </div>
+        </div>
+
+        <div class="recall-box exam-focus">
+          <h3>احفظ الفصل بجملة واحدة</h3>
+          <p><strong>Ethernet ينقل داخل LAN، والسويتش يتعلم من Source MAC، وARP يجد MAC من IPv4.</strong> إذا حفظت هذه الثلاثية، أغلب أسئلة الفصل تصير واضحة.</p>
+        </div>
+
+        <h3>Ethernet Encapsulation</h3>
+        <p>Ethernet معرفة ضمن IEEE 802.2 و802.3 وتدعم سرعات من 10 Mb/s إلى 100 Gb/s. تعتمد على طبقتين فرعيتين داخل Data Link: <strong>LLC</strong> يتعامل مع الطبقات العليا، و<strong>MAC</strong> يتعامل مع العتاد والوسيط الفيزيائي.</p>
+
+        <div class="grid">
+          <article class="card"><h4>LLC</h4><p>يربط الطبقات العليا بالطبقات الدنيا، ويكون غالبًا برمجيًا ومستقلًا عن نوع كرت الشبكة.</p></article>
+          <article class="card"><h4>MAC</h4><p>مسؤول عن التغليف، تحديد بداية ونهاية الإطار، العنونة، كشف الأخطاء، والتحكم في الوصول للوسط.</p></article>
+          <article class="card"><h4>Frame Size</h4><p>الحجم الأدنى من Destination MAC إلى FCS هو 64 bytes، والحد الأقصى 1518 bytes. الإطار الأصغر يسمى runt ويتم إسقاطه.</p></article>
+        </div>
+
+        <h3>MAC Address</h3>
+        <p>عنوان MAC قيمة 48-bit تكتب عادة على شكل 12 رقمًا Hexadecimal. أول 24-bit تمثل OUI الذي تعطيه IEEE للشركة المصنعة، وآخر 24-bit تميز الجهاز نفسه. يسمى أحيانًا BIA لأنه مخزن في ROM ثم ينسخ إلى RAM عند التشغيل.</p>
+        <table class="compare">
+          <thead><tr><th>النوع</th><th>القيمة أو الفكرة</th><th>الاستخدام</th></tr></thead>
+          <tbody>
+            <tr><td>Unicast</td><td>عنوان جهاز واحد.</td><td>إرسال إطار إلى جهاز محدد.</td></tr>
+            <tr><td>Broadcast</td><td><code>FF-FF-FF-FF-FF-FF</code></td><td>إرسال لكل الأجهزة في الشبكة المحلية، مثل ARP.</td></tr>
+            <tr><td>Multicast</td><td>يبدأ غالبًا بـ <code>01-00-5E</code> في IPv4 multicast.</td><td>إرسال إلى مجموعة أجهزة.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>كيف يتعلم السويتش؟</h3>
+        <p>السويتش Layer 2 يقرر بناءً على MAC Address. عند تشغيله تكون MAC Address Table أو CAM Table فارغة. كلما وصل Frame، يقرأ السويتش Source MAC ويخزن: هذا العنوان موجود خلف هذا المنفذ. إذا عرف Destination MAC أرسل للمنفذ المحدد فقط، وإذا لم يعرفه عمل Flood لكل المنافذ عدا منفذ الدخول.</p>
+        <div class="flow">
+          <div class="step"><b>1</b><small>Frame يدخل من Port</small></div>
+          <div class="step"><b>2</b><small>تعلم Source MAC</small></div>
+          <div class="step"><b>3</b><small>بحث عن Destination MAC</small></div>
+          <div class="step"><b>4</b><small>Forward أو Flood</small></div>
+          <div class="step"><b>5</b><small>تحديث المؤقت، غالبًا 5 دقائق</small></div>
+        </div>
+
+        <h3>طرق تمرير الإطارات وإعدادات المنافذ</h3>
+        <div class="grid">
+          <article class="card">
+            <h4>Cut-Through</h4>
+            <p>السويتش يقرأ Destination MAC فقط ثم يبدأ التمرير. سريع جدًا لكنه لا يفحص الأخطاء. نوعاه: Fast-forward وFragment-free الذي يخزن أول 64 bytes.</p>
+          </article>
+          <article class="card">
+            <h4>Store-and-Forward</h4>
+            <p>السويتش يستقبل الإطار كاملًا أولًا، ثم يفحص FCS للتأكد من عدم وجود خطأ قبل التمرير. هذا أبطأ من Cut-through لكنه أوثق لأنه لا يمرر الإطارات التالفة.</p>
+          </article>
+          <article class="card">
+            <h4>Memory Buffering</h4>
+            <p>قد يخزن السويتش الإطارات عند ازدحام المنفذ. Port-based يربط الطوابير بالمنافذ، وShared memory يضع الإطارات في ذاكرة مشتركة.</p>
+          </article>
+          <article class="card">
+            <h4>Duplex وSpeed</h4>
+            <p>Full-duplex إرسال واستقبال معًا. Half-duplex اتجاه واحد في كل لحظة. Duplex mismatch يسبب مشاكل أداء عندما يكون طرف Full والآخر Half.</p>
+          </article>
+          <article class="card">
+            <h4>Auto-MDIX</h4>
+            <p>يسمح للسويتش بتحديد نوع الكابل تلقائيًا بدل الحاجة إلى Straight-through أو Crossover حسب نوعي الجهازين.</p>
+          </article>
+        </div>
+
+        <h3>ARP: الربط بين IP وMAC</h3>
+        <p>IP هو العنوان المنطقي للوصول إلى الشبكة النهائية، أما MAC فهو العنوان الفيزيائي للوصول داخل نفس الشبكة المحلية. عندما يعرف الجهاز IP الوجهة لكنه لا يعرف MAC المطلوب، يستخدم ARP.</p>
+        <table class="compare">
+          <thead><tr><th>الحالة</th><th>ماذا يحدث؟</th></tr></thead>
+          <tbody>
+            <tr><td>الوجهة في نفس الشبكة</td><td>الجهاز يبحث في ARP Table عن MAC الخاص بعنوان IP الوجهة. إذا لم يجده يرسل ARP Request broadcast.</td></tr>
+            <tr><td>الوجهة في شبكة بعيدة</td><td>الجهاز يبحث عن MAC الخاص بالـDefault Gateway، لأن الإطار المحلي يجب أن يذهب إلى الراوتر أولًا.</td></tr>
+            <tr><td>ARP Reply</td><td>الجهاز الذي يملك Target IP يرد بعنوان MAC الخاص به، ثم تخزن النتيجة مؤقتًا في ARP Cache.</td></tr>
+            <tr><td>ARP Issues</td><td>طلبات ARP Broadcast تستهلك موارد كل أجهزة الشبكة المحلية، وARP Spoofing يسمح للمهاجم بانتحال Default Gateway. من وسائل التخفيف Dynamic ARP Inspection.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="commands" class="band alt">
+        <div class="section-head">
+          <div>
+            <h2>لوحة أوامر Cisco IOS المهمة</h2>
+            <p>هذه الأوامر مأخوذة من سياق الفصل الثاني، ومفيدة للمختبرات والواجبات والتأكد من الإعداد.</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h3>الدخول والتنقل</h3>
+            <pre>enable
+disable
+configure terminal
+exit
+end
+Ctrl+Z</pre>
+          </article>
+          <article class="card">
+            <h3>إعداد الواجهات</h3>
+            <pre>interface fastethernet 0/0
+ip address 192.168.10.1 255.255.255.0
+no shutdown
+interface serial 0/0/0
+clock rate 64000</pre>
+          </article>
+          <article class="card">
+            <h3>الحفظ والعرض</h3>
+            <pre>copy running-config startup-config
+show running-config
+show interfaces
+show ip interface brief
+show ip route</pre>
+          </article>
+          <article class="card">
+            <h3>RIP وEIGRP</h3>
+            <pre>router rip
+network 172.30.0.0
+passive-interface fastethernet 0/0
+
+router eigrp 1
+network 172.16.3.0
+no auto-summary</pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="comparisons" class="band">
+        <div class="section-head">
+          <div>
+            <h2>قسم المقارنات المهمة</h2>
+            <p>هذه الجداول تجمع الفروقات التي غالبًا تتحول إلى أسئلة امتحان: تعريف، وظيفة، متى نستخدم، وما الذي يميز كل مفهوم عن الآخر.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الفصول</b><b>1، 2، 3، 5</b></span>
+            <span><b>عدد الجداول</b><b>16 مقارنة</b></span>
+            <span><b>الهدف</b><b>مراجعة امتحانية</b></span>
+          </div>
+        </div>
+
+        <h3>الفصل 1: Introduction to Networks</h3>
+        <table class="compare">
+          <thead><tr><th>LAN</th><th>WAN</th><th>MAN / WLAN / SAN</th></tr></thead>
+          <tbody>
+            <tr><td>مساحة صغيرة مثل منزل أو مدرسة أو مبنى.</td><td>مساحة واسعة تربط مدنًا أو دولًا.</td><td>MAN داخل مدينة، WLAN لاسلكية محلية، SAN للتخزين.</td></tr>
+            <tr><td>غالبًا تدار من شخص أو منظمة واحدة.</td><td>غالبًا تشترك فيها شركات اتصالات أو مزودو خدمة.</td><td>اختيارها يعتمد على الغرض: تغطية، لاسلكي، أو تخزين.</td></tr>
+            <tr><td>سرعة عالية داخل الموقع.</td><td>روابطها عادة أبطأ وأغلى من LAN.</td><td>ليست بديلًا دائمًا عن LAN/WAN بل تصنيفات مخصصة.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Internet</th><th>Intranet</th><th>Extranet</th></tr></thead>
+          <tbody>
+            <tr><td>شبكة عالمية عامة من LANs وWANs.</td><td>شبكة خاصة داخل مؤسسة.</td><td>امتداد آمن يسمح لأطراف خارجية محددة بالدخول.</td></tr>
+            <tr><td>لا يملكها فرد أو جهة واحدة.</td><td>مقيدة بالأعضاء أو المخولين.</td><td>مفيدة للشركاء والموردين والعملاء الموثوقين.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Fault Tolerance</th><th>Scalability</th><th>QoS</th><th>Security</th></tr></thead>
+          <tbody>
+            <tr><td>تقليل أثر العطل عبر مسارات بديلة.</td><td>التوسع دون التأثير على المستخدمين الحاليين.</td><td>إدارة الأولويات للتطبيقات الحساسة.</td><td>حماية الأجهزة والبيانات والوصول.</td></tr>
+            <tr><td>يعتمد على redundancy وpacket switching.</td><td>يعتمد على standards وprotocols.</td><td>مهم للصوت والفيديو.</td><td>أهدافه: confidentiality, integrity, availability.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Home/SOHO Security</th><th>Enterprise Security</th></tr></thead>
+          <tbody>
+            <tr><td>Antivirus، antispyware، وجدار ناري أساسي.</td><td>Dedicated firewall، ACL، IPS، VPN، وسياسات إدارة وصول.</td></tr>
+            <tr><td>التركيز على حماية الأجهزة ومنع الوصول غير المصرح.</td><td>التركيز على طبقات حماية متعددة ومراقبة التهديدات والموظفين عن بعد.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>الفصل 2: Configure a Network Operating System</h3>
+        <table class="compare">
+          <thead><tr><th>Console</th><th>SSH</th><th>Telnet</th></tr></thead>
+          <tbody>
+            <tr><td>إدارة مباشرة Out-of-Band.</td><td>إدارة بعيدة مشفرة عبر الشبكة.</td><td>إدارة بعيدة غير مشفرة.</td></tr>
+            <tr><td>لا تحتاج IP مفعل، ممتازة للإعداد الأول.</td><td>تحتاج عنوان IP وخدمات نشطة.</td><td>ترسل كلمات المرور والأوامر Plaintext، لذلك غير مفضلة.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>User EXEC</th><th>Privileged EXEC</th><th>Global Config</th><th>Interface Config</th></tr></thead>
+          <tbody>
+            <tr><td><code>Router&gt;</code></td><td><code>Router#</code></td><td><code>Router(config)#</code></td><td><code>Router(config-if)#</code></td></tr>
+            <tr><td>مراقبة بسيطة وأوامر محدودة.</td><td>show, debug, copy, reload.</td><td>إعدادات الجهاز العامة مثل hostname وrouting.</td><td>إعداد منفذ محدد مثل IP وno shutdown.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Static Routing</th><th>Dynamic Routing</th></tr></thead>
+          <tbody>
+            <tr><td>مسارات يكتبها المدير يدويًا.</td><td>المسارات تتعلمها الراوترات عبر بروتوكول مثل RIP أو EIGRP.</td></tr>
+            <tr><td>أكثر أمنًا وبلا تحديثات، مناسب للصغير.</td><td>أفضل للشبكات المتغيرة والكبيرة.</td></tr>
+            <tr><td>لا يعيد التوجيه وحده عند فشل الرابط.</td><td>يتقارب بعد التغييرات حسب البروتوكول.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>RIP</th><th>EIGRP</th></tr></thead>
+          <tbody>
+            <tr><td>بسيط، metric يعتمد على hop count.</td><td>متقدم، يستخدم DUAL ويدعم convergence أسرع.</td></tr>
+            <tr><td>Metric 16 يعني unreachable.</td><td>يدعم VLSM/CIDR وpartial updates وHello packets.</td></tr>
+            <tr><td>المسارات تظهر بـ <code>R</code>.</td><td>المسارات تظهر بـ <code>D</code>.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>الفصل 3: Network Protocols and Communication</h3>
+        <table class="compare">
+          <thead><tr><th>Unicast</th><th>Multicast</th><th>Broadcast</th></tr></thead>
+          <tbody>
+            <tr><td>واحد إلى واحد.</td><td>واحد إلى مجموعة.</td><td>واحد إلى كل الأجهزة في الشبكة المحلية.</td></tr>
+            <tr><td>أقل ضجيجًا، موجه لجهاز محدد.</td><td>مفيد للمجموعات.</td><td>مفيد للاكتشاف لكنه يستهلك موارد كل الأجهزة.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>OSI Model</th><th>TCP/IP Model</th></tr></thead>
+          <tbody>
+            <tr><td>سبع طبقات تعليمية مرجعية.</td><td>نموذج عملي مرتبط بالإنترنت.</td></tr>
+            <tr><td>Application, Presentation, Session, Transport, Network, Data Link, Physical.</td><td>Application, Transport, Internet, Network Access.</td></tr>
+            <tr><td>يفصل وظائف أكثر للتوضيح.</td><td>يدمج وظائف presentation/session داخل application، وdata link/physical داخل network access.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Segmentation</th><th>Multiplexing</th><th>Encapsulation</th><th>De-encapsulation</th></tr></thead>
+          <tbody>
+            <tr><td>تقسيم البيانات الكبيرة إلى أجزاء.</td><td>تداخل محادثات متعددة على الشبكة.</td><td>إضافة headers أثناء النزول في الطبقات.</td><td>إزالة headers أثناء الصعود في الطبقات.</td></tr>
+            <tr><td>يسمح بإعادة إرسال الجزء المفقود فقط.</td><td>يرفع كفاءة استخدام الشبكة.</td><td>ينتج Data, Segment, Packet, Frame, Bits.</td><td>يوصل البيانات للتطبيق النهائي.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>IP Address</th><th>MAC Address</th></tr></thead>
+          <tbody>
+            <tr><td>Logical address في Layer 3.</td><td>Physical address في Layer 2.</td></tr>
+            <tr><td>يبقى من المصدر الأصلي إلى الوجهة النهائية.</td><td>يتغير من وصلة محلية إلى أخرى عند المرور بالراوترات.</td></tr>
+            <tr><td>يحدد الشبكة والجهاز.</td><td>يوصل الإطار داخل نفس الشبكة المحلية.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>الفصل 5: Ethernet</h3>
+        <table class="compare">
+          <thead><tr><th>LLC</th><th>MAC</th></tr></thead>
+          <tbody>
+            <tr><td>يربط الطبقات العليا بالطبقات الدنيا.</td><td>يتعامل مع التغليف والوصول للوسط والعنونة.</td></tr>
+            <tr><td>غالبًا برمجي ومستقل عن العتاد.</td><td>غالبًا عتادي داخل NIC.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Unicast MAC</th><th>Broadcast MAC</th><th>Multicast MAC</th></tr></thead>
+          <tbody>
+            <tr><td>عنوان جهاز واحد.</td><td><code>FF-FF-FF-FF-FF-FF</code></td><td>يبدأ في IPv4 غالبًا بـ <code>01-00-5E</code>.</td></tr>
+            <tr><td>إطار لجهاز محدد.</td><td>إطار لكل أجهزة LAN.</td><td>إطار لمجموعة أجهزة.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>Store-and-Forward</th><th>Cut-Through</th><th>Fragment-Free</th></tr></thead>
+          <tbody>
+            <tr><td>يستقبل الإطار كاملًا ويفحص FCS.</td><td>يمرر بعد قراءة Destination MAC.</td><td>ينتظر أول 64 bytes ثم يمرر.</td></tr>
+            <tr><td>أوثق لكنه أبطأ.</td><td>أسرع لكنه لا يفحص الأخطاء.</td><td>حل وسط لتجنب collision fragments.</td></tr>
+          </tbody>
+        </table>
+        <table class="compare">
+          <thead><tr><th>ARP Request</th><th>ARP Reply</th><th>ARP Spoofing</th></tr></thead>
+          <tbody>
+            <tr><td>Broadcast للبحث عن MAC مقابل IPv4.</td><td>رد من الجهاز صاحب IP المطلوب.</td><td>هجوم ينتحل فيه المهاجم MAC لخدمة أو gateway.</td></tr>
+            <tr><td>يصل لكل أجهزة الشبكة المحلية.</td><td>يحمل sender IPv4 وsender MAC.</td><td>من وسائل التخفيف Dynamic ARP Inspection.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="terms" class="band">
+        <div class="section-head">
+          <div>
+            <h2>قاموس مصطلحات مختصر</h2>
+            <p>مصطلحات تتكرر في الفصول، مكتوبة بطريقة تساعدك تراجع بسرعة قبل الامتحان.</p>
+          </div>
+        </div>
+        <details open><summary>Host / End Device</summary><p>جهاز طرفي يبدأ الاتصال أو يستقبله مثل PC أو Server أو Smartphone.</p></details>
+        <details><summary>Intermediary Device</summary><p>جهاز يربط الأجهزة أو الشبكات ويقرر مسار البيانات مثل Switch وRouter وFirewall وAccess Point.</p></details>
+        <details><summary>Topology Diagram</summary><p>رسم يوضح الأجهزة والروابط. قد يكون Physical يركز على المكان والكابلات، أو Logical يركز على العناوين والمنافذ والمسارات.</p></details>
+        <details><summary>Default Gateway</summary><p>واجهة الراوتر التي يرسل لها الجهاز المحلي الإطارات عندما تكون وجهة IP خارج الشبكة المحلية.</p></details>
+        <details><summary>Encapsulation</summary><p>إضافة معلومات كل طبقة إلى البيانات أثناء الإرسال: Segment ثم Packet ثم Frame ثم Bits.</p></details>
+        <details><summary>MAC Address Table</summary><p>جدول السويتش الذي يربط MAC Address بالمنفذ، ويستخدمه لتمرير الإطارات بدقة بدل Flood دائم.</p></details>
+        <details><summary>ARP Cache</summary><p>جدول مؤقت في الجهاز يحفظ علاقات IPv4 Address مع MAC Address.</p></details>
+        <details><summary>QoS</summary><p>آلية لإدارة أولوية المرور، خصوصًا للصوت والفيديو عندما لا تكفي السعة لكل التطبيقات.</p></details>
+      </section>
+
+      <section id="quiz" class="band alt">
+        <div class="section-head">
+          <div>
+            <h2>اختبارات سريعة لكل فصل</h2>
+            <p>اختر الفصل من الأزرار. كل فصل يحتوي 22 سؤالًا، مع إظهار فوري للصحيح والخطأ وملاحظة قصيرة تثبت الفكرة.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>الفصل 1</b><b>22 سؤال</b></span>
+            <span><b>الفصل 2</b><b>22 سؤال</b></span>
+            <span><b>الفصل 3</b><b>22 سؤال</b></span>
+            <span><b>الفصل 5</b><b>22 سؤال</b></span>
+          </div>
+        </div>
+        <div class="quiz-tabs" data-quiz-tabs></div>
+        <p class="quiz-meta" data-quiz-meta></p>
+        <div class="quiz" data-quiz></div>
+      </section>
+
+      <section id="previous-exams" class="band">
+        <div class="section-head">
+          <div>
+            <h2>أسئلة السنوات السابقة</h2>
+            <p>هذا القسم من الصور المرفقة. حولت الأسئلة إلى نص واضح مع إجابات نموذجية حتى تراجعها بسرعة وتبحث داخل الصفحة.</p>
+          </div>
+          <div class="chapter-meta">
+            <span><b>Final 2025</b><b>فراغات + شرح + عملي</b></span>
+            <span><b>1st Exam 2026</b><b>اختيارات + قصير</b></span>
+            <span><b>التركيز</b><b>أسئلة دكتور متوقعة</b></span>
+          </div>
+        </div>
+
+        <div class="exam-stack">
+          <article class="card">
+            <span class="exam-label">Final Exam 2024-2025, Q1</span>
+            <h3>Fill in the blanks</h3>
+            <p>الكلمات في الجدول: Segment, Protocol suite, Powerline networking, Integrity, Kernel, Burned-in address, Collision fragment, Half-duplex, Intranet, Converged networks, Data link address.</p>
+            <table class="compare">
+              <thead><tr><th>السؤال</th><th>الإجابة</th><th>ملاحظة امتحانية</th></tr></thead>
+              <tbody>
+                <tr><td>The MAC address is often referred to as a ____ meaning the address is encoded into the ROM chip permanently.</td><td>Burned-in address</td><td>BIA هو MAC المخزن في ROM.</td></tr>
+                <tr><td>____ is a private network within an organization, only accessible to its members or authorized users.</td><td>Intranet</td><td>لا تخلطها مع Extranet.</td></tr>
+                <tr><td>Unlike dedicated networks, ____ can deliver data, voice, and video over the same network infrastructure.</td><td>Converged networks</td><td>شبكة واحدة تحمل خدمات متعددة.</td></tr>
+                <tr><td>The purpose of the ____ is to deliver the data link frame from one network interface to another on the same network.</td><td>Data link address</td><td>المقصود غالبًا MAC address في Layer 2.</td></tr>
+                <tr><td>____ is the Protocol Data Unit (PDU) for the Transport layer.</td><td>Segment</td><td>Transport = Segment.</td></tr>
+                <tr><td>____ means assurance that the data has not been altered during transmission.</td><td>Integrity</td><td>من أهداف security الثلاثة.</td></tr>
+                <tr><td>____ can allow devices to connect to a LAN where data cables or wireless are not viable.</td><td>Powerline networking</td><td>يستخدم التمديدات الكهربائية.</td></tr>
+                <tr><td>Frames less than 64 bytes are called a ____ and are discarded.</td><td>Collision fragment</td><td>وتسمى أيضًا runt frame.</td></tr>
+                <tr><td>The portion of IOS that interacts directly with hardware is known as the ____.</td><td>Kernel</td><td>Kernel قريب من hardware.</td></tr>
+                <tr><td>A ____ is a set of protocols that work together to provide comprehensive communication services.</td><td>Protocol suite</td><td>مثل TCP/IP suite.</td></tr>
+                <tr><td>In ____ only one end of the connection can send at a time.</td><td>Half-duplex</td><td>عكس Full-duplex.</td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card">
+            <span class="exam-label">Final Exam 2024-2025, Q2 and Q3</span>
+            <h3>أسئلة شرح مختصر مع إجابات نموذجية</h3>
+            <details open><summary>What are the two basic functions of ARP?</summary><p>الوظيفتان هما: resolving IPv4 addresses to MAC addresses، وmaintaining a table of mappings داخل ARP cache.</p></details>
+            <details><summary>What are examples of external security threats?</summary><p>Viruses, worms, Trojan horses, spyware, adware, zero-day attacks, hacker attacks, denial of service, data interception and theft, identity theft.</p></details>
+            <details><summary>Draw/distribute the frame fields in IEEE 802.3.</summary><p>الترتيب الدراسي المختصر: Destination MAC, Source MAC, Type/Length, Data, FCS. إذا طلب تفاصيل أكثر يمكن ذكر preamble وSFD قبل العناوين.</p></details>
+            <details><summary>Advantages and disadvantages of peer-to-peer networking?</summary><p>Advantages: easy to set up, less complex, lower cost. Disadvantages: no centralized administration, weaker security, not scalable, slower performance.</p></details>
+            <details><summary>What are intermediary devices and their roles?</summary><p>أجهزة تربط الأجهزة الطرفية أو الشبكات مثل switches, routers, wireless access points, firewalls. أدوارها: إعادة توليد وإرسال الإشارات، اختيار المسارات، تمرير البيانات، إعلام الأجهزة بالأخطاء أو فشل الاتصال، وتطبيق سياسات أمن أو وصول.</p></details>
+            <details><summary>Describe encapsulation from a web server to a client.</summary><p>الويب سيرفر يجهز HTML page، ثم HTTP يرسل البيانات إلى Transport. TCP يقسمها إلى segments، ثم IP يضيف عناوين المصدر والوجهة لتكوين packet، ثم Ethernet يضيف معلومات Layer 2 لتكوين frame، وبعدها تنتقل عبر الوسط.</p></details>
+            <details><summary>Functions of LLC and MAC sublayers?</summary><p>LLC يتعامل مع الاتصال بين الطبقات العليا والطبقات الدنيا ويكون مستقلًا عن العتاد. MAC مسؤول عن data encapsulation، frame delimiting، addressing، error detection، وmedia access control.</p></details>
+          </article>
+
+          <article class="card">
+            <span class="exam-label">Final Exam 2024-2025, Q4</span>
+            <h3>MAC Address Table: سؤال عملي</h3>
+            <p>المعطيات في الصورة: أجهزة A وB وC وD متصلة بالمنافذ 1 و2 و3 و4. عناوين MAC مختصرة: A = 00-0A، B = 00-0B، C = 00-0C، D = 00-0D. الإطار المرسل يحمل Destination MAC = 00-0A وSource MAC = 00-0D.</p>
+            <table class="compare">
+              <thead><tr><th>الخطوة</th><th>ماذا يفعل السويتش؟</th><th>النتيجة</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>يستقبل الإطار من المنفذ 4 لأن المصدر D متصل هناك.</td><td>يتعلم Source MAC 00-0D على Port 4.</td></tr>
+                <tr><td>2</td><td>يفحص Destination MAC 00-0A في جدول MAC.</td><td>إذا كان الجدول فارغًا فلن يجد الوجهة.</td></tr>
+                <tr><td>3</td><td>بما أن الوجهة غير معروفة، يعمل Flood.</td><td>يرسل الإطار إلى المنافذ 1 و2 و3 فقط، وليس المنفذ 4.</td></tr>
+                <tr><td>4</td><td>الجهاز A يستقبل الإطار لأن MAC مطابق له.</td><td>الأجهزة B وC ترفض الإطار لأن destination MAC لا يطابقها.</td></tr>
+                <tr><td>5</td><td>عندما يرد A لاحقًا، يتعلم السويتش 00-0A على Port 1.</td><td>بعدها يمكنه الإرسال مباشرة بين Port 4 وPort 1 دون Flood.</td></tr>
+              </tbody>
+            </table>
+            <pre>MAC Address Table after receiving the shown frame:
+Port 4 -> 00-0D
+
+After A replies:
+Port 4 -> 00-0D
+Port 1 -> 00-0A</pre>
+          </article>
+
+          <article class="card">
+            <span class="exam-label">Final Exam 2024-2025, Q5</span>
+            <h3>RIP Configuration: سؤال عملي</h3>
+            <p>الشبكات الظاهرة: 192.168.1.0/24 بين R1 وPC1، 192.168.2.0/24 بين R1 وR2، 192.168.3.0/24 بين R2 وPC2، 192.168.4.0/24 بين R2 وR3، 192.168.5.0/24 بين R3 وPC3.</p>
+            <table class="compare">
+              <thead><tr><th>Device</th><th>Interface</th><th>IP Address</th><th>Mask</th></tr></thead>
+              <tbody>
+                <tr><td>R1</td><td>Fa0/0</td><td>192.168.1.1</td><td>255.255.255.0</td></tr>
+                <tr><td>R1</td><td>S0/0/0</td><td>192.168.2.1</td><td>255.255.255.0</td></tr>
+                <tr><td>R2</td><td>Fa0/0</td><td>192.168.3.1</td><td>255.255.255.0</td></tr>
+                <tr><td>R2</td><td>S0/0/0</td><td>192.168.2.2</td><td>255.255.255.0</td></tr>
+                <tr><td>R2</td><td>S0/0/1</td><td>192.168.4.2</td><td>255.255.255.0</td></tr>
+                <tr><td>R3</td><td>Fa0/0</td><td>192.168.5.1</td><td>255.255.255.0</td></tr>
+                <tr><td>R3</td><td>S0/0/1</td><td>192.168.4.1</td><td>255.255.255.0</td></tr>
+              </tbody>
+            </table>
+            <pre>R1(config)# router rip
+R1(config-router)# network 192.168.1.0
+R1(config-router)# network 192.168.2.0
+R1(config-router)# end
+
+R2(config)# router rip
+R2(config-router)# network 192.168.2.0
+R2(config-router)# network 192.168.3.0
+R2(config-router)# network 192.168.4.0
+R2(config-router)# end
+
+R3(config)# router rip
+R3(config-router)# network 192.168.4.0
+R3(config-router)# network 192.168.5.0
+R3(config-router)# end
+
+Verification:
+show ip route
+show ip protocols
+ping between PCs</pre>
+          </article>
+
+          <article class="card">
+            <span class="exam-label">2nd Semester, 1st Exam 2026, Q1</span>
+            <h3>Multiple choice من الصور</h3>
+            <table class="compare">
+              <thead><tr><th>السؤال</th><th>الإجابة الصحيحة</th><th>سبب مختصر</th></tr></thead>
+              <tbody>
+                <tr><td>What are the three common elements in all communication methods?</td><td>Source, destination, and channel</td><td>هذه عناصر الاتصال الأساسية.</td></tr>
+                <tr><td>Which protocol manages individual conversations between a web server and a web client?</td><td>TCP</td><td>TCP يعمل في Transport layer ويدير المحادثات.</td></tr>
+                <tr><td>What is the PDU for the Data Link Layer?</td><td>Frame</td><td>Data Link PDU = Frame.</td></tr>
+                <tr><td>Correct order of TCP/IP communication when sending data from web server to client?</td><td>HTML page, Segments, IP Packet, Ethernet Frame</td><td>Application ثم Transport ثم Internet ثم Network Access.</td></tr>
+                <tr><td>Delivery of the same message to a group of host destinations simultaneously?</td><td>Multicasting</td><td>Multicast = one-to-many group.</td></tr>
+                <tr><td>Putting a letter into an addressed envelope is analogous to?</td><td>Encapsulation</td><td>الإطار يعمل مثل الظرف.</td></tr>
+                <tr><td>Network infrastructure designed for file servers and data storage, retrieval, replication?</td><td>SAN</td><td>Storage Area Network.</td></tr>
+                <tr><td>Which device determines the path messages should take through internetworks?</td><td>Router</td><td>الراوتر يحدد المسار بين الشبكات.</td></tr>
+                <tr><td>Which expression defines bandwidth?</td><td>A measure of the data carrying capacity of the media</td><td>Bandwidth يقيس السعة لا الازدحام.</td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card">
+            <span class="exam-label">2nd Semester, 1st Exam 2026, Q2</span>
+            <h3>Short answer questions</h3>
+            <details open><summary>What happens during de-encapsulation?</summary><p>الجهاز المستقبل يزيل headers بالترتيب العكسي لإضافتها. يبدأ من Ethernet/Data Link header، ثم IP header، ثم Transport header، حتى تصل البيانات إلى التطبيق.</p></details>
+            <details><summary>What information is contained in the header of an Ethernet frame?</summary><p>يتضمن أهم شيء: Destination MAC address وSource MAC address، ومعهما Type/Length حسب الصيغة، ثم تأتي Data وFCS في نهاية الإطار للتحقق من الأخطاء.</p></details>
+            <details><summary>What is a protocol suite?</summary><p>هي مجموعة بروتوكولات تعمل معًا لتقديم خدمة اتصال كاملة، مثل TCP/IP حيث تعمل HTTP وTCP وIP وEthernet معًا في عملية الاتصال.</p></details>
+            <details><summary>Peer-to-peer networking, advantages and disadvantages?</summary><p>Advantages: easy to set up, lower cost, less complex. Disadvantages: no centralized administration, less secure, not scalable, slower performance.</p></details>
+          </article>
+        </div>
+      </section>
+
+      <section id="sources" class="band">
+        <div class="section-head">
+          <div>
+            <h2>الملفات الأصلية</h2>
+            <p>وضعت نسخًا مختصرة الأسماء من ملفات PDF داخل نفس مجلد الموقع حتى تقدر تفتح السلايدات الأصلية أثناء المذاكرة.</p>
+          </div>
+        </div>
+        <div class="grid">
+          <a class="card" href="chapter1.pdf"><h3>Chapter 1</h3><p>Introduction to Networks</p></a>
+          <a class="card" href="chapter2.pdf"><h3>Chapter 2</h3><p>Configure a Network Operating System</p></a>
+          <a class="card" href="chapter3.pdf"><h3>Chapter 3</h3><p>Network Protocols and Communication</p></a>
+          <a class="card" href="chapter5.pdf"><h3>Chapter 5</h3><p>Ethernet</p></a>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>تم بناء هذا الموقع من محتوى ملفات PDF الأربعة المرفقة. افتح الأقسام بالتسلسل إذا تريد مذاكرة كاملة، أو استخدم القائمة الجانبية للمراجعة السريعة.</p>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const quizBank = {
+      "الفصل 1": [
+        ["ما المقصود بـEnd Device؟", ["جهاز يبدأ أو يستقبل الاتصال", "كابل نحاسي فقط", "بروتوكول توجيه"], 0, "End devices هي مصادر أو وجهات الرسائل مثل PC وServer."],
+        ["أي جهاز يعد Intermediary Device؟", ["Switch", "Keyboard", "Monitor"], 0, "السويتش والراوتر والفايروول تربط أو تمرر البيانات."],
+        ["ما الأنواع الثلاثة العامة لمكونات الشبكة؟", ["Devices, Media, Services", "TCP, UDP, HTTP", "LAN, MAN, SAN فقط"], 0, "الفصل يقسم البنية إلى أجهزة ووسط نقل وخدمات."],
+        ["LAN عادةً تغطي:", ["مساحة صغيرة", "العالم كله", "شبكات مزودي الخدمة فقط"], 0, "LAN تكون داخل منزل أو مدرسة أو مكتب أو campus."],
+        ["WAN عادةً تربط:", ["شبكات LAN عبر مناطق واسعة", "منفذين داخل نفس السويتش", "ذاكرة الحاسوب بالمعالج"], 0, "WAN تربط LANs عبر مدن أو دول أو مزودي خدمة."],
+        ["ما الفرق الأهم بين Internet وIntranet؟", ["Internet عامة وIntranet خاصة", "Intranet أسرع دائمًا", "Internet تستخدم MAC فقط"], 0, "الإنترانت شبكة داخلية خاصة بالمؤسسة."],
+        ["Extranet تستخدم غالبًا من أجل:", ["وصول آمن لأطراف خارجية محددة", "إلغاء الحاجة للراوتر", "منع كل الاتصال بالإنترنت"], 0, "تستخدم للشركاء أو الموردين أو جهات لها صلاحية."],
+        ["أي وسط نقل يستخدم الضوء؟", ["Fiber optic", "Copper cable", "Console cable"], 0, "الألياف الضوئية تنقل البيانات عبر نبضات ضوئية."],
+        ["ما وظيفة NIC؟", ["ربط الجهاز بالشبكة", "تخزين نظام التشغيل", "تشفير كل رسائل الإنترنت"], 0, "Network Interface Card هي واجهة اتصال الجهاز بالشبكة."],
+        ["Fault tolerance تعني:", ["تقليل أثر العطل", "زيادة اسم الجهاز", "منع استخدام البروتوكولات"], 0, "تتحقق غالبًا بالمسارات البديلة والاعتمادية."],
+        ["Scalability تعني:", ["إمكانية توسع الشبكة بسهولة", "حذف كل المستخدمين", "تشغيل half-duplex فقط"], 0, "الشبكة القابلة للتوسع تستقبل مستخدمين وخدمات جديدة."],
+        ["QoS مهمة خصوصًا لـ:", ["الصوت والفيديو المباشر", "تغيير اسم الراوتر", "عرض MAC address فقط"], 0, "الصوت والفيديو حساسان للتأخير والتقطيع."],
+        ["أهداف أمن المعلومات الثلاثة هي:", ["Confidentiality, Integrity, Availability", "LAN, WAN, MAN", "HTTP, TCP, IP"], 0, "تسمى أحيانًا CIA triad."],
+        ["BYOD يعني:", ["استخدام المستخدم جهازه الشخصي للعمل", "بروتوكول لإرسال broadcast", "نوع من الكابلات"], 0, "Bring Your Own Device يزيد المرونة ويزيد تحديات الأمن."],
+        ["Cloud computing يعتمد على:", ["Data centers عبر الإنترنت", "كابل console فقط", "إلغاء الخوادم نهائيًا"], 0, "السحابة تقدم تخزينًا وتطبيقات وقدرات حسب الطلب."],
+        ["Public cloud تعني:", ["خدمات متاحة للعامة غالبًا pay-per-use أو free", "سحابة داخل مؤسسة واحدة فقط", "شبكة بلا إنترنت"], 0, "Public cloud تقدم خدمات لجمهور واسع."],
+        ["Private cloud تكون:", ["مخصصة لمنظمة أو جهة واحدة", "مفتوحة لكل الناس", "بلا حماية"], 0, "تستخدمها مؤسسات تحتاج تحكمًا وخصوصية أكبر."],
+        ["Powerline networking يستخدم:", ["التمديدات الكهربائية لنقل بيانات LAN", "الألياف البحرية فقط", "موجات الأقمار الصناعية فقط"], 0, "ينقل البيانات عبر ترددات على أسلاك الكهرباء."],
+        ["تهديد داخلي قد يحدث بسبب:", ["مستخدم داخل المؤسسة", "انعدام وجود LAN", "استخدام OSI فقط"], 0, "قد يكون التهديد الداخلي مقصودًا أو غير مقصود."],
+        ["ACL في الشبكات الكبيرة تستخدم لـ:", ["تصفية الوصول والمرور", "تحديد حجم Ethernet frame", "تشغيل monitor"], 0, "Access Control Lists تتحكم بمرور الترافيك."],
+        ["VPN تستخدم من أجل:", ["وصول آمن للموظفين عن بعد", "إلغاء كلمات المرور", "تحويل MAC إلى IP"], 0, "VPN تنشئ اتصالًا آمنًا عبر شبكة غير خاصة."],
+        ["أساس بنية الشبكات حسب الفصل هو:", ["Routers and switches", "Printers only", "Speakers and monitors"], 0, "الراوترات والسويتشات أساس أغلب البنى، ومنها الإنترنت."]
+      ],
+      "الفصل 2": [
+        ["Cisco IOS هو:", ["نظام تشغيل لأجهزة Cisco الشبكية", "نوع كابل", "عنوان MAC"], 0, "IOS يدير الراوترات والسويتشات ويوفر CLI."],
+        ["Kernel في نظام التشغيل هو الجزء الذي:", ["يتعامل مباشرة مع العتاد", "يعرض صفحة ويب", "يرسل ARP فقط"], 0, "Kernel يدير الموارد والتعامل مع hardware."],
+        ["Shell هو:", ["واجهة المستخدم مع النظام", "جدول MAC", "منفذ في السويتش"], 0, "Shell قد يكون CLI أو GUI."],
+        ["أفضل طريقة للإعداد الأول عند عدم وجود IP هي:", ["Console", "SSH", "Telnet"], 0, "Console out-of-band ولا يحتاج إعدادات شبكة مسبقة."],
+        ["الطريقة الآمنة للإدارة عن بعد هي:", ["SSH", "Telnet", "ARP"], 0, "SSH مشفر، بخلاف Telnet."],
+        ["Telnet غير مفضل لأنه:", ["يرسل البيانات Plaintext", "لا يعمل إلا بالألياف", "يتطلب MAC multicast"], 0, "كلمات المرور والأوامر تمر دون تشفير."],
+        ["Prompt الخاص بـUser EXEC هو:", ["Router>", "Router#", "Router(config)#"], 0, "علامة > تدل على User EXEC."],
+        ["Prompt الخاص بـPrivileged EXEC هو:", ["Router#", "Router(config-if)#", "Router>"], 0, "علامة # تدل على privileged mode."],
+        ["الأمر الذي ينقلك إلى Privileged EXEC هو:", ["enable", "hostname", "network"], 0, "enable يرفع مستوى الوصول."],
+        ["الأمر لتغيير اسم الراوتر يستخدم في:", ["Global configuration mode", "User EXEC", "Line config فقط"], 0, "hostname يكتب من Router(config)#."],
+        ["الأمر no shutdown يستخدم لـ:", ["تشغيل الواجهة", "حذف IOS", "عرض ARP cache"], 0, "الواجهات تكون administratively down حتى تفعلها."],
+        ["clock rate يضبط غالبًا في جهة:", ["DCE", "DTE", "كل PCs"], 0, "في مختبر serial، DCE يقدم التوقيت."],
+        ["كيف تعرف جهة DCE في serial؟", ["show controllers serial", "show arp", "show vlan فقط"], 0, "show controllers serial يظهر DCE أو DTE."],
+        ["copy running-config startup-config يعني:", ["حفظ الإعداد الحالي في NVRAM", "مسح الإعداد", "إرسال broadcast"], 0, "حتى لا تضيع الإعدادات بعد reboot."],
+        ["show ip interface brief يفيد في:", ["ملخص IP وحالة الواجهات", "عرض كلمات المرور فقط", "تشغيل EIGRP"], 0, "مهم جدًا في troubleshooting."],
+        ["Static route ميزتها:", ["بسيطة وآمنة ولا ترسل تحديثات", "تتعلم كل شيء تلقائيًا", "تحتاج broadcast دائم"], 0, "لكنها لا تتكيف وحدها مع تغير الشبكة."],
+        ["عيب static routing:", ["لا يعيد التوجيه تلقائيًا عند فشل الرابط", "لا يعمل في الشبكات الصغيرة", "يمنع استخدام IP"], 0, "تحتاج تعديلًا يدويًا عند تغير topology."],
+        ["RIP يستخدم metric اسمه:", ["Hop count", "Bandwidth only", "MAC age"], 0, "كل راوتر يزيد hop واحدًا."],
+        ["في RIP، metric 16 يعني:", ["Unreachable", "أفضل طريق", "Full-duplex"], 0, "RIP لا يقبل مسارًا يتجاوز 15 hops."],
+        ["المسارات المتعلمة من RIP تظهر في show ip route بالحرف:", ["R", "D", "C فقط"], 0, "R ترمز إلى RIP route."],
+        ["المسارات المتعلمة من EIGRP تظهر بالحرف:", ["D", "R", "S"], 0, "D ترمز إلى EIGRP."],
+        ["passive-interface يستخدم غالبًا لـ:", ["منع إرسال تحديثات routing من واجهة LAN", "إيقاف الراوتر", "تغيير MAC"], 0, "يبقي الشبكة معلنة لكنه لا يرسل updates من الواجهة."]
+      ],
+      "الفصل 3": [
+        ["أي عناصر الاتصال الأساسية؟", ["Source, Destination, Channel", "Switch, Cable, Keyboard", "FCS, OUI, BIA"], 0, "كل اتصال يحتاج مرسلًا ومستقبلًا وقناة."],
+        ["Protocol يعني:", ["قواعد تنظم الاتصال", "جهاز طرفي", "عنوان فيزيائي فقط"], 0, "البروتوكولات تحدد كيف تصاغ الرسائل وتنتقل."],
+        ["Encoding يعني:", ["تحويل الرسالة إلى صيغة مناسبة للوسط", "إلغاء التوجيه", "حذف IP"], 0, "البتات تتحول إلى إشارات كهربائية أو ضوئية أو لاسلكية."],
+        ["Encapsulation يشبه:", ["وضع الرسالة داخل ظرف بعنوان", "إزالة كل العناوين", "تغيير اسم الراوتر"], 0, "كل طبقة تضيف معلوماتها حول البيانات."],
+        ["Message size مهم لأن:", ["الرسائل الكبيرة تقسم إلى أجزاء", "كل رسالة يجب أن تكون 1518 دائمًا", "لا توجد عناوين"], 0, "التقسيم يسمح بالنقل وإعادة إرسال الجزء المفقود."],
+        ["Flow control يمنع:", ["إغراق المستقبل ببيانات أكثر من قدرته", "تعلم MAC", "تشغيل CLI"], 0, "يتفاوض المصدر والوجهة على التوقيت."],
+        ["Unicast هو:", ["واحد إلى واحد", "واحد إلى الجميع", "واحد إلى لا أحد"], 0, "اتصال مباشر بين مصدر ووجهة."],
+        ["Broadcast هو:", ["واحد إلى كل الأجهزة المحلية", "واحد إلى جهاز واحد فقط", "تشفير فقط"], 0, "Broadcast يصل لكل أجهزة الشبكة المحلية."],
+        ["Multicast هو:", ["واحد إلى مجموعة", "واحد إلى كل الإنترنت", "منفذ console"], 0, "المجموعة تكون مشتركة في عنوان multicast."],
+        ["HTTP يعمل في:", ["Application layer", "Physical layer", "Data Link فقط"], 0, "HTTP بروتوكول تطبيق للويب."],
+        ["TCP مسؤول عن:", ["إدارة المحادثات والتقسيم في النقل", "تحديد MAC للواجهة", "نقل البتات ضوئيًا"], 0, "TCP transport protocol."],
+        ["IP مسؤول عن:", ["عنونة packets وإيصالها للوجهة", "عرض GUI", "حفظ startup-config"], 0, "IP يضيف source/destination IP."],
+        ["Ethernet في مثال الويب يعمل في:", ["Data Link وPhysical", "Application فقط", "Session فقط"], 0, "Ethernet ينقل frame على الوسط المحلي."],
+        ["ميزة open standards أنها تشجع:", ["Interoperability and competition", "احتكار vendor واحد", "منع الابتكار"], 0, "المعايير المفتوحة تسمح لأجهزة مختلفة بالعمل معًا."],
+        ["IETF تهتم بـ:", ["تطوير وصيانة تقنيات Internet وTCP/IP", "تصنيع كروت الشبكة", "تشغيل Telnet"], 0, "IETF جهة معايير إنترنت مهمة."],
+        ["ICANN وIANA ترتبطان بـ:", ["IP allocation وdomain names وprotocol identifiers", "clock rate", "duplex mismatch"], 0, "تديران أسماء وعناوين ومعرفات."],
+        ["OSI يحتوي على:", ["7 layers", "4 layers فقط", "طبقة واحدة"], 0, "OSI نموذج مرجعي من سبع طبقات."],
+        ["TCP/IP يسمى أيضًا:", ["Internet Model", "MAC Model", "Console Model"], 0, "TCP/IP هو النموذج العملي للإنترنت."],
+        ["PDU في Transport layer هو:", ["Segment", "Packet", "Frame"], 0, "Transport PDU يسمى segment."],
+        ["PDU في Network layer هو:", ["Packet", "Bits", "Frame"], 0, "Network PDU يسمى packet."],
+        ["عند الإرسال، التغليف يتحرك:", ["من أعلى إلى أسفل", "من أسفل إلى أعلى", "لا يتحرك"], 0, "Data ثم segment ثم packet ثم frame ثم bits."],
+        ["عند الشبكة البعيدة، Layer 2 destination يكون:", ["Default Gateway MAC", "MAC النهائي البعيد مباشرة", "لا يوجد MAC"], 0, "الجهاز يرسل الإطار للراوتر الأقرب."]
+      ],
+      "الفصل 5": [
+        ["Ethernet تعمل في:", ["Data Link وPhysical", "Application فقط", "Transport فقط"], 0, "Ethernet تغطي الإطار والوسط الفيزيائي."],
+        ["IEEE standards المرتبطة بـEthernet تشمل:", ["802.2 و802.3", "DNS وHTTP", "RIP وEIGRP"], 0, "الفصل يذكر 802.2 و802.3."],
+        ["LLC وظيفته:", ["التواصل بين الطبقات العليا والدنيا", "تحديد OUI", "إرسال ARP request"], 0, "LLC sublayer برمجي غالبًا."],
+        ["MAC sublayer ينفذ غالبًا في:", ["NIC hardware", "Web browser", "Cloud فقط"], 0, "MAC مرتبط بالعتاد."],
+        ["وظائف data encapsulation في MAC تشمل:", ["Frame delimiting, addressing, error detection", "DNS, HTTP, FTP", "Console, SSH, Telnet"], 0, "هذه وظائف MAC الأساسية."],
+        ["أقل حجم Ethernet frame من Destination MAC إلى FCS هو:", ["64 bytes", "16 bytes", "9000 bytes"], 0, "الأصغر يسمى runt غالبًا."],
+        ["أكبر حجم Ethernet frame القياسي هو:", ["1518 bytes", "64 bytes", "48 bits"], 0, "الإطار الأكبر من الطبيعي قد يسمى jumbo أو baby giant حسب السياق."],
+        ["MAC address طوله:", ["48 bits", "32 bits", "128 bits"], 0, "يكتب كـ12 hexadecimal digits."],
+        ["OUI يمثل:", ["أول 24-bit مخصصة للشركة المصنعة", "آخر منفذ في الراوتر", "عنوان IP للشبكة"], 0, "IEEE تمنح OUI للبائع."],
+        ["BIA تعني:", ["Burned-In Address", "Binary Internet Address", "Broadcast Interface Access"], 0, "MAC المخزن في ROM ثم ينسخ إلى RAM."],
+        ["Broadcast MAC هو:", ["FF-FF-FF-FF-FF-FF", "01-00-5E فقط", "00-00-00-00-00-00 دائمًا"], 0, "كل البتات ones."],
+        ["Multicast IPv4 MAC يبدأ غالبًا بـ:", ["01-00-5E", "FF-FF-FF", "AA-AA-AA"], 0, "هذا prefix مستخدم لـIPv4 multicast MAC."],
+        ["السويتش يتعلم MAC من:", ["Source MAC في الإطار الداخل", "Destination IP فقط", "اسم المستخدم"], 0, "يضيف source MAC مع port number."],
+        ["إذا كان destination MAC غير معروف، السويتش:", ["Floods out all ports except incoming", "يحذف جدول MAC كاملًا", "يرسل إلى الراوتر فقط"], 0, "هذا يسمى unknown unicast flooding."],
+        ["إذا كان destination MAC معروفًا، السويتش:", ["يرسل من منفذ محدد", "يرسل لكل المنافذ دائمًا", "يحول IP إلى DNS"], 0, "هذا هو filtering/forwarding."],
+        ["CAM table هو اسم آخر لـ:", ["MAC address table", "ARP table", "Routing table"], 0, "Content Addressable Memory table في السويتش."],
+        ["Cut-through switching يتميز بأنه:", ["سريع ولا يفحص الأخطاء كاملًا", "يفحص FCS دائمًا", "لا يستخدم MAC"], 0, "يبدأ التمرير بعد قراءة destination MAC."],
+        ["Store-and-forward يتميز بأنه:", ["يفحص الإطار كاملًا وFCS", "الأسرع دائمًا", "يمنع استخدام duplex"], 0, "أوثق من cut-through لكنه يزيد latency."],
+        ["Full-duplex يعني:", ["إرسال واستقبال في نفس الوقت", "إرسال فقط", "استقبال فقط"], 0, "كلا الطرفين يرسلان ويستقبلان معًا."],
+        ["Duplex mismatch يحدث عندما:", ["طرف half-duplex وطرف full-duplex", "كلاهما full-duplex", "كلاهما نفس السرعة"], 0, "يسبب مشاكل أداء على Ethernet links."],
+        ["ARP يستخدم من أجل:", ["حل IPv4 إلى MAC", "تشفير SSH", "حفظ startup-config"], 0, "ARP يربط IP المنطقي بـMAC المحلي."],
+        ["ARP spoofing يقلل خطره في السويتشات عبر:", ["Dynamic ARP Inspection", "show ip route", "clock rate"], 0, "DAI تقنية تخفيف في enterprise switches."]
+      ]
+    };
+
+    const quizTabs = document.querySelector("[data-quiz-tabs]");
+    const quizRoot = document.querySelector("[data-quiz]");
+    const quizMeta = document.querySelector("[data-quiz-meta]");
+
+    function renderQuiz(chapterName) {
+      const questions = quizBank[chapterName];
+      quizMeta.textContent = `${chapterName}: ${questions.length} سؤال. اضغط على الإجابة حتى تظهر لك النتيجة والملاحظة.`;
+      quizRoot.innerHTML = "";
+
+      questions.forEach(([question, options, correctIndex, note], index) => {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const title = document.createElement("h3");
+        title.textContent = `${index + 1}. ${question}`;
+        card.appendChild(title);
+
+        options.forEach((option, optionIndex) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = option;
+          button.addEventListener("click", () => {
+            card.classList.add("answered");
+            card.querySelectorAll("button").forEach((item, itemIndex) => {
+              item.classList.toggle("correct", itemIndex === correctIndex);
+              item.classList.toggle("wrong", item === button && itemIndex !== correctIndex);
+            });
+          });
+          card.appendChild(button);
+        });
+
+        const answer = document.createElement("p");
+        answer.className = "answer-note";
+        answer.textContent = `الإجابة: ${options[correctIndex]}. ${note}`;
+        card.appendChild(answer);
+        quizRoot.appendChild(card);
+      });
+    }
+
+    Object.keys(quizBank).forEach((chapterName, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = chapterName;
+      button.addEventListener("click", () => {
+        quizTabs.querySelectorAll("button").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        renderQuiz(chapterName);
+      });
+      quizTabs.appendChild(button);
+      if (index === 0) {
+        button.classList.add("active");
+        renderQuiz(chapterName);
+      }
+    });
+  </script>
+</body>
+</html>

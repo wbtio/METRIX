@@ -432,18 +432,18 @@ export default function HomePage({
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col gap-3 overflow-hidden px-4 animate-in fade-in slide-in-from-bottom-8 duration-500 sm:gap-4 sm:px-6"
+      className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col gap-4 overflow-hidden px-4 animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out sm:gap-5 sm:px-6"
       dir={isArabic ? "rtl" : "ltr"}
     >
       {/* Logo */}
-      <div className="flex shrink-0 flex-col items-center justify-center gap-2.5 text-center sm:gap-3">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-3 text-center sm:gap-4 pt-1 sm:pt-2">
         <Image
           src="/logo1.svg"
           alt="METRIX Logo"
           width={240}
           height={96}
           sizes="(max-width: 640px) 170px, (max-width: 768px) 220px, 240px"
-          className="w-[170px] sm:w-[220px] md:w-[240px] h-auto object-contain dark:hidden"
+          className="w-[160px] sm:w-[210px] md:w-[230px] h-auto object-contain dark:hidden transition-transform duration-300 hover:scale-[1.02]"
           style={{ height: "auto" }}
           priority
         />
@@ -453,12 +453,12 @@ export default function HomePage({
           width={240}
           height={96}
           sizes="(max-width: 640px) 170px, (max-width: 768px) 220px, 240px"
-          className="hidden w-[170px] sm:w-[220px] md:w-[240px] h-auto object-contain dark:block"
+          className="hidden w-[160px] sm:w-[210px] md:w-[230px] h-auto object-contain dark:block transition-transform duration-300 hover:scale-[1.02]"
           style={{ height: "auto" }}
           priority
         />
         <p
-          className="max-w-[19rem] text-sm font-medium leading-6 text-muted-foreground sm:max-w-[24rem] sm:text-base sm:leading-7"
+          className="max-w-[20rem] text-sm font-semibold leading-relaxed text-muted-foreground/80 tracking-tight sm:max-w-[26rem] sm:text-[15px] sm:leading-8"
           dir={isArabic ? "rtl" : "ltr"}
           lang={isArabic ? "ar" : "en"}
         >
@@ -506,16 +506,16 @@ export default function HomePage({
 
         <div
           className={cn(
-            "relative z-20 overflow-hidden rounded-[22px] border bg-background/92 backdrop-blur-xl",
-            "shadow-lg shadow-black/5 transition-all duration-300 dark:shadow-black/20",
-            "focus-within:border-primary/35 focus-within:shadow-xl focus-within:shadow-black/5",
-            isRecording ? "border-red-400/40 bg-red-500/[0.03]" : isProcessing ? "border-amber-300/50 bg-amber-500/[0.03]" : aiPromptVisible ? promptCardClasses : "border-border/70"
+            "relative z-20 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-xl",
+            "shadow-sm shadow-black/[0.03] transition-all duration-300 ease-out dark:shadow-black/10",
+            "focus-within:border-primary/40 focus-within:shadow-md focus-within:shadow-primary/[0.06]",
+            isRecording ? "border-red-400/40 bg-red-500/[0.03]" : isProcessing ? "border-amber-300/50 bg-amber-500/[0.03]" : aiPromptVisible ? promptCardClasses : "border-border/60"
           )}
         >
           <div
             className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
-              isRecording ? "from-red-500/[0.08] via-red-500/[0.03]" : isProcessing ? "from-amber-500/[0.08] via-amber-500/[0.03]" : aiPromptVisible ? "from-amber-500/[0.08] via-amber-500/[0.02]" : "from-primary/[0.07] via-primary/[0.02]"
+              "pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent",
+              isRecording ? "from-red-500/[0.07] via-red-500/[0.02]" : isProcessing ? "from-amber-500/[0.07] via-amber-500/[0.02]" : aiPromptVisible ? "from-amber-500/[0.07] via-amber-500/[0.015]" : "from-primary/[0.06] via-primary/[0.015]"
             )}
           />
           <div className="relative px-2 pt-2 pb-1.5 sm:px-3 sm:pt-2.5 sm:pb-2.5">
@@ -615,20 +615,20 @@ export default function HomePage({
         className="flex-1 min-h-0 flex flex-col"
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <TabsList className="w-full shrink-0 mb-2">
-          <TabsTrigger value="goals" className={cn("flex-1 gap-1.5", !primaryGoal && "w-full")}>
-            <Target className="h-4 w-4" />
+        <TabsList className="w-full shrink-0 mb-3 h-11 p-1 bg-muted/60 border border-border/40 rounded-xl">
+          <TabsTrigger value="goals" className={cn("flex-1 gap-2 text-sm font-semibold rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground transition-all duration-200", !primaryGoal && "w-full")}>
+            <Target className="h-4 w-4 opacity-80" />
             {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
-            <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
+            <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold text-primary tabular-nums">
               {recentGoals.length}
             </span>
           </TabsTrigger>
           {primaryGoal && (
-            <TabsTrigger value="notifications" className="flex-1 gap-1.5">
-              <Bell className="h-4 w-4" />
+            <TabsTrigger value="notifications" className="flex-1 gap-2 text-sm font-semibold rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground transition-all duration-200">
+              <Bell className="h-4 w-4 opacity-80" />
               {isArabic ? "الإشعارات" : "Notifications"}
               {notifications.length > 0 && (
-                <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold text-primary tabular-nums">
                   {notifications.length}
                 </span>
               )}
@@ -638,9 +638,9 @@ export default function HomePage({
 
         <TabsContent value="goals" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-2xl border border-border/50 bg-card/30 p-3 pt-3.5 scrollbar-thin sm:rounded-3xl sm:p-4 sm:pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-2xl border border-border/40 bg-card/20 p-3 pt-3.5 scrollbar-thin sm:rounded-[22px] sm:p-4 sm:pt-4">
           {recentGoals.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
               {recentGoals.map((goal) => {
                 const currentPoints = goal.current_points ?? 0;
                 const targetPoints = goal.target_points ?? 0;
@@ -655,39 +655,39 @@ export default function HomePage({
                 return (
                   <div
                     key={goal.id}
-                    className="group relative w-full rounded-2xl border border-border/80 bg-white p-3 shadow-sm transition-all hover:border-primary/35 hover:shadow-md dark:bg-card/50 sm:p-4"
+                    className="group relative w-full rounded-xl border border-border/70 bg-card p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 ease-out hover:border-primary/30 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px active:translate-y-0 dark:bg-card/60 sm:p-4"
                   >
                     <button
                       onClick={() => onSelectGoal(goal.id)}
-                      className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl text-start outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="flex w-full cursor-pointer flex-col gap-3 rounded-xl text-start outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1"
                       dir={goalIsRTL ? "rtl" : "ltr"}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary shadow-sm transition-colors group-hover:bg-primary/15 sm:h-12 sm:w-12 sm:rounded-2xl">
-                            <Icon className="h-6 w-6" />
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-primary/15 bg-primary/[0.08] p-2 text-primary transition-colors duration-200 group-hover:bg-primary/[0.12] sm:h-11 sm:w-11">
+                            <Icon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className={cn("line-clamp-2 text-base font-black text-foreground transition-colors sm:text-lg", goalIsRTL ? "text-right" : "text-left")}>
+                            <h3 className={cn("line-clamp-2 text-[15px] font-bold leading-snug text-foreground tracking-tight transition-colors sm:text-base", goalIsRTL ? "text-right" : "text-left")}>
                               {goal.title}
                             </h3>
                             {hasGoalBadges && (
-                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                 {goal.is_pinned && (
-                                  <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                    <Pin className="h-3 w-3" />
+                                  <span className="flex items-center gap-1 rounded-full bg-amber-500/[0.08] px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/10">
+                                    <Pin className="h-2.5 w-2.5" />
                                     {isArabic ? "مثبت" : "Pinned"}
                                   </span>
                                 )}
                                 {daysChip && (
-                                  <span className={cn("flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums", daysChip.tone === "soon" && "bg-primary/10 text-primary", daysChip.tone === "today" && "bg-amber-500/10 text-amber-700 dark:text-amber-400", daysChip.tone === "late" && "bg-destructive/10 text-destructive")} title={daysChip.title}>
-                                    <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                  <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums border", daysChip.tone === "soon" && "bg-primary/[0.06] text-primary border-primary/10", daysChip.tone === "today" && "bg-amber-500/[0.06] text-amber-700 dark:text-amber-400 border-amber-500/10", daysChip.tone === "late" && "bg-destructive/[0.06] text-destructive border-destructive/10")} title={daysChip.title}>
+                                    <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
                                     {daysChip.text}
                                   </span>
                                 )}
                                 {hasStatsBadge && (
-                                  <span className="flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary tabular-nums" title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}>
-                                    <ListChecks className="h-3 w-3 shrink-0" aria-hidden />
+                                  <span className="flex items-center gap-1 rounded-full bg-primary/[0.06] px-2 py-0.5 text-[10px] font-semibold text-primary tabular-nums border border-primary/10" title={isArabic ? `${stats.completed} من ${stats.total} مهمة منجزة` : `${stats.completed} of ${stats.total} tasks done`}>
+                                    <ListChecks className="h-2.5 w-2.5 shrink-0" aria-hidden />
                                     <span dir="ltr">{stats.completed}/{stats.total}</span>
                                   </span>
                                 )}
@@ -703,14 +703,14 @@ export default function HomePage({
               })}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-border/80 bg-card/20 p-6 sm:p-10 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-                <Target className="h-7 w-7" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/[0.03] p-8 sm:p-12 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/15 bg-primary/[0.06] text-primary/80">
+                <Target className="h-6 w-6" />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 {isArabic ? "لا توجد أهداف بعد" : "No goals yet"}
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-1.5 max-w-[16rem] text-sm text-muted-foreground/70 leading-relaxed">
                 {isArabic ? "ابدأ بإضافة هدفك الأول وسيظهر تقدمه هنا." : "Create your first goal and its progress will appear here."}
               </p>
             </div>
@@ -721,15 +721,19 @@ export default function HomePage({
 
       {primaryGoal && (
         <TabsContent value="notifications" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-0">
-          <NotificationsSection
-            primaryGoal={primaryGoal}
-            isArabic={isArabic}
-            notifications={notifications}
-            notifLoading={notifLoading}
-            notifError={notifError}
-            contextReady={contextReady}
-            onRefresh={handleRefreshNotifs}
-          />
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-2xl border border-border/40 bg-card/20 p-3 pt-3.5 scrollbar-thin sm:rounded-[22px] sm:p-4 sm:pt-4">
+              <NotificationsSection
+                primaryGoal={primaryGoal}
+                isArabic={isArabic}
+                notifications={notifications}
+                notifLoading={notifLoading}
+                notifError={notifError}
+                contextReady={contextReady}
+                onRefresh={handleRefreshNotifs}
+              />
+            </div>
+          </div>
         </TabsContent>
       )}
     </Tabs>

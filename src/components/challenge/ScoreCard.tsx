@@ -37,18 +37,18 @@ export function ScoreCard({
   const displayName = person?.displayName || fallbackName;
 
   return (
-    <div className={softCardClass}>
+    <div className="rounded-xl border border-border/40 bg-background p-2.5 sm:p-3 shadow-sm shadow-black/[0.02]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-center gap-2.5">
           <PlayerAvatar avatarUrl={person?.avatarUrl} displayName={displayName} />
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{laneLabel}</div>
-            <div className="truncate text-sm font-black text-foreground">{displayName}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{laneLabel}</div>
+            <div className="truncate text-sm font-bold tracking-tight text-foreground">{displayName}</div>
             <GoalTitleReveal title={person?.goalTitle} isArabic={isArabic} />
           </div>
         </div>
 
-        <div className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums', badgeClass)}>
+        <div className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold tabular-nums', badgeClass)}>
           {numberFormatter.format(score.total)} {totalLabel}
         </div>
       </div>

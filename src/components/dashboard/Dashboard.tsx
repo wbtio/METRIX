@@ -296,6 +296,23 @@ export default function Dashboard({
       ),
     [dailyFocusRows, todayDateKey],
   );
+  const missedDailyFocusHistory = useMemo(
+    () =>
+      dailyFocusRows
+        .filter(
+          (row) =>
+            row.prompt_date !== todayDateKey &&
+            !(row.answer && row.answered_at),
+        )
+        .map((row) => ({
+          prompt_date: row.prompt_date,
+          question: row.question,
+          answer: row.answer || "",
+          answer_coaching: null,
+          answered_at: null,
+        })),
+    [dailyFocusRows, todayDateKey],
+  );
 
   // --- Derived ---
   const hierarchy: MainTask[] = useMemo(
@@ -1161,8 +1178,21 @@ export default function Dashboard({
       showSuccessToast(
         isArabic ? "تم حفظ جواب اليوم" : "Today's answer was saved",
       );
+      await supabase.rpc("increment_goal_points", {
+        goal_uuid: goal.id,
+        points_to_add: 2,
+      });
+      onGoalUpdated?.();
     }
-  }, [dailyFocus, dailyFocusAnswer, generateDailyFocus, isArabic]);
+  }, [
+    dailyFocus,
+    dailyFocusAnswer,
+    generateDailyFocus,
+    isArabic,
+    supabase,
+    goal.id,
+    onGoalUpdated,
+  ]);
 
   const handleAddDailyFocusSuggestion = useCallback(
     async (suggestionId: string) => {
@@ -1366,26 +1396,26 @@ export default function Dashboard({
       {/* ===== Log Progress Button ===== */}
       <button
         onClick={() => setShowLogModal(true)}
-        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary/90 py-3 text-[15px] font-extrabold text-primary-foreground shadow-sm shadow-primary/15 transition-all duration-200 hover:bg-primary hover:shadow-md active:scale-[0.98]"
+        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm shadow-primary/10 transition-all duration-200 hover:shadow-md hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
       >
-        <Flame className="w-[17px] h-[17px]" />
+        <Flame className="w-4 h-4" />
         {t.logProgressButton}
       </button>
 
       {/* ===== Tabs ===== */}
-      <div className="flex shrink-0 gap-0.5 sm:gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/20 p-0.5 sm:p-1">
+      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-border/40 bg-muted/50 p-1 h-11">
         {tabItems.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1 sm:px-1.5 rounded-lg text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap [&_svg]:h-[15px] [&_svg]:w-[15px] sm:[&_svg]:h-[17px] sm:[&_svg]:w-[17px]",
+              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap",
               activeTab === tab.key
-                ? "bg-white dark:bg-background text-foreground border border-border/70"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/30",
             )}
           >
-            {tab.icon}
+            <span className="[&_svg]:h-4 [&_svg]:w-4 opacity-80">{tab.icon}</span>
             <span className="truncate">{tab.label}</span>
           </button>
         ))}
@@ -1394,7 +1424,7 @@ export default function Dashboard({
       {/* ===== Tab Content ===== */}
       <div
         className={cn(
-          "min-h-0 flex-1",
+          "min-h-0 flex-1 rounded-2xl border border-border/40 bg-card/20 p-3 sm:p-4 shadow-sm shadow-black/[0.02]",
           activeTab === "chart"
             ? "scrollbar-hide relative z-0 touch-pan-y overflow-y-scroll overscroll-contain pb-24 [-webkit-overflow-scrolling:touch] sm:pb-4"
             : "overflow-hidden",
@@ -1406,6 +1436,7 @@ export default function Dashboard({
             isArabic={isArabic}
             dailyFocus={dailyFocus}
             dailyFocusHistory={dailyFocusHistory}
+            missedDailyFocusHistory={missedDailyFocusHistory}
             dailyFocusLoading={dailyFocusLoading}
             dailyFocusSubmitting={dailyFocusSubmitting}
             dailyFocusAddingSuggestionId={addingSuggestionId}

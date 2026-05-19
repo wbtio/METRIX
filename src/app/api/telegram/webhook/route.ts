@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/utils/supabase/service-role';
 import { processChatMessage } from '@/app/api/telegram/chat/route';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const DAILY_MESSAGE_LIMIT = 10;
 
 const BOT_MESSAGES = {
     startWithoutCode:
@@ -16,7 +17,7 @@ const BOT_MESSAGES = {
     linkFailed:
         'تعذر ربط حسابك الآن.\n\nحاول مرة ثانية من إعدادات METRIX.\n\nSomething went wrong while linking your account. Please try again from METRIX Settings.',
     linked:
-        'تم ربط تيليغرام بحسابك في METRIX بنجاح.\n\nستصلك هنا تذكيرات الأهداف إذا لم تسجل تقدمك في الوقت المحدد.\n\nYour Telegram is now linked to your METRIX account.\n\nGoal reminders will arrive here when you miss your scheduled progress check-in.',
+        'تم ربط تيليغرام بحسابك في METRIX بنجاح ✅\n\nستصلك هنا تذكيرات الأهداف إذا لم تسجل تقدمك في الوقت المحدد.\n\nيمكنك الآن استخدام /chat للتحدث مع AI عن أهدافك (10 رسائل/يوم).\n\nYour Telegram is now linked to your METRIX account ✅\n\nGoal reminders will arrive here when you miss your scheduled progress check-in.\n\nUse /chat to talk to AI about your goals (10 messages/day).',
     commands:
         'الأوامر المتاحة:\n/start - ربط حساب METRIX\n/chat - دردشة مع AI عن هدفك\n/goals - عرض أهدافك\n/stop - إنهاء المحادثة\n\nAvailable commands:\n/start - Link your METRIX account\n/chat - Chat with AI about your goal\n/goals - List your goals\n/stop - End chat session',
 };
@@ -29,7 +30,7 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: o
     if (!BOT_TOKEN) return;
     const body: Record<string, unknown> = {
         chat_id: chatId,
-        text: useHtml ? text : escapeHtml(text),
+        text,
     };
     if (useHtml) body.parse_mode = 'HTML';
     if (replyMarkup) {
@@ -282,14 +283,16 @@ async function handleCallbackQuery(cb: any, supabase: ReturnType<typeof createSe
             return;
         }
 
+        const remaining = DAILY_MESSAGE_LIMIT;
+
         await answerCallbackQuery(cbId, isArabic ? 'تم اختيار الهدف ✅' : 'Goal selected ✅');
 
         await editMessageText(
             chatId,
             msgId,
             isArabic
-                ? `🎯 <b>${goal.title}</b>\n\nتم اختيار الهدف. أرسل أي سؤال متعلق بهدفك.\nعندك 10 رسائل اليوم.\n\nأرسل /stop لإنهاء المحادثة.`
-                : `🎯 <b>${goal.title}</b>\n\nGoal selected. Send any question about your goal.\nYou have 10 messages today.\n\nSend /stop to end the chat.`,
+                ? `🎯 <b>${goal.title}</b>\n\nتم اختيار الهدف. استخدم /chat أو أرسل سؤالك الآن.\nعدد الرسائل المتاحة لك اليوم للتحدث مع هذا الهدف: ${remaining} رسائل من أصل ${DAILY_MESSAGE_LIMIT}.\n\nأرسل /stop لإنهاء المحادثة.`
+                : `🎯 <b>${goal.title}</b>\n\nGoal selected. Use /chat or send your question now.\nRemaining daily messages for this goal: ${remaining} out of ${DAILY_MESSAGE_LIMIT}.\n\nSend /stop to end the chat.`,
         );
     }
 }

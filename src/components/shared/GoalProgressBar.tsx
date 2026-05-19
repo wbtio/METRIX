@@ -30,7 +30,7 @@ export default function GoalProgressBar({
   return (
     <div
       className={cn(
-        'relative h-10 w-full overflow-hidden rounded-2xl border border-border/70 bg-muted/30',
+        'relative h-9 sm:h-10 w-full overflow-hidden rounded-xl border border-border/50 bg-muted/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]',
         className
       )}
       role="progressbar"
@@ -41,47 +41,47 @@ export default function GoalProgressBar({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[40%] bg-gradient-to-b from-black/5 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[45%] bg-gradient-to-b from-white/[0.08] to-transparent dark:from-white/[0.04]"
       />
       <div
-        className="relative h-full bg-gradient-to-r from-primary/80 via-primary to-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] transition-all duration-1000 ease-out"
+        className="relative h-full bg-gradient-to-r from-primary/85 via-primary to-primary/90 transition-all duration-700 ease-out"
         style={{ width: `${fillWidth}%` }}
       >
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/5 to-transparent"
+          className="absolute inset-0 bg-gradient-to-b from-white/[0.18] via-white/[0.05] to-transparent"
         />
         <div
           aria-hidden
-          className="absolute inset-0 bg-[url('/patterns/waves.svg')] bg-center bg-repeat-x bg-[length:120px_28px] opacity-35"
+          className="absolute inset-0 bg-[url('/patterns/waves.svg')] bg-center bg-repeat-x bg-[length:120px_28px] opacity-[0.28]"
         />
         <div
           aria-hidden
-          className="absolute right-0 top-0 bottom-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+          className="absolute end-0 top-0 bottom-0 w-[2px] bg-white/30 shadow-[0_0_8px_rgba(255,255,255,0.3)]"
         />
       </div>
 
       <div
         className={cn(
-          'absolute inset-0 z-20 flex items-center justify-between font-bold tracking-wide',
+          'absolute inset-0 z-20 flex items-center justify-between font-semibold tracking-wide',
           labelClassName
         )}
         dir="ltr"
       >
         <span
           className={cn(
-            'text-foreground/70 mix-blend-screen drop-shadow-sm tabular-nums flex min-w-0 max-w-[32%] items-center gap-1',
+            'text-foreground/60 tabular-nums flex min-w-0 max-w-[32%] items-center gap-1',
             currentClassName
           )}
         >
           <span className="truncate">{formatNumberEn(currentPoints)}</span>
           {showXpLabel && (
-            <span className="shrink-0 text-[9px] sm:text-[10px] font-medium opacity-70">XP</span>
+            <span className="shrink-0 text-[9px] sm:text-[10px] font-medium opacity-60">XP</span>
           )}
         </span>
         <span
           className={cn(
-            'shrink-0 font-black text-foreground/90 mix-blend-screen drop-shadow-sm',
+            'shrink-0 font-bold text-foreground/80 tabular-nums',
             percentClassName
           )}
         >
@@ -89,11 +89,11 @@ export default function GoalProgressBar({
         </span>
         <span
           className={cn(
-            'text-muted-foreground/80 mix-blend-screen drop-shadow-sm tabular-nums flex min-w-0 max-w-[32%] items-center gap-0.5',
+            'text-muted-foreground/70 tabular-nums flex min-w-0 max-w-[32%] items-center gap-0.5',
             targetClassName
           )}
         >
-          <span className="shrink-0 text-[9px] sm:text-[10px] opacity-60">/</span>
+          <span className="shrink-0 text-[9px] sm:text-[10px] opacity-50">/</span>
           <span className="truncate">{formatNumberEn(targetPoints)}</span>
         </span>
       </div>

@@ -42,6 +42,7 @@ interface FocusTabProps {
   isArabic: boolean;
   dailyFocus: DailyFocusSession | null;
   dailyFocusHistory?: DailyFocusHistoryItem[];
+  missedDailyFocusHistory?: DailyFocusHistoryItem[];
   dailyFocusLoading: boolean;
   dailyFocusSubmitting: boolean;
   dailyFocusAddingSuggestionId: string | null;
@@ -112,6 +113,7 @@ export default function FocusTab({
   isArabic,
   dailyFocus,
   dailyFocusHistory = [],
+  missedDailyFocusHistory = [],
   dailyFocusLoading,
   dailyFocusSubmitting,
   dailyFocusAddingSuggestionId,
@@ -177,10 +179,10 @@ export default function FocusTab({
 
   return (
     <div className="flex h-full min-h-0 flex-col pb-0">
-      <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white/95 dark:bg-card/70">
+      <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm shadow-black/[0.02] dark:bg-card/50">
         {/* Filter bar */}
-        <div className="shrink-0 border-b border-border/60 bg-gradient-to-b from-muted/[0.18] to-transparent px-3 py-2 sm:px-4">
-          <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto whitespace-nowrap rounded-2xl border border-border/50 bg-background/60 p-1.5 dark:bg-background/20">
+        <div className="shrink-0 border-b border-border/60 bg-muted/30 px-3 py-2 sm:px-4">
+          <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto whitespace-nowrap rounded-xl border border-border/40 bg-background/60 p-1 dark:bg-background/20">
             {sectionTabs.map((tab) => (
               <button
                 key={tab.key}
@@ -188,14 +190,14 @@ export default function FocusTab({
                 className={cn(
                   "inline-flex h-8 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all",
                   focusSection === tab.key
-                    ? "border-primary/30 bg-primary/[0.08] text-foreground shadow-sm shadow-primary/10 dark:bg-primary/[0.14]"
+                    ? "border-primary/30 bg-primary/[0.08] text-foreground dark:bg-primary/[0.14]"
                     : "border-transparent bg-transparent text-muted-foreground hover:border-border/50 hover:bg-background/80 hover:text-foreground dark:hover:bg-background/25",
                 )}
               >
                 <span>{tab.label}</span>
               </button>
             ))}
-            <span className="ms-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-xl border border-cyan-600/25 bg-cyan-600/12 px-3 text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+            <span className="ms-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-cyan-600/25 bg-cyan-600/12 px-3 text-[10px] font-semibold text-cyan-700 dark:text-cyan-400">
               <CheckSquare className="h-3.5 w-3.5" />
               {focusStats.completedSubtasks}/{focusStats.totalSubtasks}
             </span>
@@ -205,10 +207,10 @@ export default function FocusTab({
                   addingMain ? onCloseNewMainComposer : onOpenNewMainComposer
                 }
                 className={cn(
-                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all",
+                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all active:scale-[0.98]",
                   addingMain
-                    ? "border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15"
-                    : "bg-primary text-primary-foreground shadow-sm shadow-primary/15 hover:opacity-90",
+                    ? "border border-primary/20 bg-primary/10 text-primary hover:opacity-90"
+                    : "bg-primary text-primary-foreground shadow-sm hover:opacity-90",
                 )}
                 aria-label={
                   addingMain
@@ -239,6 +241,7 @@ export default function FocusTab({
                 isArabic={isArabic}
                 dailyFocus={dailyFocus}
                 dailyFocusHistory={dailyFocusHistory}
+                missedDailyFocusHistory={missedDailyFocusHistory}
                 loading={dailyFocusLoading}
                 submitting={dailyFocusSubmitting}
                 addingSuggestionId={dailyFocusAddingSuggestionId}
@@ -255,7 +258,7 @@ export default function FocusTab({
               {[0, 1, 2].map((item) => (
                 <div
                   key={item}
-                  className="animate-pulse rounded-2xl border border-border/60 bg-muted/20 p-3.5"
+                  className="animate-pulse rounded-xl border border-border/60 bg-muted/20 p-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-muted" />
@@ -270,11 +273,11 @@ export default function FocusTab({
               ))}
             </div>
           ) : hierarchy.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/[0.18] px-4 py-8 text-center sm:px-6">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="rounded-xl border border-dashed border-border/50 bg-muted/[0.18] px-3 py-8 text-center sm:px-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/[0.06] text-primary">
                 <ListTodo className="h-5 w-5" />
               </div>
-              <h3 className="mt-4 text-sm font-black text-foreground">
+              <h3 className="mt-4 text-sm font-bold tracking-tight text-foreground">
                 {isArabic
                   ? "ابدأ أول مسار رئيسي لهذا الهدف"
                   : "Start the first main track for this goal"}
@@ -286,7 +289,7 @@ export default function FocusTab({
               </p>
               <button
                 onClick={onOpenNewMainComposer}
-                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-opacity hover:opacity-90"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" />
                 {isArabic ? "إضافة مهمة رئيسية" : "Add main task"}
@@ -329,14 +332,14 @@ export default function FocusTab({
                   <div
                     key={main.id}
                     className={cn(
-                      "group/main overflow-hidden rounded-2xl border bg-white transition-[transform,box-shadow,border-color,background-color] duration-300 dark:bg-card/50",
+                      "group/main overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm shadow-black/[0.02] transition-all duration-200 hover:-translate-y-px hover:shadow-sm dark:bg-card/50",
                       mainAccent.borderClass,
                       mainCompletedToday && "focus-task-completed-today",
                     )}
                     data-fresh={mainShouldAnimate ? "true" : undefined}
                     style={completionStyle}
                   >
-                    <div className="px-3 py-2.5 sm:px-3.5 sm:py-3">
+                    <div className="px-3 py-2.5">
                       <div className="flex flex-col gap-2.5">
                         {/* Main task row */}
                         <div
@@ -406,16 +409,16 @@ export default function FocusTab({
                                     }}
                                   />
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <button
-                                      onClick={() => onRenameTask(main.id)}
-                                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
-                                    >
+                                              <button
+                                                 onClick={() => onRenameTask(main.id)}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
+                                              >
                                       <Save className="h-3.5 w-3.5" />
                                       {isArabic ? "حفظ" : "Save"}
                                     </button>
                                     <button
                                       onClick={onCancelEditingTask}
-                                      className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground"
+                                      className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground hover:opacity-90"
                                     >
                                       <X className="h-3.5 w-3.5" />
                                       {t.cancel}
@@ -445,7 +448,7 @@ export default function FocusTab({
                                   {totalSubs > 0 && (
                                     <div className="flex shrink-0 items-center gap-1.5">
                                       {/* Thin progress bar, always visible */}
-                                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted/70 sm:w-16">
+                                      <div className="h-1.5 w-12 overflow-hidden rounded-xl bg-muted/20 sm:w-16">
                                         <div
                                           className={cn(
                                             "h-full rounded-full transition-all duration-500",
@@ -484,10 +487,10 @@ export default function FocusTab({
                             >
                               <button
                                 onClick={() => onToggleExpand(main.id)}
-                                className={cn(
-                                  "hidden h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground dark:bg-background/20 sm:inline-flex",
-                                  isExpanded && "text-foreground bg-muted/60",
-                                )}
+                                  className={cn(
+                                    "hidden h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] dark:bg-background/20 sm:inline-flex",
+                                    isExpanded && "text-foreground bg-muted/60",
+                                  )}
                                 title={
                                   isExpanded
                                     ? isArabic
@@ -509,7 +512,7 @@ export default function FocusTab({
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     className={cn(
-                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-all hover:text-foreground dark:bg-background/20",
+                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-all hover:text-foreground active:scale-[0.98] dark:bg-background/20",
                                       "opacity-100 pointer-events-auto",
                                     )}
                                     title={isArabic ? "المزيد" : "More"}
@@ -582,7 +585,7 @@ export default function FocusTab({
                               {mainCompletedToday && (
                                 <span
                                   className={cn(
-                                    "focus-task-completed-pill hidden h-6 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-black opacity-0 transition-opacity duration-200 sm:inline-flex sm:pointer-events-none sm:group-hover/main:pointer-events-auto sm:group-hover/main:opacity-100",
+                                    "focus-task-completed-pill hidden h-6 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-bold opacity-0 transition-opacity duration-200 sm:inline-flex sm:pointer-events-none sm:group-hover/main:pointer-events-auto sm:group-hover/main:opacity-100",
                                     mainAccent.softClass,
                                     mainAccent.borderClass,
                                     mainAccent.textClass,
@@ -601,7 +604,7 @@ export default function FocusTab({
 
                         {/* Expanded subtasks panel */}
                         {isExpanded && (
-                          <div className="rounded-2xl border border-border/60 bg-muted/[0.12] p-2.5 sm:p-3 dark:bg-background/20">
+                          <div className="rounded-xl border border-border/60 bg-muted/[0.12] p-2.5 dark:bg-background/20">
                             {main.subtasks.length > 0 ? (
                               <div className="space-y-2">
                                 {main.subtasks.map((sub) => {
@@ -625,7 +628,7 @@ export default function FocusTab({
                                     <div
                                       key={sub.id}
                                       className={cn(
-                                        "group/sub flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-[transform,box-shadow,border-color,background-color] duration-300 sm:gap-2.5",
+                                        "group/sub flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-all duration-200 sm:gap-2.5",
                                         checked
                                           ? cn(
                                               mainAccent.softClass,
@@ -666,7 +669,7 @@ export default function FocusTab({
                                               onChange={(e) =>
                                                 onSetEditingText(e.target.value)
                                               }
-                                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                                              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
                                               autoFocus
                                               onKeyDown={(e) => {
                                                 if (e.key === "Enter")
@@ -687,7 +690,7 @@ export default function FocusTab({
                                               </button>
                                               <button
                                                 onClick={onCancelEditingTask}
-                                                className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground"
+                                                className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground hover:opacity-90"
                                               >
                                                 <X className="h-3.5 w-3.5" />
                                                 {t.cancel}
@@ -809,7 +812,7 @@ export default function FocusTab({
                                           <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                               <button
-                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground dark:bg-background/30"
+                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] dark:bg-background/30"
                                                 title={
                                                   isArabic ? "المزيد" : "More"
                                                 }
@@ -880,10 +883,10 @@ export default function FocusTab({
                                 })}
                               </div>
                             ) : (
-                              <div className="flex justify-center rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-3 dark:bg-background/20 sm:justify-start">
+                              <div className="flex justify-center rounded-xl border border-dashed border-border/50 bg-background/70 px-3 py-3 dark:bg-background/20 sm:justify-start">
                                 <button
                                   onClick={() => onStartAddingSub(main.id)}
-                                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+                                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
                                 >
                                   <Plus className="h-4 w-4" />
                                   {isArabic
@@ -897,7 +900,7 @@ export default function FocusTab({
                             {composerVisible && (
                               <div
                                 className={cn(
-                                  "mt-3 rounded-xl border border-dashed p-3",
+                                  "mt-3 rounded-xl border border-dashed border-border/50 p-3",
                                   mainAccent.softClass,
                                   mainAccent.borderClass,
                                 )}
@@ -964,14 +967,14 @@ export default function FocusTab({
                                   />
                                   <button
                                     onClick={() => onAddSub(main.id)}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
                                   >
                                     <Save className="h-4 w-4" />
                                     {isArabic ? "حفظ" : "Save"}
                                   </button>
                                   <button
                                     onClick={onCancelAddingSub}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-4 py-2.5 text-sm font-semibold text-muted-foreground"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-muted-foreground hover:opacity-90"
                                   >
                                     <X className="h-4 w-4" />
                                     {t.cancel}
@@ -993,10 +996,10 @@ export default function FocusTab({
         {/* Add main task composer */}
         {addingMain && (
           <div className="shrink-0 border-t border-border/60 px-3 py-3 sm:px-4 sm:py-4">
-            <div className="rounded-2xl border border-dashed border-primary/35 bg-primary/[0.05] p-3.5 sm:p-4">
+            <div className="rounded-xl border border-dashed border-border/50 bg-primary/[0.05] p-3 sm:p-4">
               <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-black text-foreground">
+                  <h3 className="text-sm font-bold tracking-tight text-foreground">
                     {isArabic
                       ? "أضف مساراً رئيسياً جديداً"
                       : "Add a new main track"}
@@ -1118,14 +1121,14 @@ export default function FocusTab({
                   />
                   <button
                     onClick={onAddMain}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
                   >
                     <Save className="h-4 w-4" />
                     {isArabic ? "حفظ" : "Save"}
                   </button>
                   <button
                     onClick={onCloseNewMainComposer}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-4 py-2.5 text-sm font-semibold text-muted-foreground"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-muted-foreground hover:opacity-90"
                   >
                     <X className="h-4 w-4" />
                     {t.cancel}

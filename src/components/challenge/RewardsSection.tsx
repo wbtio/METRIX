@@ -652,33 +652,30 @@ export function RewardsSection({
   };
 
   return (
-    <section className={cn(cardClass, 'relative overflow-hidden')}>
+    <section className={cn('rounded-xl border border-border/60 bg-card p-3 shadow-sm shadow-black/[0.02] relative overflow-hidden sm:p-4')}>
       {/* Ambient */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(circle at top right, rgba(250,204,21,0.07), transparent 40%), radial-gradient(circle at bottom left, rgba(56,189,248,0.07), transparent 40%)',
-        }}
+        style={{ background: 'transparent' }}
       />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-border/40" />
 
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chart-3/14 text-chart-3 ring-1 ring-chart-3/25">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-muted/40 border border-border/40 text-muted-foreground">
             <Crown className="h-4 w-4" />
           </div>
-          <span className="text-sm font-black text-foreground">{t.challengeRewards}</span>
+          <span className="text-sm font-bold tracking-tight text-foreground">{t.challengeRewards}</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="rounded-full border border-chart-3/20 bg-chart-3/8 px-3 py-1 text-[11px] font-black text-chart-3">
+          <div className="rounded-full border border-border/40 bg-muted/30 px-3 py-1 text-[10px] font-semibold text-muted-foreground">
             {numberFormatter.format(rewards.length)} {t.challengeRewards}
           </div>
           <button
             type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-[11px] font-black text-muted-foreground transition-colors hover:bg-muted dark:bg-background/20"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-muted px-2.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:opacity-90 active:scale-[0.98]"
             aria-expanded={!isCollapsed}
           >
             {isCollapsed ? (

@@ -118,30 +118,29 @@ function NotificationCard({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-start gap-3 rounded-2xl border p-3.5 text-start transition-all hover:shadow-sm sm:rounded-3xl sm:p-4",
+        "flex w-full items-start gap-3 rounded-xl border p-3 text-start transition-all duration-200 ease-out hover:shadow-sm hover:-translate-y-px active:translate-y-0",
         meta.bg,
-        meta.border,
-        "bg-opacity-40"
+        meta.border
       )}
     >
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-background/70 sm:h-10 sm:w-10",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-background/60",
           meta.border
         )}
       >
-        <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", meta.color)} />
+        <Icon className={cn("h-4 w-4", meta.color)} />
       </div>
       <div className="flex-1 min-w-0">
         <p
           className={cn(
-            "text-[11px] font-bold uppercase tracking-wide mb-0.5",
+            "text-[11px] font-bold uppercase tracking-wider mb-1",
             meta.color
           )}
         >
           {isArabic ? meta.labelAr : meta.labelEn}
         </p>
-        <p className="text-sm text-foreground leading-relaxed">{message}</p>
+        <p className="text-sm text-foreground/90 leading-relaxed">{message}</p>
       </div>
     </button>
   );
@@ -173,7 +172,7 @@ export default function NotificationsSection({
   }, []);
 
   return (
-    <div className="group relative flex flex-col h-full w-full gap-3 rounded-2xl border border-border/80 bg-white p-3 shadow-sm transition-all hover:border-primary/35 hover:shadow-md dark:bg-card/50 sm:p-4">
+    <div className="flex flex-col h-full w-full gap-3">
       <div className="flex w-full shrink-0 items-center">
         <div className="ms-auto flex items-center gap-1">
           {visibleNotifications.length > 0 && (
@@ -181,7 +180,7 @@ export default function NotificationsSection({
               variant="ghost"
               size="sm"
               onClick={handleMarkAllRead}
-              className="h-7 gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">
@@ -194,7 +193,7 @@ export default function NotificationsSection({
             size="sm"
             onClick={onRefresh}
             disabled={notifLoading || !contextReady}
-            className="h-7 w-7 rounded-md p-0"
+            className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           >
             <RefreshCw
               className={cn("h-3.5 w-3.5", notifLoading && "animate-spin")}
@@ -205,16 +204,18 @@ export default function NotificationsSection({
 
       {/* Notifications List */}
       {!contextReady || notifLoading ? (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-14 rounded-2xl bg-muted/60" />
-          <div className="h-14 rounded-2xl bg-muted/60" />
+        <div className="space-y-2.5 animate-pulse">
+          <div className="h-16 rounded-xl bg-muted/50" />
+          <div className="h-16 rounded-xl bg-muted/50" />
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 scrollbar-thin">
           {visibleNotifications.length === 0 && !notifError && (
-            <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/30 p-3 text-muted-foreground">
-              <CheckCheck className="h-4 w-4 opacity-50" />
-              <p className="text-xs">
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground/60">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/50 bg-muted/30">
+                <CheckCheck className="h-5 w-5 opacity-50" />
+              </div>
+              <p className="text-sm font-medium">
                 {isArabic
                   ? "لا توجد إشعارات حالياً"
                   : "No notifications right now"}
@@ -234,16 +235,13 @@ export default function NotificationsSection({
             />
           ))}
           {notifError && (
-            <div className="flex items-center gap-2 rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-red-500 text-xs">
+            <div className="flex items-center gap-2 rounded-xl bg-red-500/[0.06] border border-red-500/15 p-3 text-red-600 text-xs">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <p>{notifError}</p>
             </div>
           )}
         </div>
       )}
-
-
-
     </div>
   );
 }

@@ -351,18 +351,18 @@ export function ActivityCard({
   };
 
   return (
-    <section className={cardClass}>
+    <section className="rounded-xl border border-border/60 bg-card p-3 shadow-sm shadow-black/[0.02] sm:p-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/25">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-muted/40 border border-border/40 text-muted-foreground">
             <Trophy className="h-4 w-4" />
           </div>
-          <span className="text-sm font-black text-foreground">
+          <span className="text-sm font-bold tracking-tight text-foreground">
             {ui.recentTitle}
           </span>
           {milestoneEvents.length > 0 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-400 ring-1 ring-amber-500/20">
+            <span className="rounded-full border border-border/40 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
               {milestoneEvents.length}
             </span>
           )}
@@ -370,7 +370,7 @@ export function ActivityCard({
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-[11px] font-black text-muted-foreground transition-colors hover:bg-muted dark:bg-background/20"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-muted px-2.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:opacity-90 active:scale-[0.98]"
           aria-expanded={!collapsed}
         >
           {collapsed ? (
@@ -388,7 +388,7 @@ export function ActivityCard({
       </div>
 
       {errorMessage ? (
-        <div className="mt-2 flex items-start justify-between gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-[11px] font-bold text-rose-600 dark:text-rose-300">
+        <div className="mt-2 flex items-start justify-between gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
           <span>{errorMessage}</span>
           <button
             type="button"
@@ -402,14 +402,14 @@ export function ActivityCard({
       ) : null}
 
       {imageDialog && (
-        <div className="fixed inset-0 z-90 flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-90 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4">
           <div
-            className="w-full max-w-lg rounded-t-3xl border border-border/70 bg-card p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl"
+            className="w-full max-w-lg rounded-t-3xl border border-border/60 bg-card p-5 shadow-sm animate-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl"
             dir={isArabic ? "rtl" : "ltr"}
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-black text-foreground">
+                <h3 className="text-lg font-bold tracking-tight text-foreground">
                   {imageDialog.hasImage
                     ? isArabic
                       ? "استبدال صورة الإنجاز"
@@ -434,7 +434,7 @@ export function ActivityCard({
               </button>
             </div>
 
-            <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-base font-black text-primary-foreground transition hover:opacity-90">
+            <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 active:scale-[0.98]">
               {busyId === imageDialog.logId ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
@@ -469,14 +469,14 @@ export function ActivityCard({
       )}
 
       {promptDialog && (
-        <div className="fixed inset-0 z-90 flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-90 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4">
           <div
-            className="w-full max-w-xl rounded-t-3xl border border-border/70 bg-card p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl"
+            className="w-full max-w-xl rounded-t-3xl border border-border/60 bg-card p-5 shadow-sm animate-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl"
             dir={isArabic ? "rtl" : "ltr"}
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-black text-foreground">
+                <h3 className="text-lg font-bold tracking-tight text-foreground">
                   {isArabic ? "برومبت الصورة" : "Image Prompt"}
                 </h3>
                 <p className="mt-1 text-xs font-medium leading-6 text-muted-foreground">
@@ -523,10 +523,10 @@ export function ActivityCard({
                       "rounded-xl border px-2.5 py-2 text-start transition",
                       promptDialog.style === styleOption.value
                         ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border/70 bg-muted/20 text-muted-foreground hover:bg-muted hover:text-foreground",
+                        : "border-border/40 bg-muted/20 text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <p className="text-xs font-black">
+                    <p className="text-xs font-bold">
                       {isArabic ? styleOption.label.ar : styleOption.label.en}
                     </p>
                     <p className="mt-0.5 text-[10px] font-medium leading-4">
@@ -556,7 +556,7 @@ export function ActivityCard({
                       : prev,
                   )
                 }
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-black text-primary transition hover:bg-primary/15"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary transition hover:opacity-90 active:scale-[0.98]"
               >
                 <WandSparkles className="h-4 w-4" />
                 {isArabic
@@ -571,7 +571,7 @@ export function ActivityCard({
                     prev ? { ...prev, prompt: event.target.value } : prev,
                   )
                 }
-                className="h-44 w-full resize-none rounded-2xl border border-border/70 bg-background/70 p-3 text-xs leading-6 text-foreground focus:border-primary focus:outline-none"
+                className="h-44 w-full resize-none rounded-xl border border-border bg-background p-3 text-xs leading-6 text-foreground focus:border-primary focus:outline-none"
                 placeholder={isArabic ? "اكتب البرومبت..." : "Write prompt..."}
               />
 
@@ -580,7 +580,7 @@ export function ActivityCard({
                   type="button"
                   onClick={() => void handleCopyPrompt(promptDialog.prompt)}
                   disabled={!promptDialog.prompt.trim()}
-                  className="flex-1 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
+                  className="flex-1 rounded-xl border border-border/60 bg-muted px-3 py-2.5 text-sm font-semibold text-muted-foreground transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Copy className="h-4 w-4" />
@@ -606,7 +606,7 @@ export function ActivityCard({
                     busyId === promptDialog.logId ||
                     !promptDialog.prompt.trim()
                   }
-                  className="flex-1 rounded-xl bg-primary px-3 py-2.5 text-sm font-black text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+                  className="flex-1 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     {busyId === promptDialog.logId ? (
@@ -626,7 +626,7 @@ export function ActivityCard({
       {!collapsed && (
         <div className="mt-3">
           {milestoneEvents.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/70 bg-background/55 px-3 py-8 text-center dark:bg-background/20">
+            <div className="rounded-xl border border-dashed border-border/40 bg-muted/30 px-3 py-8 text-center">
               <Trophy className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
                 {ui.activityEmpty}
@@ -682,7 +682,7 @@ export function ActivityCard({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/80 shadow-sm backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white"
+                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/80 transition-colors hover:bg-black/60 hover:text-white"
                           aria-label={
                             isArabic ? "خيارات الإنجاز" : "Milestone options"
                           }
@@ -826,16 +826,16 @@ export function ActivityCard({
                   <div
                     key={logId}
                     className={cn(
-                      "group relative overflow-hidden rounded-2xl border bg-linear-to-br p-2 shadow-sm ring-1 ring-white/10 transition-colors duration-200 dark:ring-white/5",
+                      "group relative overflow-hidden rounded-xl border p-2 shadow-sm transition-colors duration-200",
                       accent.card,
                       accent.border,
                     )}
                   >
                     {/* Delete confirm overlay */}
                     {isConfirmDelete && (
-                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-2xl bg-background/95 p-4 text-center backdrop-blur-md animate-in fade-in duration-200">
+                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-xl bg-background/95 p-4 text-center animate-in fade-in duration-200">
                         <AlertTriangle className="h-6 w-6 text-rose-500" />
-                        <p className="max-w-60 text-xs font-black leading-relaxed text-foreground">
+                        <p className="max-w-60 text-xs font-bold leading-relaxed text-foreground">
                           {isArabic
                             ? "حذف هذا الإنجاز؟ سيتم خصم نقاطه من الهدف."
                             : "Delete this achievement? Its points will be deducted."}
@@ -844,7 +844,7 @@ export function ActivityCard({
                           <button
                             onClick={() => setConfirmDeleteId(null)}
                             disabled={isBusy}
-                            className="flex-1 rounded-xl border border-border/70 bg-background/80 py-2 text-xs font-black text-foreground transition hover:bg-muted"
+                            className="flex-1 rounded-lg border border-border/60 bg-muted py-2 text-xs font-semibold text-muted-foreground transition hover:opacity-90 active:scale-[0.98]"
                           >
                             {isArabic ? "إلغاء" : "Cancel"}
                           </button>
@@ -853,7 +853,7 @@ export function ActivityCard({
                               event.logId && handleDelete(event.logId)
                             }
                             disabled={isBusy}
-                            className="flex flex-1 items-center justify-center rounded-xl bg-rose-600 py-2 text-xs font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+                            className="flex flex-1 items-center justify-center rounded-lg bg-destructive py-2 text-xs font-bold text-destructive-foreground transition hover:opacity-90 active:scale-[0.98]"
                           >
                             {isBusy ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -868,7 +868,7 @@ export function ActivityCard({
                     )}
 
                     {/* Image — TOP */}
-                    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-background/30 ring-1 ring-white/15">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted/20">
                       {event.milestone!.imageUrl ? (
                         <Image
                           src={event.milestone!.imageUrl}
@@ -887,7 +887,7 @@ export function ActivityCard({
                           <Trophy className="h-6 w-6" />
                         </div>
                       )}
-                      <div className="absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 h-12 bg-black/40" />
                       <div
                         className={cn(
                           "absolute top-1.5 flex items-center gap-1",
@@ -895,13 +895,13 @@ export function ActivityCard({
                         )}
                       >
                         {milestoneActionsMenu}
-                        <div className="rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-bold text-white/90 backdrop-blur-md">
+                        <div className="rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-semibold text-white/90">
                           +{Intl.NumberFormat('en').format(event.points)}
                         </div>
                       </div>
                       <div
                         className={cn(
-                          "absolute bottom-1.5 flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-bold text-white/90 backdrop-blur-md",
+                          "absolute bottom-1.5 flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-[1.5px] text-[9px] font-semibold text-white/90",
                           isArabic ? "right-2" : "left-2",
                         )}
                       >
@@ -930,10 +930,10 @@ export function ActivityCard({
                         />
                       ) : (
                         <>
-                          <h4 className="line-clamp-2 text-[11px] font-black leading-tight text-foreground">
+                          <h4 className="line-clamp-2 text-xs font-bold leading-tight text-foreground">
                             {event.milestone!.name}
                           </h4>
-                          <p className="line-clamp-3 text-[10px] leading-relaxed text-muted-foreground">
+                          <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
                             {displayDesc}
                           </p>
                         </>
@@ -972,7 +972,7 @@ function InlineEditor({
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-full resize-none rounded-lg border border-border/70 bg-background/70 p-2 text-[11px] leading-relaxed text-foreground focus:border-primary focus:outline-none"
+          className="w-full resize-none rounded-lg border border-border bg-background p-2 text-xs leading-relaxed text-foreground focus:border-primary focus:outline-none"
           rows={3}
           placeholder={isArabic ? "الوصف..." : "Description..."}
           autoFocus
@@ -981,7 +981,7 @@ function InlineEditor({
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-full rounded-lg border border-border/70 bg-background/70 p-2 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-border bg-background p-2 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
           placeholder={isArabic ? "اسم الإنجاز..." : "Milestone name..."}
           autoFocus
         />
@@ -990,7 +990,7 @@ function InlineEditor({
         <button
           onClick={() => onSave(value.trim())}
           disabled={isBusy || !value.trim()}
-          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-1 text-[11px] font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-1 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
         >
           {isBusy ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -1002,7 +1002,7 @@ function InlineEditor({
         <button
           onClick={onCancel}
           disabled={isBusy}
-          className="rounded-lg bg-muted px-2 py-1 text-[11px] font-bold text-foreground hover:bg-muted/70"
+          className="rounded-lg bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:opacity-90 active:scale-[0.98]"
         >
           <X className="h-3 w-3" />
         </button>
