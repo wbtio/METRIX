@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar as ShadcnCalendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { IconPicker, getGoalIcon } from './IconPicker';
+import { apiUrl } from '@/lib/api';
 
 interface EditableGoal {
   id: string;
@@ -331,7 +332,7 @@ export default function GoalEditDialog({
     setAiSuccessMessage(null);
 
     try {
-      const response = await fetch('/api/goal/ai-edit', {
+      const response = await fetch(apiUrl('/api/goal/ai-edit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

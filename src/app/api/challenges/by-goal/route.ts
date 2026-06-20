@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createClient } from '@/utils/supabase/server';
+import { createRequestClient } from '@/utils/supabase/server-request';
 import { getErrorMessage } from '../shared';
 
 interface ScoreSlice {
@@ -162,7 +162,7 @@ function noneSnapshot() {
   };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { goalId, localMidnightUtc } = await req.json();
 
@@ -170,7 +170,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'goalId is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createRequestClient(req);
     const {
       data: { user },
       error: userError,

@@ -5,12 +5,17 @@ const config: CapacitorConfig = {
   appName: "Metrix",
   webDir: "www",
   server: {
-    url: "https://metrix-beryl-zeta.vercel.app/",
-    cleartext: false,
+    hostname: "localhost",
+    androidScheme: "https",
   },
   android: {
     allowMixedContent: false,
     backgroundColor: "#0b1120",
+  },
+  plugins: {
+    Browser: {
+      preferredContentMode: "external",
+    },
   },
 };
 

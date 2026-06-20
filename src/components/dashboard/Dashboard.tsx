@@ -39,6 +39,7 @@ import DashboardHeader from "./DashboardHeader";
 import FocusTab from "./FocusTab";
 import ToastNotification from "./ToastNotification";
 import DailyFocusQuestionDialog from "./DailyFocusQuestionDialog";
+import { apiUrl } from "@/lib/api";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -620,7 +621,7 @@ export default function Dashboard({
             row.prompt_date !== todayDateKey &&
             Boolean((row.answer || "").trim() && row.answered_at),
         ).length;
-        const response = await fetch("/api/goal/daily-focus", {
+        const response = await fetch(apiUrl("/api/goal/daily-focus"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

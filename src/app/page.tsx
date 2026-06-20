@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 // Components
 import Dashboard from "@/components/dashboard/Dashboard";
 import GoalsList from "@/components/goal/GoalsList";
@@ -16,6 +17,8 @@ import { createClient } from "@/utils/supabase/client";
 import { translations, type Language } from "@/lib/translations";
 import { getLocalDateKey, getLocalWeekStartMonday } from "@/lib/task-periods";
 import { useStreakReminder } from "@/hooks/useStreakReminder";
+import { setAccessToken, isNativeApp } from "@/lib/api";
+import { useCapacitorAuth } from "@/hooks/useCapacitorAuth";
 import type { User } from "@supabase/supabase-js";
 
 type AppView = "home" | "dashboard" | "settings" | "goals" | "create-goal";
@@ -46,6 +49,7 @@ interface PendingNavigation {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [createGoalMode, setCreateGoalMode] = useState<"ai" | "manual">("ai");
@@ -68,6 +72,18 @@ export default function Home() {
 
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
+
+  // Deep link listener for Capacitor OAuth callback (when app is already running)
+  useCapacitorAuth(() => {
+    const refresh = async () => {
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser();
+      setUser(u);
+      if (u) fetchGoals(u.id);
+    };
+    refresh();
+  });
 
   const fetchTaskStats = useCallback(
     async (goalIds: string[]) => {
@@ -149,12 +165,34 @@ export default function Home() {
       } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAccessToken(session.access_token);
+        }
         fetchGoals(user.id);
+      } else if (isNativeApp()) {
+        router.push("/login");
+        return;
+      } else {
+        setLoading(false);
       }
     };
 
     initData();
-  }, [fetchGoals, supabase]);
+  }, [fetchGoals, router, supabase]);
+
+  // Keep access token in sync with auth state changes
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   // Load persisted language from localStorage after hydration
   useEffect(() => {

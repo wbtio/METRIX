@@ -5,6 +5,7 @@ import { X, Loader2, Send, Trophy, AlertCircle, ArrowUpRight } from 'lucide-reac
 import { createClient } from '@/utils/supabase/client';
 import { translations, type Language } from '@/lib/translations';
 import VoiceRecorder from '../shared/VoiceRecorder';
+import { apiUrl } from '@/lib/api';
 
 interface DailyLogModalProps {
     goal: { id: string; title: string; ai_summary?: string; created_at?: string; current_points?: number; target_points?: number };
@@ -51,7 +52,7 @@ export default function DailyLogModal({ goal, tasks, onClose, onSuccess, languag
                 : 0;
 
             // 2. Get score from AI Judge API with full journey context
-            const res = await fetch('/api/goal/evaluate', {
+            const res = await fetch(apiUrl('/api/goal/evaluate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 

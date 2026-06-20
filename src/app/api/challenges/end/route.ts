@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createRequestClient } from '@/utils/supabase/server-request';
 import { getErrorMessage, parseChallengeRpcError } from '../shared';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { challengeId } = await req.json();
 
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'challengeId is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createRequestClient(req);
     const {
       data: { user },
       error: userError,

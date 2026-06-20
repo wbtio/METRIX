@@ -32,6 +32,7 @@ import { Slider } from '@/components/ui/slider';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { apiUrl } from '@/lib/api';
 
 interface GoalCreatorProps {
     onComplete: () => void;
@@ -228,7 +229,7 @@ export default function GoalCreator({
                     formData.append('audio', audioBlob, `recording.${mimeType.split('/')[1]}`);
                     formData.append('language', resolvedLanguage === 'ar' ? 'ar' : 'en');
 
-                    const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+                    const response = await fetch(apiUrl('/api/transcribe'), { method: 'POST', body: formData });
                     const data = await response.json();
                     console.log('Transcribe response:', response.status, data);
 
@@ -296,7 +297,7 @@ export default function GoalCreator({
         if (!goalText.trim()) return;
         setLoading(true);
         try {
-            const res = await fetch('/api/goal/investigate', {
+            const res = await fetch(apiUrl('/api/goal/investigate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -340,7 +341,7 @@ export default function GoalCreator({
     const handleCreatePlan = async (finalAnswers?: any, targetDeadline?: string) => {
         setLoading(true);
         try {
-            const res = await fetch('/api/goal/plan', {
+            const res = await fetch(apiUrl('/api/goal/plan'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

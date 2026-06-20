@@ -35,6 +35,7 @@ import NotificationsSection from "@/components/notifications/NotificationsSectio
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ProgressLogDialog from "./progress/ProgressLogDialog";
 import type { TaskRow } from "@/lib/task-hierarchy";
+import { apiUrl } from "@/lib/api";
 
 interface Goal {
   id: string;
@@ -308,7 +309,7 @@ export default function HomePage({
           const formData = new FormData();
           formData.append("audio", audioBlob, `recording.${mimeType.split("/")[1]}`);
           formData.append("language", language === "ar" ? "ar" : "en");
-          const response = await fetch("/api/transcribe", { method: "POST", body: formData });
+          const response = await fetch(apiUrl("/api/transcribe"), { method: "POST", body: formData });
           const data = await response.json();
           if (response.ok && !data.fallback && data.text) {
             setGoalInput((prev) => (prev ? prev + " " + data.text : data.text));

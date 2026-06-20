@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useCapacitorAuth } from '@/hooks/useCapacitorAuth';
 
 const MANIFESTO_STORAGE_KEY = 'metrix-login-manifesto-seen';
 
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [isManifestoOpen, setIsManifestoOpen] = useState(false);
+  const { signInWithGoogle } = useCapacitorAuth(() => router.push('/'));
 
   useEffect(() => {
     const checkUser = async () => {
@@ -34,18 +36,7 @@ export default function LoginPage() {
     checkUser();
   }, [router, supabase]);
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      console.error('Error logging in:', error.message);
-    }
-  };
+  const handleGoogleLogin = () => signInWithGoogle();
 
   if (loading) {
     return (

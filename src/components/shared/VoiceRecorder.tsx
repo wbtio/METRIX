@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/translations";
+import { apiUrl } from "@/lib/api";
 
 interface VoiceRecorderProps {
   onTranscript: (text: string) => void;
@@ -81,7 +82,7 @@ export default function VoiceRecorder({
           );
           formData.append("language", language);
 
-          const response = await fetch("/api/transcribe", {
+          const response = await fetch(apiUrl("/api/transcribe"), {
             method: "POST",
             body: formData,
           });

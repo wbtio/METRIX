@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createClient } from '@/utils/supabase/server';
+import { createRequestClient } from '@/utils/supabase/server-request';
 import { getChallengeProfileSnapshot, getErrorMessage, parseChallengeRpcError } from '../shared';
 
 async function getOpenGoalChallenge(supabase: SupabaseClient, goalId: string, userId: string) {
@@ -41,7 +41,7 @@ async function getOpenGoalChallenge(supabase: SupabaseClient, goalId: string, us
   };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { goalId } = await req.json();
 
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'goalId is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createRequestClient(req);
     const {
       data: { user },
       error: userError,

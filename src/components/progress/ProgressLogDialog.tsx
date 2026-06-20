@@ -44,6 +44,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
 
 interface ProgressLogDialogProps {
   goal: {
@@ -703,7 +704,7 @@ export default function ProgressLogDialog({
         : 0;
 
       // Get AI evaluation with time-based bonus calculation
-      const res = await fetch("/api/goal/evaluate", {
+      const res = await fetch(apiUrl("/api/goal/evaluate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -941,7 +942,7 @@ export default function ProgressLogDialog({
     setNotification(null);
 
     try {
-      const res = await fetch("/api/goal/milestone", {
+      const res = await fetch(apiUrl("/api/goal/milestone"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1056,7 +1057,7 @@ export default function ProgressLogDialog({
       formData.append("logId", pendingMilestoneImage.logId);
       formData.append("image", file);
 
-      const response = await fetch("/api/goal/milestone/image", {
+      const response = await fetch(apiUrl("/api/goal/milestone/image"), {
         method: "POST",
         body: formData,
       });

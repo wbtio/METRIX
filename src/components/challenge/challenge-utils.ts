@@ -1,10 +1,12 @@
+import { apiUrl, getAuthHeaders } from "@/lib/api";
+
 export async function postJSON<T = unknown>(
   url: string,
   body: Record<string, unknown>,
 ) {
-  const response = await fetch(url, {
+  const response = await fetch(apiUrl(url), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(body),
   });
 

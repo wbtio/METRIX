@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
 import { Slider } from '@/components/ui/slider';
+import { apiUrl } from '@/lib/api';
 
 interface GoalCreatorPageProps {
     initialGoalText: string;
@@ -193,7 +194,7 @@ export default function GoalCreatorPage({
         setNotification(null);
 
         try {
-            const res = await fetch('/api/goal/plan', {
+            const res = await fetch(apiUrl('/api/goal/plan'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -238,7 +239,7 @@ export default function GoalCreatorPage({
         setNotification(null);
 
         try {
-            const res = await fetch('/api/goal/investigate', {
+            const res = await fetch(apiUrl('/api/goal/investigate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

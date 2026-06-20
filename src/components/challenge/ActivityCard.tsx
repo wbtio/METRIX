@@ -39,6 +39,7 @@ import {
 import type { ChallengeEvent } from "./challenge-types";
 import { cardClass } from "./challenge-types";
 import { formatNumericDate, formatTime } from "./challenge-utils";
+import { apiUrl } from "@/lib/api";
 
 interface ActivityCardProps {
   goalId?: string;
@@ -219,7 +220,7 @@ export function ActivityCard({
     setBusyId(logId);
     setErrorMessage(null);
     try {
-      const response = await fetch("/api/goal/milestone", {
+      const response = await fetch(apiUrl("/api/goal/milestone"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logId, goalId }),
@@ -262,7 +263,7 @@ export function ActivityCard({
     setBusyId(logId);
     setErrorMessage(null);
     try {
-      const response = await fetch("/api/goal/milestone", {
+      const response = await fetch(apiUrl("/api/goal/milestone"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logId, goalId, ...payload }),
@@ -320,7 +321,7 @@ export function ActivityCard({
       formData.append("goalId", goalId);
       formData.append("image", file);
 
-      const response = await fetch("/api/goal/milestone/image", {
+      const response = await fetch(apiUrl("/api/goal/milestone/image"), {
         method: "POST",
         body: formData,
       });
