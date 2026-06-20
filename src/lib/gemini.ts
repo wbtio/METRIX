@@ -1542,4 +1542,100 @@ Strict content rules: ABSOLUTELY NO humans, NO people, NO faces, NO bodies, NO h
       }
     }
   }
+
+  static async editGoalWithAI(
+    currentGoal: any,
+    instruction: string
+  ) {
+    const safetyCheck = GeminiService.checkContentSafety(instruction);
+    if (!safetyCheck.isSafe) {
+      return {
+        status: "refused",
+        explanation: safetyCheck.reason,
+      };
+    }
+
+    const userLanguage = GeminiService.detectLanguage(instruction);
+    const currentDate = new Date().toISOString().split("T")[0];
+
+    const systemPrompt = `
+SYSTEM ROLE:
+You are an expert "Goal Adjustment AI". Your job is to take an existing goal, review the user's natural language instructions (which might be in Arabic or English), and adjust the goal parameters accordingly.
+
+THE PROPERTIES YOU CAN MODIFY ARE:
+1. "title": The title of the goal.
+2. "ai_summary" (this corresponds to the goal description).
+3. "created_at": The start date in YYYY-MM-DD format.
+4. "estimated_completion_date": The end date in YYYY-MM-DD format.
+5. "current_points": The current progress points (must be >= 0).
+6. "target_points": The target/total progress points (must be >= 1000).
+7. "icon": The icon name (e.g., "Target", "Brain", "Award", "Flame", "BookOpen", "Laptop", "Sparkles", "Heart", "Briefcase", "DollarSign", "Code", "Calendar", "Clock").
+
+BE SMART AT PARSING COMMANDS & DATES:
+- Read the instructions carefully.
+- If the user asks to "extend it by 3 months" or "add a month", calculate the new "estimated_completion_date" based on the current "estimated_completion_date" or current date (Current Date: ${currentDate}).
+- If the user specifies new points (e.g. 2.5 million / 2,500,000 / مليونين ونص), convert them to an integer.
+- Ensure all other properties are preserved exactly as they are in the current goal if they are not requested to change.
+- Make sure the start date and end date are valid and estimated_completion_date is after created_at.
+
+OUTPUT LANGUAGE:
+- Respond/explain the changes in the user's language: ${userLanguage === "ar" ? "Arabic" : "English"}.
+
+OUTPUT JSON FORMAT ONLY:
+{
+  "status": "ok" | "refused",
+  "goal": {
+    "title": "string",
+    "ai_summary": "string",
+    "created_at": "YYYY-MM-DD",
+    "estimated_completion_date": "YYYY-MM-DD",
+    "current_points": number,
+    "target_points": number,
+    "icon": "string"
+  },
+  "explanation": "Brief description of the changes made, in the language of the prompt."
+}
+`;
+
+    const userPrompt = `
+CURRENT DATE: ${currentDate}
+
+CURRENT GOAL:
+${JSON.stringify({
+  title: currentGoal.title,
+  ai_summary: currentGoal.ai_summary || currentGoal.description || "",
+  created_at: currentGoal.created_at,
+  estimated_completion_date: currentGoal.estimated_completion_date,
+  current_points: currentGoal.current_points,
+  target_points: currentGoal.target_points,
+  icon: currentGoal.icon || "Target"
+}, null, 2)}
+
+USER INSTRUCTIONS:
+<<<BEGIN_USER_INPUT>>>
+${instruction}
+<<<END_USER_INPUT>>>
+`;
+
+    try {
+      const response = await GeminiService.callWithRetry(
+        {
+          responseMimeType: "application/json",
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+            role: "system",
+          },
+        },
+        { role: "user", parts: [{ text: userPrompt }] },
+      );
+
+      const responseText = response.text || "";
+      if (!responseText) throw new Error("Empty response from Gemini API");
+
+      return extractJson(responseText);
+    } catch (error) {
+      console.error("Gemini editGoalWithAI Error:", error);
+      throw error;
+    }
+  }
 }

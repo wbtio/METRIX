@@ -420,42 +420,7 @@ export default function ProgressLogDialog({
     [goal.id, supabase, tasks],
   );
 
-  const sendTelegramProgressNotify = useCallback(
-    async (params: {
-      goalTitle: string;
-      mode: "manual" | "ai";
-      dayLabel?: string;
-      coachMessage?: string;
-      comparisonMessage?: string | null;
-      warningMessage?: string | null;
-      fullFeedback?: string;
-      sessionTotalPoints?: number;
-      deltaAwarded?: number;
-      bonusPoints?: number;
-    }) => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
-        const { data: settings } = await supabase
-          .from("user_settings")
-          .select("telegram_chat_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!settings?.telegram_chat_id) return;
-
-        await fetch("/api/telegram/progress-notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
-        });
-      } catch {
-        // Best-effort — don't block the UI
-      }
-    },
-    [supabase],
-  );
 
   const toggleTaskSelection = (taskId: string) => {
     setSelectedTasks((prev) => {
@@ -671,21 +636,6 @@ export default function ProgressLogDialog({
         );
       }
 
-      sendTelegramProgressNotify({
-        goalTitle: goal.title,
-        mode: "manual",
-        dayLabel: result.day_label,
-        coachMessage: result.coach_message,
-        comparisonMessage: result.comparison_message,
-        warningMessage: result.warning_message,
-        fullFeedback: result.full_feedback,
-        sessionTotalPoints,
-        deltaAwarded,
-        bonusPoints: deltaBonusPoints,
-      });
-
-      // Fire reminder cron to re-evaluate — disabled: handled server-side via Edge Function cron
-      // fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;
@@ -707,7 +657,6 @@ export default function ProgressLogDialog({
     goal.current_points,
     goal.target_points,
     syncTaskCheckins,
-    sendTelegramProgressNotify,
     fetchPreviousLogsForAnalysis,
     fetchTodaySessionLog,
     dailyCap,
@@ -958,21 +907,6 @@ export default function ProgressLogDialog({
         );
       }
 
-      sendTelegramProgressNotify({
-        goalTitle: goal.title,
-        mode: "ai",
-        dayLabel: sessionResult.day_label,
-        coachMessage: sessionResult.coach_message,
-        comparisonMessage: sessionResult.comparison_message,
-        warningMessage: sessionResult.warning_message,
-        fullFeedback: sessionResult.full_feedback,
-        sessionTotalPoints,
-        deltaAwarded,
-        bonusPoints: deltaBonusPoints,
-      });
-
-      // Fire reminder cron to re-evaluate — disabled: handled server-side via Edge Function cron
-      // fetch("/api/telegram/reminders/cron").catch(() => {});
     } catch (error: unknown) {
       console.error(error);
       submittedRef.current = false;
@@ -991,7 +925,6 @@ export default function ProgressLogDialog({
     language,
     supabase,
     syncTaskCheckins,
-    sendTelegramProgressNotify,
     fetchPreviousLogsForAnalysis,
     fetchTodaySessionLog,
     dailyCap,
@@ -1074,15 +1007,6 @@ export default function ProgressLogDialog({
           detail: { goalId: goal.id },
         }),
       );
-
-      sendTelegramProgressNotify({
-        goalTitle: goal.title,
-        mode: "ai",
-        dayLabel: language === "ar" ? "إنجاز كبير 🏆" : "Major Milestone 🏆",
-        coachMessage: data.message,
-        sessionTotalPoints: data.score,
-        deltaAwarded: data.score,
-      });
     } catch (error: unknown) {
       submittedRef.current = false;
       console.error("Milestone submit error:", error);
@@ -1638,22 +1562,23 @@ export default function ProgressLogDialog({
   // Mode selection screen
   if (mode === "select") {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border">
-          <div className="p-6 border-b border-border flex justify-between items-center">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+
+        <div className="bg-card rounded-t-[1.5rem] sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border/60 shadow-2xl shadow-black/10 flex flex-col">
+          <div className="p-6 border-b border-border/50 flex justify-between items-center shrink-0">
             <div className="flex-1" dir={language === "ar" ? "rtl" : "ltr"}>
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="text-xl font-extrabold text-foreground tracking-tight">
                 {t.logProgress}
               </h3>
-              <p className="text-xs text-muted-foreground font-medium mt-1">
+              <p className="text-xs text-muted-foreground/70 font-semibold mt-1.5 uppercase tracking-wider">
                 {goal.title}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full transition-colors shrink-0"
+              className="p-2.5 hover:bg-muted/70 rounded-xl transition-all duration-200 active:scale-95 shrink-0 border border-border/30 hover:border-border/50"
             >
-              <X className="w-6 h-6 text-muted-foreground" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
@@ -1661,23 +1586,23 @@ export default function ProgressLogDialog({
             className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 space-y-3"
             dir={language === "ar" ? "rtl" : "ltr"}
           >
-            <p className="text-sm text-muted-foreground font-medium mb-4">
+            <p className="text-sm text-muted-foreground/80 font-semibold mb-5">
               {t.logProgressMode}
             </p>
 
             <button
               onClick={() => setMode("ai")}
-              className="w-full p-5 bg-primary/5 border-2 border-primary/20 rounded-xl hover:bg-primary/10 hover:border-primary/40 transition-all active:scale-[0.98]"
+              className="w-full p-5 bg-primary/[0.04] border-2 border-primary/15 rounded-2xl hover:bg-primary/[0.08] hover:border-primary/30 transition-all duration-200 active:scale-[0.98] group shadow-sm hover:shadow-md"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 border border-primary/10 group-hover:border-primary/20 transition-colors">
                   <Bot className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 text-start">
-                  <h4 className="font-bold text-foreground text-base mb-0.5">
+                  <h4 className="font-bold text-foreground text-base mb-1">
                     {t.aiMode}
                   </h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     {t.aiModeDesc}
                   </p>
                 </div>
@@ -1686,17 +1611,17 @@ export default function ProgressLogDialog({
 
             <button
               onClick={() => setMode("manual")}
-              className="w-full p-5 bg-chart-2/5 border-2 border-chart-2/20 rounded-xl hover:bg-chart-2/10 hover:border-chart-2/40 transition-all active:scale-[0.98]"
+              className="w-full p-5 bg-chart-2/[0.04] border-2 border-chart-2/15 rounded-2xl hover:bg-chart-2/[0.08] hover:border-chart-2/30 transition-all duration-200 active:scale-[0.98] group shadow-sm hover:shadow-md"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-chart-2/15 rounded-lg flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-chart-2/10 rounded-xl flex items-center justify-center shrink-0 border border-chart-2/10 group-hover:border-chart-2/20 transition-colors">
                   <Hand className="w-6 h-6 text-chart-2" />
                 </div>
                 <div className="flex-1 text-start">
-                  <h4 className="font-bold text-foreground text-base mb-0.5">
+                  <h4 className="font-bold text-foreground text-base mb-1">
                     {t.manualMode}
                   </h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     {t.manualModeDesc}
                   </p>
                 </div>
@@ -1705,19 +1630,19 @@ export default function ProgressLogDialog({
 
             <button
               onClick={() => setMode("milestone")}
-              className="w-full p-5 bg-purple-500/5 border-2 border-purple-500/20 rounded-xl hover:bg-purple-500/10 hover:border-purple-500/40 transition-all active:scale-[0.98]"
+              className="w-full p-5 bg-purple-500/[0.04] border-2 border-purple-500/15 rounded-2xl hover:bg-purple-500/[0.08] hover:border-purple-500/30 transition-all duration-200 active:scale-[0.98] group shadow-sm hover:shadow-md"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-500/15 rounded-lg flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center shrink-0 border border-purple-500/10 group-hover:border-purple-500/20 transition-colors">
                   <Trophy className="w-6 h-6 text-purple-500" />
                 </div>
                 <div className="flex-1 text-start">
-                  <h4 className="font-bold text-foreground text-base mb-0.5">
+                  <h4 className="font-bold text-foreground text-base mb-1">
                     {language === "ar"
                       ? "إنجاز كبير (Milestone)"
                       : "Major Milestone"}
                   </h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     {language === "ar"
                       ? "سجل إنجازاً استثنائياً كبيراً لتحصل على مكافأة ضخمة"
                       : "Log an exceptional achievement for massive points"}
@@ -1727,6 +1652,7 @@ export default function ProgressLogDialog({
             </button>
           </div>
         </div>
+
       </div>
     );
   }
@@ -1734,32 +1660,32 @@ export default function ProgressLogDialog({
   // AI mode screen
   if (mode === "ai") {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border">
-          <div className="p-6 border-b border-border flex justify-between items-center">
-            <div>
-              <h3 className="text-xl font-bold text-foreground">{t.aiMode}</h3>
-              <p className="text-xs text-muted-foreground font-bold uppercase">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="bg-card rounded-t-[1.5rem] sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border/60 shadow-2xl shadow-black/10 flex flex-col">
+          <div className="p-6 border-b border-border/50 flex justify-between items-center shrink-0">
+            <div className="flex-1" dir={language === "ar" ? "rtl" : "ltr"}>
+              <h3 className="text-xl font-extrabold text-foreground tracking-tight">{t.aiMode}</h3>
+              <p className="text-xs text-muted-foreground/70 font-semibold mt-1.5 uppercase tracking-wider">
                 {goal.title}
               </p>
             </div>
             <button
               onClick={() => setMode("select")}
-              className="p-2 hover:bg-muted rounded-full transition-colors"
+              className="p-2.5 hover:bg-muted/70 rounded-xl transition-all duration-200 active:scale-95 border border-border/30 hover:border-border/50"
             >
-              <X className="w-6 h-6 text-muted-foreground" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
           {notification && (
             <div
-              className={`mx-6 mt-4 p-3 rounded-xl flex items-center gap-3 ${notification.type === "error" ? "bg-destructive/10 border border-destructive/20 text-destructive" : "bg-chart-2/10 border border-chart-2/20 text-chart-2"}`}
+              className={`mx-6 mt-4 p-3.5 rounded-xl flex items-center gap-3 shadow-sm ${notification.type === "error" ? "bg-destructive/[0.06] border border-destructive/15 text-destructive" : "bg-chart-2/[0.06] border border-chart-2/15 text-chart-2"}`}
             >
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm flex-1">{notification.message}</p>
+              <p className="text-sm font-semibold flex-1">{notification.message}</p>
               <button
                 onClick={() => setNotification(null)}
-                className="p-1 hover:bg-muted rounded-full"
+                className="p-1.5 hover:bg-muted/60 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1767,8 +1693,8 @@ export default function ProgressLogDialog({
           )}
 
           <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">
+            <div className="space-y-2.5">
+              <label className="text-sm font-bold text-muted-foreground/80 uppercase tracking-widest px-1">
                 {t.describeWhatYouDid}
               </label>
               <div className="relative">
@@ -1776,7 +1702,7 @@ export default function ProgressLogDialog({
                   value={logText}
                   onChange={(e) => setLogText(e.target.value)}
                   placeholder={t.progressPlaceholder}
-                  className="w-full h-48 p-4 border-2 rounded-2xl resize-none transition-all placeholder:text-muted-foreground bg-muted/30 text-foreground border-transparent focus:border-primary"
+                  className="w-full h-48 p-4 border-2 rounded-2xl resize-none transition-all duration-200 placeholder:text-muted-foreground/50 bg-muted/20 text-foreground border-border/30 focus:border-primary/40 focus:bg-background focus:shadow-sm focus:shadow-primary/5"
                   dir={language === "ar" ? "rtl" : "ltr"}
                 />
                 <div className="absolute bottom-4 end-4">
@@ -1788,15 +1714,15 @@ export default function ProgressLogDialog({
               </div>
             </div>
 
-            <div className="p-4 bg-primary/10 rounded-2xl flex gap-3 text-primary text-sm">
+            <div className="p-4 bg-primary/[0.06] rounded-2xl flex gap-3 text-primary text-sm border border-primary/10 shadow-sm">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p dir={language === "ar" ? "rtl" : "ltr"}>{t.aiJudgeNote}</p>
+              <p dir={language === "ar" ? "rtl" : "ltr"} className="font-medium leading-relaxed">{t.aiJudgeNote}</p>
             </div>
 
             <button
               onClick={handleAISubmit}
               disabled={loading || !logText.trim()}
-              className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/20"
+              className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg hover:opacity-90 hover:-translate-y-px transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 shadow-lg shadow-primary/15 active:scale-[0.98]"
             >
               {loading ? (
                 <Loader2 className="animate-spin w-5 h-5" />
@@ -1815,37 +1741,39 @@ export default function ProgressLogDialog({
   // Milestone mode screen
   if (mode === "milestone") {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-purple-500/30 shadow-lg shadow-purple-500/10">
-          <div className="p-6 border-b border-border flex justify-between items-center bg-purple-500/5">
-            <div dir={language === "ar" ? "rtl" : "ltr"}>
-              <h3 className="text-xl font-black text-purple-600 dark:text-purple-400 flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="bg-card rounded-t-[1.5rem] sm:rounded-3xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom duration-300 border border-purple-500/20 shadow-2xl shadow-purple-500/10 flex flex-col">
+          <div className="p-6 border-b border-border/50 flex justify-between items-center shrink-0 bg-purple-500/[0.04]">
+            <div className="flex-1" dir={language === "ar" ? "rtl" : "ltr"}>
+              <h3 className="text-xl font-extrabold text-purple-700 dark:text-purple-400 flex items-center gap-2.5 tracking-tight">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 border border-purple-500/15">
+                  <Trophy className="w-4 h-4" />
+                </span>
                 {language === "ar"
                   ? "إنجاز كبير (Milestone)"
                   : "Major Milestone"}
               </h3>
-              <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
+              <p className="text-xs text-muted-foreground/70 font-semibold uppercase tracking-wider mt-1.5 truncate">
                 {goal.title}
               </p>
             </div>
             <button
               onClick={() => setMode("select")}
-              className="p-2 hover:bg-muted rounded-full transition-colors"
+              className="p-2.5 hover:bg-muted/70 rounded-xl transition-all duration-200 active:scale-95 border border-border/30 hover:border-border/50 shrink-0"
             >
-              <X className="w-6 h-6 text-muted-foreground" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
           {notification && (
             <div
-              className={`mx-6 mt-4 p-3 rounded-xl flex items-center gap-3 ${notification.type === "error" ? "bg-destructive/10 border border-destructive/20 text-destructive" : "bg-chart-2/10 border border-chart-2/20 text-chart-2"}`}
+              className={`mx-6 mt-4 p-3.5 rounded-xl flex items-center gap-3 shadow-sm ${notification.type === "error" ? "bg-destructive/[0.06] border border-destructive/15 text-destructive" : "bg-chart-2/[0.06] border border-chart-2/15 text-chart-2"}`}
             >
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm flex-1">{notification.message}</p>
+              <p className="text-sm font-semibold flex-1">{notification.message}</p>
               <button
                 onClick={() => setNotification(null)}
-                className="p-1 hover:bg-muted rounded-full"
+                className="p-1.5 hover:bg-muted/60 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1853,20 +1781,22 @@ export default function ProgressLogDialog({
           )}
 
           <div
-            className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-4 space-y-5"
+            className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-5 space-y-5 flex-1 overflow-y-auto"
             dir={language === "ar" ? "rtl" : "ltr"}
           >
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex gap-3 text-rose-600 dark:text-rose-400 text-sm font-medium">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <p>
+            <div className="p-4 bg-amber-500/[0.06] border border-amber-500/15 rounded-2xl flex gap-3 text-amber-700 dark:text-amber-400 text-sm shadow-sm">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/15">
+                <AlertCircle className="w-4 h-4" />
+              </span>
+              <p className="font-medium leading-relaxed">
                 {language === "ar"
                   ? "تحذير: الإنجازات يجب أن تكون قفزات هائلة مقارنة بالمهام العادية. إذا كان هذا مجرد إنجاز لمهامك المعتادة، سيتم رفضه من قبل الذكاء الاصطناعي ولن تحصل على أي نقاط!"
                   : "WARNING: Milestones must be massive leaps compared to normal tasks. If this is just a regular task, it will be rejected by AI and you will get NO points!"}
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">
+            <div className="space-y-2.5">
+              <label className="text-sm font-bold text-muted-foreground/80 uppercase tracking-wider">
                 {language === "ar" ? "اسم الإنجاز" : "Milestone Name"}
               </label>
               <input
@@ -1878,12 +1808,12 @@ export default function ProgressLogDialog({
                     ? "مثال: إطلاق التطبيق، اجتياز الاختبار النهائي..."
                     : "e.g. Launched App, Passed Final Exam..."
                 }
-                className="w-full p-3 border-2 rounded-xl transition-all placeholder:text-muted-foreground bg-muted/30 text-foreground border-transparent focus:border-purple-500 font-bold"
+                className="w-full p-4 border-2 rounded-2xl transition-all duration-200 placeholder:text-muted-foreground/50 bg-muted/20 text-foreground border-border/30 focus:border-purple-500/40 focus:bg-background focus:shadow-sm focus:shadow-purple-500/5 font-bold text-[15px]"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">
+            <div className="space-y-2.5">
+              <label className="text-sm font-bold text-muted-foreground/80 uppercase tracking-wider">
                 {t.describeWhatYouDid}
               </label>
               <div className="relative">
@@ -1895,7 +1825,7 @@ export default function ProgressLogDialog({
                       ? "اشرح بالتفصيل لماذا يعتبر هذا الإنجاز قفزة استثنائية في هدفك..."
                       : "Explain in detail why this is an exceptional leap in your goal..."
                   }
-                  className="w-full h-32 p-4 border-2 rounded-2xl resize-none transition-all placeholder:text-muted-foreground bg-muted/30 text-foreground border-transparent focus:border-purple-500"
+                  className="w-full h-36 p-4 border-2 rounded-2xl resize-none transition-all duration-200 placeholder:text-muted-foreground/50 bg-muted/20 text-foreground border-border/30 focus:border-purple-500/40 focus:bg-background focus:shadow-sm focus:shadow-purple-500/5 text-[15px] leading-relaxed"
                 />
                 <div className="absolute bottom-4 end-4">
                   <VoiceRecorder
@@ -1909,13 +1839,13 @@ export default function ProgressLogDialog({
             <button
               onClick={handleMilestoneSubmit}
               disabled={loading || !logText.trim() || !milestoneName.trim()}
-              className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-purple-500/20 mt-4"
+              className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-extrabold text-lg transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:hover:translate-y-0 hover:-translate-y-px shadow-lg shadow-purple-500/20 active:scale-[0.98]"
             >
               {loading ? (
                 <Loader2 className="animate-spin w-5 h-5" />
               ) : (
                 <>
-                  <Trophy className="w-5 h-5" />{" "}
+                  <Trophy className="w-5 h-5" />
                   {language === "ar"
                     ? "سجل الإنجاز الكبير"
                     : "Log Major Milestone"}
@@ -1930,28 +1860,28 @@ export default function ProgressLogDialog({
 
   // Manual mode screen
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border flex flex-col">
-        <div className="p-6 border-b border-border flex justify-between items-center shrink-0">
-          <div>
-            <h3 className="text-xl font-bold text-foreground">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-card rounded-t-[1.5rem] sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-300 border border-border/60 shadow-2xl shadow-black/10 flex flex-col">
+        <div className="p-6 border-b border-border/50 flex justify-between items-center shrink-0">
+          <div className="flex-1" dir={language === "ar" ? "rtl" : "ltr"}>
+            <h3 className="text-xl font-extrabold text-foreground tracking-tight">
               {t.manualMode}
             </h3>
-            <p className="text-xs text-muted-foreground font-bold uppercase">
+            <p className="text-xs text-muted-foreground/70 font-semibold uppercase tracking-wider mt-1.5">
               {goal.title}
             </p>
           </div>
           <button
             onClick={() => setMode("select")}
-            className="p-2 hover:bg-muted rounded-full transition-colors"
+            className="p-2.5 hover:bg-muted/70 rounded-xl transition-all duration-200 active:scale-95 border border-border/30 hover:border-border/50 shrink-0"
           >
-            <X className="w-6 h-6 text-muted-foreground" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {notification && (
           <div
-            className={`mx-6 mt-4 p-3 rounded-xl flex items-center gap-3 ${notification.type === "error" ? "bg-destructive/10 border border-destructive/20 text-destructive" : "bg-chart-2/10 border border-chart-2/20 text-chart-2"}`}
+            className={`mx-6 mt-4 p-3.5 rounded-xl flex items-center gap-3 shadow-sm ${notification.type === "error" ? "bg-destructive/[0.06] border border-destructive/15 text-destructive" : "bg-chart-2/[0.06] border border-chart-2/15 text-chart-2"}`}
           >
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm flex-1">{notification.message}</p>
@@ -1978,11 +1908,12 @@ export default function ProgressLogDialog({
               // If main task has subtasks, show them
               if (main.subtasks && main.subtasks.length > 0) {
                 return (
-                  <div key={main.id} className="space-y-2">
+                  <div key={main.id} className="space-y-2.5">
                     <div
-                      className="font-bold text-sm text-foreground/80 px-2"
+                      className="font-extrabold text-sm text-foreground/70 px-1 flex items-center gap-2"
                       dir={language === "ar" ? "rtl" : "ltr"}
                     >
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />
                       {main.task_description}
                     </div>
                     {main.subtasks.map((sub) => {
@@ -1992,7 +1923,7 @@ export default function ProgressLogDialog({
                       return (
                         <div
                           key={sub.id}
-                          className={`rounded-xl p-4 space-y-3 transition-all cursor-pointer select-none ${isSelected ? "bg-chart-2/10 border-2 border-chart-2 shadow-sm" : "bg-muted/30 border-2 border-transparent hover:border-muted-foreground/20 hover:bg-muted/50"}`}
+                          className={`rounded-2xl p-4 space-y-3 transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${isSelected ? "bg-primary/[0.06] border-2 border-primary/30 shadow-md shadow-primary/5" : "bg-muted/[0.08] border-2 border-border/30 hover:border-primary/20 hover:bg-muted/[0.15] hover:shadow-sm"}`}
                           onClick={() => toggleTaskSelection(sub.id)}
                         >
                           <div
@@ -2000,40 +1931,43 @@ export default function ProgressLogDialog({
                             dir={language === "ar" ? "rtl" : "ltr"}
                           >
                             <div
-                              className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected ? "bg-chart-2 border-chart-2 scale-105" : "border-muted-foreground/50 bg-background hover:border-muted-foreground"}`}
+                              className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all duration-200 shrink-0 shadow-sm ${isSelected ? "bg-primary border-primary scale-105 shadow-primary/20" : "border-border/60 bg-background hover:border-primary/40"}`}
                             >
                               {isSelected && (
-                                <Check className="w-5 h-5 text-white stroke-[3]" />
+                                <Check className="w-5 h-5 text-primary-foreground stroke-[2.5]" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p
-                                className="font-medium text-foreground"
+                                className="font-semibold text-[15px] text-foreground leading-snug"
                                 dir={language === "ar" ? "rtl" : "ltr"}
                               >
                                 {sub.task_description}
                               </p>
-                              <p
-                                className="text-xs text-muted-foreground"
-                                dir={language === "ar" ? "rtl" : "ltr"}
-                              >
-                                {t.weight}: {sub.impact_weight}
-                                {sub.time_required_minutes &&
-                                  ` • ${sub.time_required_minutes} ${t.minutes}`}
-                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-bold text-muted-foreground/80 border border-border/20">
+                                  {t.weight}: {sub.impact_weight}
+                                </span>
+                                {sub.time_required_minutes && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-bold text-muted-foreground/80 border border-border/20">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {sub.time_required_minutes} {t.minutes}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
                           {isSelected && sub.time_required_minutes && (
                             <div
-                              className={`space-y-2 ${language === "ar" ? "pe-8" : "ps-8"}`}
+                              className={`space-y-2.5 ${language === "ar" ? "pe-9" : "ps-9"}`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <label
-                                className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2"
+                                className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider flex items-center gap-2"
                                 dir={language === "ar" ? "rtl" : "ltr"}
                               >
-                                <Clock className="w-3 h-3" />
+                                <Clock className="w-3.5 h-3.5 text-primary/60" />
                                 {t.timeSpent}
                               </label>
                               <input
@@ -2047,18 +1981,15 @@ export default function ProgressLogDialog({
                                     parseInt(e.target.value) || 0,
                                   )
                                 }
-                                className="w-full px-3 py-2 bg-background border-2 border-border rounded-lg text-sm focus:border-chart-2 transition-colors"
+                                className="w-full px-4 py-2.5 bg-background border-2 border-border/40 rounded-xl text-sm focus:border-primary/40 focus:shadow-sm focus:shadow-primary/5 transition-all duration-200"
                                 dir={language === "ar" ? "rtl" : "ltr"}
                               />
                               {selectedData?.timeSpentMinutes &&
                                 selectedData.timeSpentMinutes >
                                   sub.time_required_minutes && (
-                                  <p
-                                    className="text-xs text-chart-1 font-bold flex items-center gap-1"
-                                    dir={language === "ar" ? "rtl" : "ltr"}
-                                  >
-                                    <ArrowUpRight className="w-3 h-3" />+
-                                    {Math.floor(
+                                  <div className="flex items-center gap-1.5 text-xs font-bold text-chart-1 bg-chart-1/[0.08] px-3 py-1.5 rounded-lg border border-chart-1/15 w-fit">
+                                    <ArrowUpRight className="w-3.5 h-3.5" />
+                                    +{Math.floor(
                                       (sub.impact_weight || 0) *
                                         (selectedData.timeSpentMinutes /
                                           sub.time_required_minutes -
@@ -2066,7 +1997,7 @@ export default function ProgressLogDialog({
                                         0.5,
                                     )}{" "}
                                     {t.bonusPoints}
-                                  </p>
+                                  </div>
                                 )}
                             </div>
                           )}
@@ -2084,7 +2015,7 @@ export default function ProgressLogDialog({
               return (
                 <div
                   key={main.id}
-                  className={`rounded-xl p-4 space-y-3 transition-all cursor-pointer select-none ${isSelected ? "bg-chart-2/10 border-2 border-chart-2 shadow-sm" : "bg-muted/30 border-2 border-transparent hover:border-muted-foreground/20 hover:bg-muted/50"}`}
+                  className={`rounded-2xl p-4 space-y-3 transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${isSelected ? "bg-primary/[0.06] border-2 border-primary/30 shadow-md shadow-primary/5" : "bg-muted/[0.08] border-2 border-border/30 hover:border-primary/20 hover:bg-muted/[0.15] hover:shadow-sm"}`}
                   onClick={() => toggleTaskSelection(main.id)}
                 >
                   <div
@@ -2092,40 +2023,43 @@ export default function ProgressLogDialog({
                     dir={language === "ar" ? "rtl" : "ltr"}
                   >
                     <div
-                      className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected ? "bg-chart-2 border-chart-2 scale-105" : "border-muted-foreground/50 bg-background hover:border-muted-foreground"}`}
+                      className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all duration-200 shrink-0 shadow-sm ${isSelected ? "bg-primary border-primary scale-105 shadow-primary/20" : "border-border/60 bg-background hover:border-primary/40"}`}
                     >
                       {isSelected && (
-                        <Check className="w-5 h-5 text-white stroke-[3]" />
+                        <Check className="w-5 h-5 text-primary-foreground stroke-[2.5]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p
-                        className="font-medium text-foreground"
+                        className="font-semibold text-[15px] text-foreground leading-snug"
                         dir={language === "ar" ? "rtl" : "ltr"}
                       >
                         {main.task_description}
                       </p>
-                      <p
-                        className="text-xs text-muted-foreground"
-                        dir={language === "ar" ? "rtl" : "ltr"}
-                      >
-                        {t.weight}: {main.impact_weight}
-                        {main.time_required_minutes &&
-                          ` • ${main.time_required_minutes} ${t.minutes}`}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-bold text-muted-foreground/80 border border-border/20">
+                          {t.weight}: {main.impact_weight}
+                        </span>
+                        {main.time_required_minutes && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-bold text-muted-foreground/80 border border-border/20">
+                            <Clock className="w-2.5 h-2.5" />
+                            {main.time_required_minutes} {t.minutes}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {isSelected && main.time_required_minutes && (
                     <div
-                      className={`space-y-2 ${language === "ar" ? "pe-8" : "ps-8"}`}
+                      className={`space-y-2.5 ${language === "ar" ? "pe-9" : "ps-9"}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <label
-                        className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2"
+                        className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider flex items-center gap-2"
                         dir={language === "ar" ? "rtl" : "ltr"}
                       >
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-3.5 h-3.5 text-primary/60" />
                         {t.timeSpent}
                       </label>
                       <input
@@ -2136,18 +2070,15 @@ export default function ProgressLogDialog({
                         onChange={(e) =>
                           updateTaskTime(main.id, parseInt(e.target.value) || 0)
                         }
-                        className="w-full px-3 py-2 bg-background border-2 border-border rounded-lg text-sm focus:border-chart-2 transition-colors"
+                        className="w-full px-4 py-2.5 bg-background border-2 border-border/40 rounded-xl text-sm focus:border-primary/40 focus:shadow-sm focus:shadow-primary/5 transition-all duration-200"
                         dir={language === "ar" ? "rtl" : "ltr"}
                       />
                       {selectedData?.timeSpentMinutes &&
                         selectedData.timeSpentMinutes >
                           main.time_required_minutes && (
-                          <p
-                            className="text-xs text-chart-1 font-bold flex items-center gap-1"
-                            dir={language === "ar" ? "rtl" : "ltr"}
-                          >
-                            <ArrowUpRight className="w-3 h-3" />+
-                            {Math.floor(
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-chart-1 bg-chart-1/[0.08] px-3 py-1.5 rounded-lg border border-chart-1/15 w-fit">
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                            +{Math.floor(
                               (main.impact_weight || 0) *
                                 (selectedData.timeSpentMinutes /
                                   main.time_required_minutes -
@@ -2155,7 +2086,7 @@ export default function ProgressLogDialog({
                                 0.5,
                             )}{" "}
                             {t.bonusPoints}
-                          </p>
+                          </div>
                         )}
                     </div>
                   )}
@@ -2165,18 +2096,21 @@ export default function ProgressLogDialog({
           )}
         </div>
 
-        <div className="border-t border-border shrink-0 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6">
+        <div className="border-t border-border/50 shrink-0 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6">
           <button
             onClick={handleManualSubmit}
             disabled={loading || selectedTasks.size === 0}
-            className="w-full py-4 bg-chart-2 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-chart-2/20"
+            className="w-full py-4 bg-chart-2 text-white rounded-2xl font-extrabold text-lg transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:hover:translate-y-0 hover:-translate-y-px shadow-lg shadow-chart-2/15 active:scale-[0.98]"
           >
             {loading ? (
               <Loader2 className="animate-spin w-5 h-5" />
             ) : (
               <>
-                <Send className="w-5 h-5" /> {t.submitLog} ({selectedTasks.size}
-                )
+                <Send className="w-5 h-5" />
+                <span>{t.submitLog}</span>
+                <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white/20 text-xs font-black">
+                  {selectedTasks.size}
+                </span>
               </>
             )}
           </button>

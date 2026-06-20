@@ -229,6 +229,16 @@ export const translations = {
     basePoints: 'Base Points',
     totalAwarded: 'Total Awarded',
 
+    // HomePage dual-mode box
+    modeNewGoal: 'New Goal',
+    modeDailyLog: 'Daily Log',
+    modeNewGoalHint: 'Write your goal here...',
+    modeDailyLogHint: 'Select a goal to log progress',
+    noGoalsToLog: 'No goals yet to log',
+    selectGoalFirst: 'Select a goal first',
+    logManual: 'Manual',
+    logAI: 'AI Plan',
+
     // GoalCreator
     createNewGoal: 'Create New Goal',
     whatDoYouWant: 'What do you want to achieve?',
@@ -341,6 +351,7 @@ export const translations = {
     // Task Hierarchy
     mainTask: 'Main Task',
     subtask: 'Subtask',
+    subtasksProgress: 'Subtasks',
     addMainTask: 'Add Main Task',
     addSubtask: 'Add Subtask',
     daily: 'Daily',
@@ -379,13 +390,6 @@ export const translations = {
     noTasks: 'No tasks yet',
     noLogs: 'No activity logs yet',
 
-    // Telegram
-    telegramBot: 'Telegram Bot',
-    telegramBotDesc: 'Get goal reminders via Telegram',
-    connectTelegram: 'Connect',
-    disconnectTelegram: 'Disconnect',
-    telegramConnected: 'Connected',
-    openInTelegram: 'Open in Telegram',
 
     // Goal Reminders
     goalReminders: 'Goal Reminders',
@@ -627,6 +631,16 @@ export const translations = {
     basePoints: 'النقاط الأساسية',
     totalAwarded: 'الإجمالي الممنوح',
 
+    // HomePage dual-mode box
+    modeNewGoal: 'هدف جديد',
+    modeDailyLog: 'تسجيل يومي',
+    modeNewGoalHint: 'اكتب هدفك هنا\u200f...',
+    modeDailyLogHint: 'اختر هدفاً لتسجيل تقدّمك',
+    noGoalsToLog: 'لا توجد أهداف لتسجلها بعد',
+    selectGoalFirst: 'اختر هدفاً أولاً',
+    logManual: 'يدوي',
+    logAI: 'ذكاء اصطناعي',
+
     // GoalCreator
     createNewGoal: 'إنشاء هدف جديد',
     whatDoYouWant: 'ماذا تريد أن تحقق؟',
@@ -739,6 +753,7 @@ export const translations = {
     // Task Hierarchy
     mainTask: 'مهمة رئيسية',
     subtask: 'مهمة فرعية',
+    subtasksProgress: 'المهام الفرعية',
     addMainTask: 'إضافة مهمة رئيسية',
     addSubtask: 'إضافة فرعية',
     daily: 'يومي',
@@ -777,13 +792,6 @@ export const translations = {
     noTasks: 'لا توجد مهام بعد',
     noLogs: 'لا توجد سجلات نشاط بعد',
 
-    // Telegram
-    telegramBot: 'بوت تيليغرام',
-    telegramBotDesc: 'استقبل تذكيرات الأهداف عبر تيليغرام',
-    connectTelegram: 'ربط',
-    disconnectTelegram: 'فصل',
-    telegramConnected: 'متصل',
-    openInTelegram: 'فتح في تيليغرام',
 
     // Goal Reminders
     goalReminders: 'تذكيرات الأهداف',

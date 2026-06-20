@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Loader2,
     CheckCircle,
@@ -12,6 +12,8 @@ import {
     Target,
     ListChecks,
     ChevronRight,
+    Zap,
+    CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
@@ -111,6 +113,27 @@ export default function GoalCreator({
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [planResult, setPlanResult] = useState<any>(null);
     const [notification, setNotification] = useState<{ type: 'error' | 'warning' | 'info', message: string } | null>(null);
+
+    const [tunerDuration, setTunerDuration] = useState<number>(90);
+    const [tunerDifficulty, setTunerDifficulty] = useState<'easy' | 'medium' | 'hard' | 'expert' | 'legendary'>('medium');
+
+    const tunerPoints = useMemo(() => {
+        const multipliers = {
+            easy: 50,
+            medium: 100,
+            hard: 150,
+            expert: 200,
+            legendary: 250,
+        };
+        const multiplier = multipliers[tunerDifficulty] || 100;
+        return Math.max(1000, tunerDuration * multiplier);
+    }, [tunerDuration, tunerDifficulty]);
+
+    useEffect(() => {
+        if (planResult?.plan?.estimated_total_days) {
+            setTunerDuration(Number(planResult.plan.estimated_total_days) || 90);
+        }
+    }, [planResult]);
 
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessingAudio, setIsProcessingAudio] = useState(false);
@@ -395,8 +418,8 @@ export default function GoalCreator({
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            const targetPoints = Math.max(1000, Number(structuredInput.target_points) || 10000);
-            const totalDays = Math.max(1, Number(planResult.plan?.estimated_total_days) || 90);
+            const targetPoints = tunerPoints;
+            const totalDays = tunerDuration;
             const adjustedCompletionDate = new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000).toISOString();
 
             const goalTitle =
@@ -872,29 +895,163 @@ export default function GoalCreator({
         <div className="space-y-5">
             {renderNotification()}
 
-            <Card className="overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-md">
-                <CardHeader className="border-b border-border/60 bg-muted/30 px-6 py-4">
+            <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card/60 via-card/85 to-primary/5 backdrop-blur-md shadow-lg transition-all duration-300 hover:shadow-xl hover:border-primary/30 relative">
+                {/* Background decorative glowing element */}
+                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
+                <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                         <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                            {resolvedLanguage === 'ar' ? 'ملخص' : 'Summary'}
+                            {resolvedLanguage === 'ar' ? 'ملخص الخطة' : 'Plan Summary'}
                         </Badge>
                     </div>
-                    <CardTitle className="text-base sm:text-lg mb-1">
+                    <CardTitle className="text-base sm:text-lg font-bold mb-1">
                         {planResult?.plan?.goal_summary}
                     </CardTitle>
                     <CardDescription className="text-sm text-muted-foreground">
                         {planResult?.ai_summary}
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-2">
-                        <Clock className="size-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                            {resolvedLanguage === 'ar' ? 'المدة التقديرية' : 'Estimated duration'}:
+
+                <CardContent className="p-6 space-y-6">
+                    {/* Plan Tuner Header */}
+                    <div className="flex items-center gap-3">
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/20">
+                            <Zap className="size-4 animate-pulse" />
                         </span>
-                        <Badge variant="secondary" className="text-xs">
-                            {planResult?.plan?.estimated_total_days || '-'} {resolvedLanguage === 'ar' ? 'يوم' : 'days'}
-                        </Badge>
+                        <div>
+                            <h3 className="text-sm font-bold text-foreground">
+                                {resolvedLanguage === 'ar' ? 'مُعدّل الخطة الديناميكي' : 'Dynamic Plan Tuner'}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {resolvedLanguage === 'ar' ? 'اضبط المدة ومستوى الصعوبة لتعديل إجمالي النقاط المستهدفة' : 'Fine-tune your timeline and difficulty to calculate custom effort points'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Points Display */}
+                    <div className="relative group rounded-2xl bg-muted/30 border border-border/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden">
+                        <div className="space-y-1 text-center sm:text-left rtl:sm:text-right">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                {resolvedLanguage === 'ar' ? 'إجمالي نقاط الهدف' : 'Total Goal Points'}
+                            </span>
+                            <div className="flex items-center justify-center sm:justify-start gap-1 text-[10px] text-muted-foreground">
+                                <span>{tunerDuration} {resolvedLanguage === 'ar' ? 'يوم' : 'days'}</span>
+                                <span>×</span>
+                                <span>
+                                    {tunerDifficulty === 'easy' ? '50' : tunerDifficulty === 'medium' ? '100' : tunerDifficulty === 'hard' ? '150' : tunerDifficulty === 'expert' ? '200' : '250'} {resolvedLanguage === 'ar' ? 'نقطة/يوم' : 'pts/day'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="relative flex items-center justify-center min-w-[130px] py-1.5 px-4 rounded-xl bg-gradient-to-r from-primary/10 to-indigo-500/10 border border-primary/25 shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
+                            <span className="text-lg sm:text-xl font-black text-primary tracking-tight">
+                                {tunerPoints.toLocaleString()} {resolvedLanguage === 'ar' ? 'نقطة' : 'pts'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Timeline Slider */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-sm font-semibold flex items-center gap-2">
+                                <Clock className="size-4 text-muted-foreground" />
+                                {resolvedLanguage === 'ar' ? 'المدة الزمنية للهدف' : 'Goal Timeline'}
+                            </Label>
+                            <Badge variant="secondary" className="font-bold text-xs bg-primary/10 text-primary border border-primary/20">
+                                {tunerDuration} {resolvedLanguage === 'ar' ? 'يوم' : 'days'}
+                            </Badge>
+                        </div>
+                        <Slider
+                            min={7}
+                            max={365}
+                            step={1}
+                            value={[tunerDuration]}
+                            onValueChange={([val]) => setTunerDuration(val)}
+                            className="py-2"
+                        />
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>7 {resolvedLanguage === 'ar' ? 'أيام' : 'days'}</span>
+                            <span className="flex items-center gap-1.5 font-medium text-foreground bg-muted/40 px-2 py-0.5 rounded-md border border-border/30">
+                                <CalendarDays className="size-3.5 text-muted-foreground" />
+                                {resolvedLanguage === 'ar' ? 'تاريخ الإنجاز المتوقع:' : 'Estimated completion:'} {' '}
+                                {new Date(Date.now() + tunerDuration * 24 * 60 * 60 * 1000).toLocaleDateString(resolvedLanguage === 'ar' ? 'ar-EG' : 'en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                })}
+                            </span>
+                            <span>365 {resolvedLanguage === 'ar' ? 'يوم' : 'days'}</span>
+                        </div>
+                    </div>
+
+                    {/* Difficulty Gamified Tiers */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-semibold flex items-center gap-2">
+                            <Zap className="size-4 text-muted-foreground" />
+                            {resolvedLanguage === 'ar' ? 'مستوى الصعوبة والالتزام' : 'Difficulty & Commitment Level'}
+                        </Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            {(['easy', 'medium', 'hard', 'expert', 'legendary'] as const).map((tier) => {
+                                const active = tunerDifficulty === tier;
+                                const tierMeta = {
+                                    easy: {
+                                        labelEn: 'Easy',
+                                        labelAr: 'سهل',
+                                        rate: '50/d',
+                                        classes: 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+                                        activeClasses: 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.35)] dark:text-emerald-950 dark:font-bold'
+                                    },
+                                    medium: {
+                                        labelEn: 'Medium',
+                                        labelAr: 'متوسط',
+                                        rate: '100/d',
+                                        classes: 'border-sky-500/20 text-sky-600 dark:text-sky-400',
+                                        activeClasses: 'bg-sky-500 text-white border-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.35)] dark:text-sky-950 dark:font-bold'
+                                    },
+                                    hard: {
+                                        labelEn: 'Hard',
+                                        labelAr: 'صعب',
+                                        rate: '150/d',
+                                        classes: 'border-amber-500/20 text-amber-600 dark:text-amber-400',
+                                        activeClasses: 'bg-amber-500 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.35)] dark:text-amber-950 dark:font-bold'
+                                    },
+                                    expert: {
+                                        labelEn: 'Expert',
+                                        labelAr: 'خبير',
+                                        rate: '200/d',
+                                        classes: 'border-rose-500/20 text-rose-600 dark:text-rose-400',
+                                        activeClasses: 'bg-rose-500 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.35)] dark:text-rose-950 dark:font-bold'
+                                    },
+                                    legendary: {
+                                        labelEn: 'Legendary',
+                                        labelAr: 'أسطوري',
+                                        rate: '250/d',
+                                        classes: 'border-purple-500/20 text-purple-600 dark:text-purple-400',
+                                        activeClasses: 'bg-purple-500 text-white border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.35)] dark:text-purple-950 dark:font-bold'
+                                    }
+                                }[tier];
+
+                                return (
+                                    <button
+                                        key={tier}
+                                        type="button"
+                                        onClick={() => setTunerDifficulty(tier)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center p-2.5 rounded-xl border bg-card/40 transition-all duration-300 hover:scale-[1.03] select-none",
+                                            active ? tierMeta.activeClasses : cn("border-border hover:bg-muted/40 hover:border-border/80", tierMeta.classes)
+                                        )}
+                                    >
+                                        <span className="text-xs font-bold leading-none">
+                                            {resolvedLanguage === 'ar' ? tierMeta.labelAr : tierMeta.labelEn}
+                                        </span>
+                                        <span className={cn("text-[9px] font-medium mt-1 leading-none opacity-80", active ? "text-white dark:text-emerald-950" : "text-muted-foreground")}>
+                                            {tierMeta.rate}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </CardContent>
             </Card>

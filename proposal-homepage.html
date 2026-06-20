@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ميتـركس | اختيار الهدف + زر تسجيل</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: oklch(0.145 0.015 220);
+    --bg-soft: oklch(0.19 0.018 220);
+    --card: oklch(0.205 0.02 220);
+    --card-hi: oklch(0.235 0.025 220);
+    --fg: oklch(0.985 0 0);
+    --muted: oklch(0.72 0.012 220);
+    --muted-2: oklch(0.55 0.014 220);
+    --primary: oklch(0.67 0.12 218);
+    --primary-soft: oklch(0.67 0.12 218 / 0.12);
+    --primary-line: oklch(0.67 0.12 218 / 0.28);
+    --amber: oklch(0.78 0.16 75);
+    --amber-soft: oklch(0.78 0.16 75 / 0.14);
+    --amber-line: oklch(0.78 0.16 75 / 0.3);
+    --border: oklch(0.32 0.02 220 / 0.5);
+    --border-soft: oklch(0.32 0.02 220 / 0.28);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.67 0.12 218 / 0.16), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 20%, oklch(0.55 0.14 260 / 0.10), transparent);
+    background-attachment: fixed; min-height: 100vh;
+  }
+  .wrap { max-width: 580px; margin: 0 auto; padding: 0 18px 80px; }
+
+  header { padding: 48px 0 28px; text-align: center; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border: 1px solid var(--amber-line);
+    background: var(--amber-soft); border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: var(--amber); margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(20px, 5vw, 26px); font-weight: 700; margin-bottom: 6px; }
+  header p { color: var(--muted); font-size: 13px; }
+
+  .mock {
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    border-radius: 16px; padding: 16px; margin-top: 16px;
+  }
+  .mock-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .mock-num { font-size: 11px; font-weight: 700; color: var(--amber); font-variant-numeric: tabular-nums; }
+  .mock-name { font-size: 13.5px; font-weight: 700; }
+  .mock-tag { font-size: 10px; color: var(--muted-2); margin-inline-start: auto; }
+
+  .box {
+    display: flex; align-items: stretch; gap: 6px;
+    background: var(--card); border: 1px solid var(--amber-line);
+    border-radius: 14px; overflow: hidden; box-shadow: 0 6px 22px rgba(0,0,0,0.22);
+  }
+  .toggle {
+    display: flex; flex-direction: column; gap: 4px; padding: 6px;
+    background: oklch(0.16 0.018 220); border-inline-end: 1px solid var(--border-soft);
+  }
+  .toggle .it {
+    width: 34px; height: 36px; display: grid; place-items: center;
+    border-radius: 10px; font-size: 15px; color: var(--muted);
+  }
+  .toggle .it.on { background: var(--primary-soft); color: var(--primary); }
+  .toggle .it.log.on { background: var(--amber-soft); color: var(--amber); }
+
+  .content { flex: 1; min-width: 0; }
+
+  /* goal chip base */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+    border-radius: 999px; border: 1px solid var(--border-soft); background: var(--bg-soft);
+    font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+    transition: all 0.22s cubic-bezier(0.25,1,0.5,1); cursor: pointer;
+  }
+  .chip .ci { width: 16px; height: 16px; border-radius: 5px; background: var(--primary-soft); border: 1px solid var(--primary-line); display: grid; place-items: center; color: var(--primary); font-size: 9px; transition: all 0.22s; }
+  .chip .cp { font-size: 9.5px; font-weight: 700; opacity: 0.5; font-variant-numeric: tabular-nums; transition: opacity 0.22s; }
+  .chip:hover { border-color: var(--amber-line); color: var(--fg); }
+  .chip.sel {
+    border-color: var(--amber); background: var(--amber-soft); color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber-line), 0 4px 14px oklch(0.78 0.16 75 / 0.18);
+  }
+  .chip.sel .ci { background: var(--amber); border-color: var(--amber); color: var(--bg); }
+  .chip.sel .cp { opacity: 0.85; }
+
+  .chips-row { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* log button */
+  .logbtn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700;
+    background: var(--amber); color: var(--bg); border: none; cursor: pointer;
+    box-shadow: 0 4px 14px oklch(0.78 0.16 75 / 0.3); transition: all 0.2s; white-space: nowrap;
+  }
+  .logbtn.full { width: 100%; padding: 10px 16px; font-size: 12.5px; }
+
+  /* V1: chips row, button slides in below (box fixed height) */
+  .v1 .content { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* V2: chips + selected grows button inline */
+  .v2 .content { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .v2 .chip.sel { padding-inline-end: 4px; }
+  .v2 .chip-sel-btn {
+    display: inline-flex; align-items: center; gap: 2px; margin-inline-start: 2px;
+    padding: 4px 8px; border-radius: 999px; background: var(--amber); color: var(--bg);
+    font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .v2 .chip-sel-btn:hover { filter: brightness(1.1); }
+
+  /* V3: split circle — selected chip has a circular confirm button */
+  .v3 .content { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .v3 .chip.sel { padding-inline-end: 3px; }
+  .v3 .confirm-circle {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--amber); color: var(--bg);
+    display: grid; place-items: center; font-size: 12px; cursor: pointer; margin-inline-start: 2px;
+    box-shadow: 0 0 0 2px var(--card), 0 2px 8px oklch(0.78 0.16 75 / 0.4);
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .v3 .confirm-circle:hover { transform: scale(1.1); }
+
+  /* V4: chips always visible + log button fixed bottom (never disappears, disabled when none selected) */
+  .v4 .content { display: flex; flex-direction: column; }
+  .v4 .chips-area { padding: 10px 12px 6px; }
+  .v4 .btn-area { padding: 0 12px 10px; }
+  .v4 .logbtn { width: 100%; }
+  .v4 .logbtn.disabled { background: oklch(0.3 0.01 220); color: var(--muted-2); box-shadow: none; cursor: not-allowed; }
+
+  /* V5: selected chip animates with checkmark icon swap, button below */
+  .v5 .content { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+  .v5 .chip.sel .ci { animation: pop 0.3s cubic-bezier(0.25,1.4,0.5,1); }
+  @keyframes pop { 0% { transform: scale(0.6); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+  /* V6: chips row + button inline same row, button appears only when selected */
+  .v6 .content { padding: 10px 12px; }
+  .v6 .inner { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+  .cap { font-size: 11px; color: var(--muted-2); margin-top: 9px; text-align: center; }
+
+  footer { text-align: center; padding: 26px 0 0; color: var(--muted-2); font-size: 11px; border-top: 1px solid var(--border-soft); margin-top: 26px; }
+  footer b { color: var(--fg); letter-spacing: 0.2em; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="badge">⚡ كل الأهداف ظاهرة</span>
+    <h1>اضغط الهدف → يتلوّن + يظهر زر التسجيل</h1>
+    <p>الصندوق لا يكبر — كل الأهداف تبقى ظاهرة</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- V1: chips + button slides below -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠١</span><span class="mock-name">شرائح + زر بالأسفل</span><span class="mock-tag">button below</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v1">
+        <div class="chips-row">
+          <span class="chip"><span class="ci">◎</span>قراءة ١٢ كتاباً<span class="cp">٤٠٪</span></span>
+          <span class="chip sel"><span class="ci">✦</span>رياضة ٥ مرات<span class="cp">٢٥٪</span></span>
+          <span class="chip"><span class="ci">✎</span>تعلّم الألمانية<span class="cp">٦٠٪</span></span>
+        </div>
+        <button class="logbtn full"><span>⚡</span> تسجيل التقدّم اليوم</button>
+      </div>
+    </div>
+    <div class="cap">كل الأهداف ظاهرة — المختار بلون كهرماني — زر بالأسفل</div>
+  </div>
+
+  <!-- V2: selected chip has inline confirm button -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠٢</span><span class="mock-name">زر مؤكد داخل الشريحة</span><span class="mock-tag">inline confirm</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v2">
+        <span class="chip"><span class="ci">◎</span>قراءة<span class="cp">٤٠٪</span></span>
+        <span class="chip sel"><span class="ci">✦</span>رياضة ٥ مرات<span class="cp">٢٥٪</span><span class="chip-sel-btn">⚡ تسجيل</span></span>
+        <span class="chip"><span class="ci">✎</span>ألمانية<span class="cp">٦٠٪</span></span>
+      </div>
+    </div>
+    <div class="cap">الشريحة المختارة يظهر فيها زر «تسجيل» — لا زر منفصل</div>
+  </div>
+
+  <!-- V3: split circle confirm button on selected chip -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠٣</span><span class="mock-name">دائرة مؤكّدة على الشريحة</span><span class="mock-tag">circle confirm</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v3">
+        <span class="chip"><span class="ci">◎</span>قراءة<span class="cp">٤٠٪</span></span>
+        <span class="chip sel"><span class="ci">✓</span>رياضة ٥ مرات<span class="cp">٢٥٪</span><span class="confirm-circle">⚡</span></span>
+        <span class="chip"><span class="ci">✎</span>ألمانية<span class="cp">٦٠٪</span></span>
+      </div>
+    </div>
+    <div class="cap">دائرة صغيرة ملاصقة للشريحة المختارة — تضغطها للتسجيل</div>
+  </div>
+
+  <!-- V4: chips always + fixed button (disabled until selected) -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠٤</span><span class="mock-name">زر ثابت (معطّل حتى الاختيار)</span><span class="mock-tag">always button</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v4">
+        <div class="chips-area">
+          <div class="chips-row">
+            <span class="chip"><span class="ci">◎</span>قراءة<span class="cp">٤٠٪</span></span>
+            <span class="chip sel"><span class="ci">✦</span>رياضة ٥ مرات<span class="cp">٢٥٪</span></span>
+            <span class="chip"><span class="ci">✎</span>ألمانية<span class="cp">٦٠٪</span></span>
+          </div>
+        </div>
+        <div class="btn-area">
+          <button class="logbtn"><span>⚡</span> تسجيل</button>
+        </div>
+      </div>
+    </div>
+    <div class="cap">الزر دائماً موجود — معطّل حتى تختار هدفاً</div>
+  </div>
+
+  <!-- V5: checkmark animation + button below -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠٥</span><span class="mock-name">أيقونة ✓ تظهر بانيميشن + زر</span><span class="mock-tag">animated</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v5">
+        <div class="chips-row">
+          <span class="chip"><span class="ci">◎</span>قراءة ١٢ كتاباً<span class="cp">٤٠٪</span></span>
+          <span class="chip sel"><span class="ci">✓</span>رياضة ٥ مرات<span class="cp">٢٥٪</span></span>
+          <span class="chip"><span class="ci">✎</span>تعلّم الألمانية<span class="cp">٦٠٪</span></span>
+        </div>
+        <button class="logbtn full"><span>⚡</span> تسجيل التقدّم اليوم</button>
+      </div>
+    </div>
+    <div class="cap">الأيقونة تتحول لـ✓ بانيميشن عند الاختيار + زر بالأسفل</div>
+  </div>
+
+  <!-- V6: chips + button inline same row -->
+  <div class="mock">
+    <div class="mock-head"><span class="mock-num">٠٦</span><span class="mock-name">شرائح + زر بنفس الصف</span><span class="mock-tag">inline</span></div>
+    <div class="box">
+      <div class="toggle"><div class="it">＋</div><div class="it log on">⚡</div></div>
+      <div class="content v6">
+        <div class="inner">
+          <span class="chip"><span class="ci">◎</span>قراءة<span class="cp">٤٠٪</span></span>
+          <span class="chip sel"><span class="ci">✦</span>رياضة<span class="cp">٢٥٪</span></span>
+          <span class="chip"><span class="ci">✎</span>ألمانية<span class="cp">٦٠٪</span></span>
+          <button class="logbtn"><span>⚡</span> تسجيل</button>
+        </div>
+      </div>
+    </div>
+    <div class="cap">كل شيء في صف واحد — شرائح + زر بنفس السطر</div>
+  </div>
+
+</main>
+
+<footer><div class="wrap"><b>METRIX</b><br>كل الأهداف ظاهرة · اختر الأفضل</div></footer>
+
+<script>
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      c.closest('.box').querySelectorAll('.chip').forEach(x => x.classList.remove('sel'));
+      c.classList.add('sel');
+    });
+  });
+</script>
+</body>
+</html>

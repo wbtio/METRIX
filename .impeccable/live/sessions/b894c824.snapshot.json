@@ -1,0 +1,41 @@
+{
+  "id": "b894c824",
+  "phase": "completed",
+  "pageUrl": "/",
+  "sourceFile": "src/components/dashboard/FocusTab.tsx",
+  "expectedVariants": 4,
+  "arrivedVariants": 4,
+  "visibleVariant": 2,
+  "paramValues": {
+    "shadow-offset": 4,
+    "border-weight": 2,
+    "cyber-glow": true
+  },
+  "pendingEventSeq": null,
+  "pendingEvent": null,
+  "deliveryLease": null,
+  "checkpointRevision": 14,
+  "activeOwner": "9d7f27c3",
+  "sourceMarkers": {},
+  "fallbackMode": null,
+  "annotationArtifacts": [],
+  "diagnostics": [
+    {
+      "error": "stale_checkpoint_ignored",
+      "revision": 1
+    },
+    {
+      "error": "stale_checkpoint_ignored",
+      "revision": 2
+    },
+    {
+      "error": "stale_checkpoint_ignored",
+      "revision": 3
+    },
+    {
+      "error": "stale_checkpoint_ignored",
+      "revision": 4
+    }
+  ],
+  "updatedAt": "2026-05-24T15:34:15.667Z"
+}

@@ -13,8 +13,10 @@ import {
   ListChecks,
   Bell,
   Clock,
+  Plus,
+  Zap,
 } from "lucide-react";
-import { type Language } from "@/lib/translations";
+import { translations, type Language } from "@/lib/translations";
 import type { GoalTaskStats } from "@/app/page";
 import Image from "next/image";
 import { getIconComponent } from "./goal/IconPicker";
@@ -31,6 +33,8 @@ import {
 } from "@/hooks/useNotifications";
 import NotificationsSection from "@/components/notifications/NotificationsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ProgressLogDialog from "./progress/ProgressLogDialog";
+import type { TaskRow } from "@/lib/task-hierarchy";
 
 interface Goal {
   id: string;
@@ -42,6 +46,7 @@ interface Goal {
   estimated_completion_date?: string | null;
   icon?: string;
   is_pinned?: boolean;
+  ai_summary?: string;
 }
 
 interface HomePageProps {
@@ -78,6 +83,21 @@ export default function HomePage({
   const isArabic = language === "ar";
   const safeRecentGoalsLimit = Math.max(1, recentGoalsLimit);
   const recentGoals = goals.slice(0, safeRecentGoalsLimit);
+
+  /* ---- Dual-mode box state ---- */
+  const [boxMode, setBoxMode] = useState<"new" | "log">("new");
+  const [selectedLogGoalId, setSelectedLogGoalId] = useState<string | null>(
+    null,
+  );
+  const [logTasks, setLogTasks] = useState<TaskRow[]>([]);
+  const [logTasksLoading, setLogTasksLoading] = useState(false);
+  const [showProgressDialog, setShowProgressDialog] = useState(false);
+
+  const t = translations[language];
+  const selectedLogGoal = useMemo(
+    () => goals.find((g) => g.id === selectedLogGoalId) || null,
+    [goals, selectedLogGoalId],
+  );
 
   /* ---- Pick primary goal for notifications ---- */
   const primaryGoal = useMemo(() => {
@@ -413,6 +433,42 @@ export default function HomePage({
     onNavigateToCreate?.(normalizedGoalInput, "manual");
   };
 
+  /* ---- Log mode: fetch tasks and open progress dialog ---- */
+  const handleLogSubmit = useCallback(async () => {
+      if (!selectedLogGoalId) return;
+      setLogTasksLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("sub_layers")
+          .select("*")
+          .eq("goal_id", selectedLogGoalId)
+          .order("sort_order", { ascending: true });
+
+        if (error) {
+          console.error("Failed to fetch tasks for log mode:", error);
+          return;
+        }
+
+        setLogTasks((data as TaskRow[]) || []);
+        setShowProgressDialog(true);
+      } catch (err) {
+        console.error("Log mode fetch tasks error:", err);
+      } finally {
+        setLogTasksLoading(false);
+      }
+    },
+    [selectedLogGoalId, supabase],
+  );
+
+  const handleProgressDialogClose = useCallback(() => {
+    setShowProgressDialog(false);
+    setLogTasks([]);
+  }, []);
+
+  const handleProgressDialogSuccess = useCallback(() => {
+    handleProgressDialogClose();
+  }, [handleProgressDialogClose]);
+
   const resizeGoalTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = "0px";
     const computedStyle = window.getComputedStyle(textarea);
@@ -468,18 +524,18 @@ export default function HomePage({
         </p>
       </div>
 
-      {/* Goal Input */}
+      {/* Dual-mode box: vertical toggle + content */}
       <div
         className={cn(
           "relative shrink-0 transition-all duration-300",
-          aiPromptVisible ? "pt-10 sm:pt-11" : "pt-0"
+          aiPromptVisible && boxMode === "new" ? "pt-10 sm:pt-11" : "pt-0"
         )}
         dir={isArabic ? "rtl" : "ltr"}
       >
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden transition-all duration-300",
-            aiPromptVisible ? "h-[4.75rem] opacity-100 sm:h-[5.75rem]" : "h-0 opacity-0"
+            aiPromptVisible && boxMode === "new" ? "h-[4.75rem] opacity-100 sm:h-[5.75rem]" : "h-0 opacity-0"
           )}
         >
           <div className={cn("rounded-t-[22px] border border-b-0 px-4 pt-1 pb-6 sm:px-5 sm:pt-1.5 sm:pb-9", promptToneClasses)}>
@@ -506,107 +562,226 @@ export default function HomePage({
 
         <div
           className={cn(
-            "relative z-20 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-xl",
+            "relative z-20 flex items-stretch gap-2 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-xl",
             "shadow-sm shadow-black/[0.03] transition-all duration-300 ease-out dark:shadow-black/10",
-            "focus-within:border-primary/40 focus-within:shadow-md focus-within:shadow-primary/[0.06]",
-            isRecording ? "border-red-400/40 bg-red-500/[0.03]" : isProcessing ? "border-amber-300/50 bg-amber-500/[0.03]" : aiPromptVisible ? promptCardClasses : "border-border/60"
+            boxMode === "new"
+              ? (isRecording ? "border-red-400/40 bg-red-500/[0.03]" : isProcessing ? "border-amber-300/50 bg-amber-500/[0.03]" : aiPromptVisible ? promptCardClasses : "border-border/60")
+              : "border-amber-300/40"
           )}
         >
+          {/* Vertical mode toggle */}
           <div
-            className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent",
-              isRecording ? "from-red-500/[0.07] via-red-500/[0.02]" : isProcessing ? "from-amber-500/[0.07] via-amber-500/[0.02]" : aiPromptVisible ? "from-amber-500/[0.07] via-amber-500/[0.015]" : "from-primary/[0.06] via-primary/[0.015]"
-            )}
-          />
-          <div className="relative px-2 pt-2 pb-1.5 sm:px-3 sm:pt-2.5 sm:pb-2.5">
-            <Textarea
-              ref={goalTextareaRef}
-              rows={1}
-              value={goalInput}
-              onChange={(e) => {
-                setGoalInput(e.target.value);
-                if (!analyzeGoalInput(e.target.value).needsMoreDetail) setShowAIDetailPrompt(false);
-                resizeGoalTextarea(e.currentTarget);
-              }}
-              onInput={(e) => resizeGoalTextarea(e.currentTarget)}
-              placeholder={goalInputPlaceholder}
-              aria-describedby={aiPromptVisible ? "goal-ai-detail-prompt" : undefined}
-              className={cn(
-                "min-h-[44px] max-h-[132px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none scrollbar-thin",
-                "text-sm font-medium leading-6 text-foreground sm:text-base sm:leading-7 md:text-base",
-                "placeholder:text-muted-foreground/50",
-                "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                "dark:bg-transparent",
-                isArabic ? "text-right" : "text-left",
-                isRecording && "placeholder:text-red-500/60 caret-red-500"
-              )}
-              dir={isArabic ? "rtl" : "auto"}
-            />
-          </div>
-          <div
-            className={cn(
-              "flex flex-row-reverse items-center gap-2 px-2 pb-2 pt-0 sm:items-center sm:justify-between sm:px-3 sm:pb-3",
-              isArabic ? "sm:flex-row-reverse" : "sm:flex-row"
-            )}
+            className="flex shrink-0 flex-col gap-1 p-1.5 bg-muted/30 border-inline-end border-border/40"
+            role="tablist"
+            aria-label={isArabic ? "وضع الصندوق" : "Box mode"}
           >
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={toggleRecording}
-              disabled={isProcessing}
-              aria-pressed={isRecording}
+              role="tab"
+              aria-selected={boxMode === "new"}
+              onClick={() => setBoxMode("new")}
               className={cn(
-                "h-9 w-9 shrink-0 rounded-full px-0 shadow-none sm:w-9 sm:px-0",
-                isProcessing
-                  ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                  : isRecording
-                    ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
-                    : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                "flex h-12 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
+                boxMode === "new"
+                  ? "bg-primary/[0.12] text-primary ring-1 ring-primary/25 shadow-[0_4px_12px_-6px_hsl(var(--primary)/0.6)]"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
+              title={t.modeNewGoal}
             >
-              {isProcessing ? <Loader2 className="size-4 animate-spin" /> : isRecording ? <StopCircle className="size-4" /> : <Mic className="size-4" />}
-            </Button>
-            <div
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={boxMode === "log"}
+              onClick={() => setBoxMode("log")}
+              disabled={goals.length === 0}
               className={cn(
-                "grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:w-auto sm:flex-none sm:gap-2 sm:min-w-[280px]"
+                "flex h-12 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
+                boxMode === "log"
+                  ? "bg-amber-500/[0.12] text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/25 shadow-[0_4px_12px_-6px_rgba(245,158,11,0.5)]"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               )}
-              dir={isArabic ? "rtl" : "ltr"}
+              title={t.modeDailyLog}
             >
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleManualCreate}
-                aria-pressed={selectedCreationMode === "manual"}
-                className={cn(
-                  "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-200 sm:h-10 sm:px-4 sm:text-sm",
-                  selectedCreationMode === "manual"
-                    ? "border-foreground/20 bg-foreground/[0.06] text-foreground ring-1 ring-foreground/10"
-                    : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
-                )}
-              >
-                <PenLine className="size-4 shrink-0" />
-                <span className="truncate">{isArabic ? "يدوي" : "Manual"}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAICreate}
-                aria-pressed={selectedCreationMode === "ai"}
-                className={cn(
-                  "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4 sm:text-sm",
-                  aiPromptVisible
-                    ? "border-amber-300/60 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200"
-                    : selectedCreationMode === "ai"
-                      ? "border-primary/35 bg-primary/10 text-primary ring-1 ring-primary/15 hover:bg-primary/15"
-                      : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
-                )}
-              >
-                <Sparkles className="size-4 shrink-0" />
-                <span className="truncate">{isArabic ? "ذكاء اصطناعي" : "AI Plan"}</span>
-              </Button>
-            </div>
+              <Zap className="h-4 w-4" />
+            </button>
           </div>
+
+          {/* Content area */}
+          {boxMode === "new" ? (
+            /* ===== NEW GOAL MODE (existing input) ===== */
+            <div className="relative min-w-0 flex-1">
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent",
+                  isRecording ? "from-red-500/[0.07] via-red-500/[0.02]" : isProcessing ? "from-amber-500/[0.07] via-amber-500/[0.02]" : aiPromptVisible ? "from-amber-500/[0.07] via-amber-500/[0.015]" : "from-primary/[0.06] via-primary/[0.015]"
+                )}
+              />
+              <div className="relative px-2 pt-2 pb-1.5 sm:px-3 sm:pt-2.5 sm:pb-2.5">
+                <Textarea
+                  ref={goalTextareaRef}
+                  rows={1}
+                  value={goalInput}
+                  onChange={(e) => {
+                    setGoalInput(e.target.value);
+                    if (!analyzeGoalInput(e.target.value).needsMoreDetail) setShowAIDetailPrompt(false);
+                    resizeGoalTextarea(e.currentTarget);
+                  }}
+                  onInput={(e) => resizeGoalTextarea(e.currentTarget)}
+                  placeholder={goalInputPlaceholder}
+                  aria-describedby={aiPromptVisible ? "goal-ai-detail-prompt" : undefined}
+                  className={cn(
+                    "min-h-[44px] max-h-[132px] resize-none overflow-y-hidden border-0 bg-transparent px-3 py-2 shadow-none scrollbar-thin",
+                    "text-sm font-medium leading-6 text-foreground sm:text-base sm:leading-7 md:text-base",
+                    "placeholder:text-muted-foreground/50",
+                    "focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                    "dark:bg-transparent",
+                    isArabic ? "text-right" : "text-left",
+                    isRecording && "placeholder:text-red-500/60 caret-red-500"
+                  )}
+                  dir={isArabic ? "rtl" : "auto"}
+                />
+              </div>
+              <div
+                className={cn(
+                  "flex flex-row-reverse items-center gap-2 px-2 pb-2 pt-0 sm:items-center sm:justify-between sm:px-3 sm:pb-3",
+                  isArabic ? "sm:flex-row-reverse" : "sm:flex-row"
+                )}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleRecording}
+                  disabled={isProcessing}
+                  aria-pressed={isRecording}
+                  className={cn(
+                    "h-9 w-9 shrink-0 rounded-full px-0 shadow-none sm:w-9 sm:px-0",
+                    isProcessing
+                      ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : isRecording
+                        ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300"
+                        : "border-border/70 bg-background/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  {isProcessing ? <Loader2 className="size-4 animate-spin" /> : isRecording ? <StopCircle className="size-4" /> : <Mic className="size-4" />}
+                </Button>
+                <div
+                  className={cn(
+                    "grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:w-auto sm:flex-none sm:gap-2 sm:min-w-[280px]"
+                  )}
+                  dir={isArabic ? "rtl" : "ltr"}
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleManualCreate}
+                    aria-pressed={selectedCreationMode === "manual"}
+                    className={cn(
+                      "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-200 sm:h-10 sm:px-4 sm:text-sm",
+                      selectedCreationMode === "manual"
+                        ? "border-foreground/20 bg-foreground/[0.06] text-foreground ring-1 ring-foreground/10"
+                        : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
+                    )}
+                  >
+                    <PenLine className="size-4 shrink-0" />
+                    <span className="truncate">{isArabic ? "يدوي" : "Manual"}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAICreate}
+                    aria-pressed={selectedCreationMode === "ai"}
+                    className={cn(
+                      "w-full h-9 min-w-0 rounded-full border px-2 text-xs font-semibold shadow-none transition-all duration-300 sm:h-10 sm:px-4 sm:text-sm",
+                      aiPromptVisible
+                        ? "border-amber-300/60 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200"
+                        : selectedCreationMode === "ai"
+                          ? "border-primary/35 bg-primary/10 text-primary ring-1 ring-primary/15 hover:bg-primary/15"
+                          : "border-border/70 bg-background/70 text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
+                    )}
+                  >
+                    <Sparkles className="size-4 shrink-0" />
+                    <span className="truncate">{isArabic ? "ذكاء اصطناعي" : "AI Plan"}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ===== DAILY LOG MODE ===== */
+            <div className="relative min-w-0 flex-1 flex flex-col">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-amber-500/[0.06] via-amber-500/[0.015] to-transparent" />
+              <div className="relative flex-1 px-2 pt-2 pb-1.5 sm:px-3 sm:pt-2.5 sm:pb-2.5 flex flex-col gap-2">
+                {goals.length === 0 ? (
+                  <div className="flex items-center justify-center rounded-xl border border-dashed border-border/50 bg-muted/10 px-3 py-4 text-center">
+                    <p className="text-sm text-muted-foreground/70">
+                      {t.noGoalsToLog}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 max-h-[88px] overflow-y-auto scrollbar-thin">
+                    {goals.map((goal) => {
+                      const Icon = getIconComponent(goal.icon || "Target");
+                      const currentPoints = goal.current_points ?? 0;
+                      const targetPoints = goal.target_points ?? 0;
+                      const progress = targetPoints > 0 ? Math.round((currentPoints / targetPoints) * 100) : 0;
+                      const isSelected = selectedLogGoalId === goal.id;
+                      return (
+                        <button
+                          key={goal.id}
+                          type="button"
+                          onClick={() => setSelectedLogGoalId(goal.id)}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-all duration-200",
+                            isSelected
+                              ? "border-amber-500 bg-amber-500/[0.14] text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/25 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.4)]"
+                              : "border-border/60 bg-background/60 text-muted-foreground hover:border-amber-500/30 hover:bg-amber-500/[0.06] hover:text-foreground"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border transition-all duration-200",
+                              isSelected
+                                ? "border-amber-500 bg-amber-500 text-amber-950"
+                                : "border-primary/30 bg-primary/[0.08] text-primary"
+                            )}
+                          >
+                            <Icon className="h-2.5 w-2.5" />
+                          </span>
+                          <span className="max-w-[130px] truncate">{goal.title}</span>
+                          <span className={cn("tabular-nums text-[10px] font-bold transition-opacity", isSelected ? "opacity-80" : "opacity-50")}>
+                            {progress}%
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="px-2 pb-2 pt-0 sm:px-3 sm:pb-3">
+                <Button
+                  type="button"
+                  disabled={!selectedLogGoalId || logTasksLoading || goals.length === 0}
+                  onClick={() => handleLogSubmit()}
+                  className={cn(
+                    "w-full h-10 rounded-xl px-4 text-sm font-bold transition-all duration-200",
+                    !selectedLogGoalId || goals.length === 0
+                      ? "bg-muted/40 text-muted-foreground/50 cursor-not-allowed shadow-none"
+                      : "bg-amber-500 text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] dark:bg-amber-500 dark:text-amber-950"
+                  )}
+                >
+                  {logTasksLoading ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                  ) : (
+                    <Zap className="size-4 shrink-0" />
+                  )}
+                  <span>{isArabic ? "تسجيل التقدّم اليوم" : "Log Today's Progress"}</span>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -615,8 +790,41 @@ export default function HomePage({
         className="flex-1 min-h-0 flex flex-col"
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <TabsList className="w-full shrink-0 mb-3 h-11 p-1 bg-muted/60 border border-border/40 rounded-xl">
-          <TabsTrigger value="goals" className={cn("flex-1 gap-2 text-sm font-semibold rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground transition-all duration-200", !primaryGoal && "w-full")}>
+        <style>{`
+          .metrix-tabs-list {
+            height: 50px !important;
+            padding: 5px !important;
+            background-color: color-mix(in oklab, var(--primary) 1.5%, var(--muted)) !important;
+            border: 1px solid color-mix(in oklab, var(--primary) 6%, var(--border)) !important;
+            box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.02) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 16px !important;
+          }
+          
+          .metrix-tabs-trigger {
+            height: 100% !important;
+            border-radius: 12px !important;
+            transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+          }
+
+          .metrix-tabs-trigger[data-state="active"] {
+            border: 1px solid color-mix(in oklab, var(--primary) 20%, var(--border)) !important;
+            background-color: var(--background) !important;
+            box-shadow: 0 4px 12px -2px color-mix(in oklab, var(--primary) 7.5%, transparent),
+                        inset 0 1px 0 0 color-mix(in oklab, var(--background) 50%, transparent) !important;
+            color: var(--foreground) !important;
+          }
+
+          .metrix-tabs-trigger:hover:not([data-state="active"]) {
+            background-color: color-mix(in oklab, var(--primary) 4%, transparent) !important;
+            color: var(--foreground) !important;
+          }
+        `}</style>
+
+        <TabsList className="metrix-tabs-list w-full shrink-0 mb-3 transition-all duration-300">
+          <TabsTrigger value="goals" className={cn("metrix-tabs-trigger flex-1 gap-2 text-sm font-semibold whitespace-nowrap transition-all duration-300", !primaryGoal && "w-full")}>
             <Target className="h-4 w-4 opacity-80" />
             {isArabic ? "الأهداف الأخيرة" : "Recent Goals"}
             <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold text-primary tabular-nums">
@@ -624,7 +832,7 @@ export default function HomePage({
             </span>
           </TabsTrigger>
           {primaryGoal && (
-            <TabsTrigger value="notifications" className="flex-1 gap-2 text-sm font-semibold rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground transition-all duration-200">
+            <TabsTrigger value="notifications" className="metrix-tabs-trigger flex-1 gap-2 text-sm font-semibold whitespace-nowrap transition-all duration-300">
               <Bell className="h-4 w-4 opacity-80" />
               {isArabic ? "الإشعارات" : "Notifications"}
               {notifications.length > 0 && (
@@ -736,8 +944,25 @@ export default function HomePage({
           </div>
         </TabsContent>
       )}
-    </Tabs>
+      </Tabs>
 
+      {/* Progress Log Dialog (opened from daily-log mode) */}
+      {showProgressDialog && selectedLogGoal && (
+        <ProgressLogDialog
+          goal={{
+            id: selectedLogGoal.id,
+            title: selectedLogGoal.title,
+            ai_summary: selectedLogGoal.ai_summary || "",
+            created_at: selectedLogGoal.created_at,
+            current_points: selectedLogGoal.current_points,
+            target_points: selectedLogGoal.target_points,
+          }}
+          tasks={logTasks}
+          onClose={handleProgressDialogClose}
+          onSuccess={handleProgressDialogSuccess}
+          language={language}
+        />
+      )}
 
     </div>
   );

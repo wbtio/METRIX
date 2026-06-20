@@ -181,24 +181,24 @@ export default function FocusTab({
     <div className="flex h-full min-h-0 flex-col pb-0">
       <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm shadow-black/[0.02] dark:bg-card/50">
         {/* Filter bar */}
-        <div className="shrink-0 border-b border-border/60 bg-muted/30 px-3 py-2 sm:px-4">
-          <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto whitespace-nowrap rounded-xl border border-border/40 bg-background/60 p-1 dark:bg-background/20">
+        <div className="shrink-0 border-b border-border/50 bg-muted/[0.03] px-4 py-3 sm:px-5">
+          <div className="scrollbar-thin flex items-center gap-2.5 overflow-x-auto whitespace-nowrap">
             {sectionTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setFocusSection(tab.key)}
                 className={cn(
-                  "inline-flex h-8 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all",
+                  "inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border px-4 text-xs font-bold transition-all duration-200 active:scale-95",
                   focusSection === tab.key
-                    ? "border-primary/30 bg-primary/[0.08] text-foreground dark:bg-primary/[0.14]"
-                    : "border-transparent bg-transparent text-muted-foreground hover:border-border/50 hover:bg-background/80 hover:text-foreground dark:hover:bg-background/25",
+                    ? "border-primary/25 bg-primary/[0.1] text-foreground shadow-sm shadow-primary/5 ring-1 ring-primary/10 dark:bg-primary/[0.16]"
+                    : "border-transparent bg-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground hover:border-border/40 hover:shadow-sm",
                 )}
               >
                 <span>{tab.label}</span>
               </button>
             ))}
-            <span className="ms-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-cyan-600/25 bg-cyan-600/12 px-3 text-[10px] font-semibold text-cyan-700 dark:text-cyan-400">
-              <CheckSquare className="h-3.5 w-3.5" />
+            <span className="ms-1 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.08] px-3.5 text-[11px] font-bold text-cyan-700 dark:text-cyan-400 shadow-sm shadow-cyan-500/5">
+              <CheckSquare className="h-4 w-4" />
               {focusStats.completedSubtasks}/{focusStats.totalSubtasks}
             </span>
             {focusSection === "tasks" ? (
@@ -207,10 +207,10 @@ export default function FocusTab({
                   addingMain ? onCloseNewMainComposer : onOpenNewMainComposer
                 }
                 className={cn(
-                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all active:scale-[0.98]",
+                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 hover:shadow-md",
                   addingMain
-                    ? "border border-primary/20 bg-primary/10 text-primary hover:opacity-90"
-                    : "bg-primary text-primary-foreground shadow-sm hover:opacity-90",
+                    ? "border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:border-primary/30"
+                    : "bg-primary text-primary-foreground shadow-sm shadow-primary/15 hover:opacity-90 hover:-translate-y-px",
                 )}
                 aria-label={
                   addingMain
@@ -273,23 +273,23 @@ export default function FocusTab({
               ))}
             </div>
           ) : hierarchy.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/50 bg-muted/[0.18] px-3 py-8 text-center sm:px-4">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/[0.06] text-primary">
-                <ListTodo className="h-5 w-5" />
+            <div className="rounded-2xl border border-dashed border-border/40 bg-muted/[0.03] px-4 py-10 text-center sm:px-6">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/[0.07] text-primary ring-1 ring-primary/10 shadow-sm shadow-primary/5">
+                <ListTodo className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 text-sm font-bold tracking-tight text-foreground">
+              <h3 className="mt-5 text-[15px] font-extrabold tracking-tight text-foreground">
                 {isArabic
                   ? "ابدأ أول مسار رئيسي لهذا الهدف"
                   : "Start the first main track for this goal"}
               </h3>
-              <p className="mt-2 text-xs leading-6 text-muted-foreground sm:text-sm">
+              <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground/80 sm:text-sm max-w-xs mx-auto">
                 {isArabic
                   ? "أضف مساراً رئيسياً واضحاً ثم قسّمه إلى خطوات فرعية حتى تصبح المتابعة اليومية أسهل."
                   : "Add a clear main track, then break it into subtasks so the day-to-day follow-up feels lighter."}
               </p>
               <button
                 onClick={onOpenNewMainComposer}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 active:scale-[0.98]"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/15 transition-all duration-200 hover:opacity-90 hover:-translate-y-px hover:shadow-lg active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" />
                 {isArabic ? "إضافة مهمة رئيسية" : "Add main task"}
@@ -298,7 +298,7 @@ export default function FocusTab({
           ) : (
             <div
               className={cn(
-                "scrollbar-thin min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-6 sm:pb-2",
+                "scrollbar-thin min-h-0 flex-1 space-y-3.5 overflow-y-auto overscroll-contain pb-6 sm:pb-3",
                 isArabic ? "pl-1" : "pr-1",
               )}
             >
@@ -332,15 +332,15 @@ export default function FocusTab({
                   <div
                     key={main.id}
                     className={cn(
-                      "group/main overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm shadow-black/[0.02] transition-all duration-200 hover:-translate-y-px hover:shadow-sm dark:bg-card/50",
+                      "group/main overflow-hidden rounded-2xl border border-border/50 bg-card shadow-[0_1px_3px_-1px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:bg-card/50 dark:shadow-[0_1px_3px_-1px_rgba(0,0,0,0.15)]",
                       mainAccent.borderClass,
                       mainCompletedToday && "focus-task-completed-today",
                     )}
                     data-fresh={mainShouldAnimate ? "true" : undefined}
                     style={completionStyle}
                   >
-                    <div className="px-3 py-2.5">
-                      <div className="flex flex-col gap-2.5">
+                    <div className="px-2.5 py-1.5 sm:px-3 sm:py-2">
+                      <div className="flex flex-col gap-3">
                         {/* Main task row */}
                         <div
                           className={cn(
@@ -354,7 +354,7 @@ export default function FocusTab({
                             {editingTaskId === main.id ? (
                               <div
                                 className={cn(
-                                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-base",
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm shadow-sm",
                                   mainAccent.softClass,
                                   mainAccent.borderClass,
                                 )}
@@ -376,7 +376,7 @@ export default function FocusTab({
                               >
                                 <button
                                   className={cn(
-                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-base transition-colors hover:bg-muted/40",
+                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:bg-muted/50 hover:scale-105 active:scale-95 shadow-sm",
                                     mainAccent.softClass,
                                     mainAccent.borderClass,
                                   )}
@@ -409,10 +409,10 @@ export default function FocusTab({
                                     }}
                                   />
                                   <div className="flex flex-wrap items-center gap-2">
-                                              <button
-                                                 onClick={() => onRenameTask(main.id)}
-                                                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
-                                              >
+                                    <button
+                                      onClick={() => onRenameTask(main.id)}
+                                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
+                                    >
                                       <Save className="h-3.5 w-3.5" />
                                       {isArabic ? "حفظ" : "Save"}
                                     </button>
@@ -429,16 +429,16 @@ export default function FocusTab({
                                 <button
                                   type="button"
                                   onClick={() => onToggleExpand(main.id)}
-                                  className="flex min-h-10 w-full min-w-0 items-center gap-2 rounded-xl text-start transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                  className="flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg text-start transition-colors hover:bg-muted/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 px-1 -mx-1"
                                   aria-expanded={isExpanded}
                                   title={main.task_description}
                                 >
                                   {/* Task name — always visible, prominent */}
                                   <span
                                     className={cn(
-                                      "line-clamp-2 min-w-0 flex-1 break-words text-base font-extrabold leading-snug text-foreground sm:text-[17px]",
+                                      "line-clamp-2 min-w-0 flex-1 break-words text-xs font-extrabold leading-snug text-foreground sm:text-sm",
                                       mainCompletedToday &&
-                                        "text-foreground/80",
+                                        "text-foreground/75",
                                     )}
                                   >
                                     {main.task_description}
@@ -446,25 +446,25 @@ export default function FocusTab({
 
                                   {/* Inline meta — slim indicators always, full pills on hover (desktop) */}
                                   {totalSubs > 0 && (
-                                    <div className="flex shrink-0 items-center gap-1.5">
+                                    <div className="flex shrink-0 items-center gap-2">
                                       {/* Thin progress bar, always visible */}
-                                      <div className="h-1.5 w-12 overflow-hidden rounded-xl bg-muted/20 sm:w-16">
+                                      <div className="h-2 w-14 overflow-hidden rounded-full bg-muted/25 sm:w-20">
                                         <div
                                           className={cn(
-                                            "h-full rounded-full transition-all duration-500",
+                                            "h-full rounded-full transition-all duration-700 ease-out",
                                             mainAccent.swatchClass,
                                           )}
                                           style={{
-                                            width: `${Math.max(mainCompletion, completedSubs > 0 ? 10 : 0)}%`,
+                                            width: `${Math.max(mainCompletion, completedSubs !== 0 ? 10 : 0)}%`,
                                           }}
                                         />
                                       </div>
                                       {/* Detailed pills — appear on hover (desktop only) */}
                                       <div className="hidden items-center gap-1.5 overflow-hidden opacity-0 transition-opacity duration-200 group-hover/main:opacity-100 [@media(hover:hover)]:flex">
-                                        <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-muted px-2 text-[10px] font-bold text-muted-foreground">
+                                        <span className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-muted/50 px-2.5 text-[11px] font-bold text-muted-foreground border border-border/30">
                                           {completedSubs}/{totalSubs}
                                         </span>
-                                        <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-border/60 bg-background/80 px-2 text-[10px] font-semibold text-muted-foreground dark:bg-background/20">
+                                        <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-border/40 bg-background/80 px-2.5 text-[11px] font-semibold text-muted-foreground dark:bg-background/20">
                                           {isArabic
                                             ? `${mainCompletion}%`
                                             : `${mainCompletion}%`}
@@ -487,10 +487,10 @@ export default function FocusTab({
                             >
                               <button
                                 onClick={() => onToggleExpand(main.id)}
-                                  className={cn(
-                                    "hidden h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] dark:bg-background/20 sm:inline-flex",
-                                    isExpanded && "text-foreground bg-muted/60",
-                                  )}
+                                className={cn(
+                                  "hidden h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-background/70 text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/40 hover:border-border/70 active:scale-95 dark:bg-background/20 sm:inline-flex shadow-sm",
+                                  isExpanded && "text-foreground bg-muted/50 border-border/60",
+                                )}
                                 title={
                                   isExpanded
                                     ? isArabic
@@ -512,7 +512,7 @@ export default function FocusTab({
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     className={cn(
-                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-all hover:text-foreground active:scale-[0.98] dark:bg-background/20",
+                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-background/70 text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/40 hover:border-border/70 active:scale-95 dark:bg-background/20 shadow-sm",
                                       "opacity-100 pointer-events-auto",
                                     )}
                                     title={isArabic ? "المزيد" : "More"}
@@ -548,10 +548,10 @@ export default function FocusTab({
                                     <span>{t.renameTask}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  <div className="px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
                                     {isArabic ? "الوزن:" : "Weight:"}
                                   </div>
-                                  <div className="flex gap-1 px-2 pb-1">
+                                  <div className="scrollbar-thin flex gap-1 px-2 pb-1 overflow-x-auto">
                                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
                                       (w) => (
                                         <button
@@ -560,9 +560,9 @@ export default function FocusTab({
                                             onUpdateTaskWeight(main.id, w)
                                           }
                                           className={cn(
-                                            "h-7 w-7 rounded-lg text-xs font-bold transition-colors",
+                                            "h-8 w-8 shrink-0 rounded-lg text-xs font-bold transition-colors",
                                             main.impact_weight === w
-                                              ? "bg-primary text-primary-foreground"
+                                              ? "bg-primary text-primary-foreground shadow-sm"
                                               : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
                                           )}
                                         >
@@ -585,7 +585,7 @@ export default function FocusTab({
                               {mainCompletedToday && (
                                 <span
                                   className={cn(
-                                    "focus-task-completed-pill hidden h-6 shrink-0 items-center gap-1 rounded-full border px-2 text-[10px] font-bold opacity-0 transition-opacity duration-200 sm:inline-flex sm:pointer-events-none sm:group-hover/main:pointer-events-auto sm:group-hover/main:opacity-100",
+                                    "focus-task-completed-pill hidden h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-bold opacity-0 transition-all duration-200 sm:inline-flex sm:pointer-events-none sm:group-hover/main:pointer-events-auto sm:group-hover/main:opacity-100 shadow-sm",
                                     mainAccent.softClass,
                                     mainAccent.borderClass,
                                     mainAccent.textClass,
@@ -595,16 +595,24 @@ export default function FocusTab({
                                   }
                                   title={t.completedToday}
                                 >
-                                  <CheckSquare className="h-3 w-3" />
+                                  <CheckSquare className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">{t.completedToday}</span>
                                 </span>
                               )}
                             </div>
                           )}
                         </div>
 
-                        {/* Expanded subtasks panel */}
-                        {isExpanded && (
-                          <div className="rounded-xl border border-border/60 bg-muted/[0.12] p-2.5 dark:bg-background/20">
+                        {/* Expanded subtasks panel with grid transition */}
+                        <div
+                          className="grid transition-[grid-template-rows] duration-200 ease-out-quart"
+                          style={{
+                            gridTemplateRows: isExpanded ? "1fr" : "0fr"
+                          }}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="pt-2">
+                              <div className="rounded-2xl border border-border/50 bg-muted/[0.08] p-3 dark:bg-background/15 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                             {main.subtasks.length > 0 ? (
                               <div className="space-y-2">
                                 {main.subtasks.map((sub) => {
@@ -628,13 +636,14 @@ export default function FocusTab({
                                     <div
                                       key={sub.id}
                                       className={cn(
-                                        "group/sub flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-all duration-200 sm:gap-2.5",
+                                        "group/sub flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-all duration-200 sm:gap-2.5 sm:px-3 sm:py-2",
                                         checked
                                           ? cn(
                                               mainAccent.softClass,
                                               mainAccent.borderClass,
+                                              "shadow-sm",
                                             )
-                                          : "border-border/60 bg-background/80 dark:bg-background/25",
+                                          : "border-border/50 bg-background/80 dark:bg-background/25 hover:border-border/70 hover:shadow-sm",
                                         completedToday &&
                                           "focus-task-completed-today",
                                       )}
@@ -647,17 +656,22 @@ export default function FocusTab({
                                         onClick={() =>
                                           onToggleCheckin(sub.id, sub.frequency)
                                         }
-                                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80 transition-colors hover:bg-muted/40 dark:bg-background/30"
+                                        className={cn(
+                                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 active:scale-90",
+                                          checked
+                                            ? "border-transparent bg-primary/10 shadow-sm"
+                                            : "border-border/50 bg-background/90 hover:bg-muted/40 dark:bg-background/40",
+                                        )}
                                       >
                                         {checked ? (
                                           <CheckSquare
                                             className={cn(
-                                              "h-5 w-5",
+                                              "h-4 w-4 transition-transform duration-200 animate-check-pop",
                                               mainAccent.textClass,
                                             )}
                                           />
                                         ) : (
-                                          <Square className="h-5 w-5 text-muted-foreground/60" />
+                                          <Square className="h-4 w-4 text-muted-foreground/50 transition-all duration-150 active:scale-95" />
                                         )}
                                       </button>
 
@@ -669,7 +683,7 @@ export default function FocusTab({
                                               onChange={(e) =>
                                                 onSetEditingText(e.target.value)
                                               }
-                                              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                                              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm"
                                               autoFocus
                                               onKeyDown={(e) => {
                                                 if (e.key === "Enter")
@@ -683,14 +697,14 @@ export default function FocusTab({
                                                 onClick={() =>
                                                   onRenameTask(sub.id)
                                                 }
-                                                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+                                                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition-all"
                                               >
                                                 <Save className="h-3.5 w-3.5" />
                                                 {isArabic ? "حفظ" : "Save"}
                                               </button>
                                               <button
                                                 onClick={onCancelEditingTask}
-                                                className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground hover:opacity-90"
+                                                className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted/70 active:scale-95 transition-all"
                                               >
                                                 <X className="h-3.5 w-3.5" />
                                                 {t.cancel}
@@ -707,7 +721,7 @@ export default function FocusTab({
                                               }
                                             >
                                               <button
-                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted/50"
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm transition-all duration-200 hover:bg-muted/50 hover:scale-110 active:scale-90"
                                                 title={
                                                   isArabic
                                                     ? "تغيير الأيقونة"
@@ -719,9 +733,9 @@ export default function FocusTab({
                                             </FullEmojiPicker>
                                             <span
                                               className={cn(
-                                                "line-clamp-2 min-w-0 flex-1 break-words text-[14px] font-semibold leading-snug text-foreground sm:text-[15px]",
+                                                "line-clamp-2 min-w-0 flex-1 break-words text-xs font-semibold leading-snug text-foreground sm:text-sm",
                                                 checked &&
-                                                  "line-through text-muted-foreground",
+                                                  "line-through text-muted-foreground/60",
                                               )}
                                               title={sub.task_description}
                                             >
@@ -731,14 +745,14 @@ export default function FocusTab({
                                         )}
                                       </div>
 
-                                      <div className="flex shrink-0 items-center gap-1.5">
+                                      <div className="flex shrink-0 items-center gap-2">
                                         {/* Cadence dot — always visible, tiny */}
                                         <span
                                           className={cn(
-                                            "h-2 w-2 shrink-0 rounded-full",
+                                            "h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-background",
                                             sub.frequency === "daily"
-                                              ? "bg-cyan-500"
-                                              : "bg-violet-500",
+                                              ? "bg-cyan-500 shadow-sm shadow-cyan-500/30"
+                                              : "bg-violet-500 shadow-sm shadow-violet-500/30",
                                           )}
                                           title={
                                             sub.frequency === "daily"
@@ -765,7 +779,7 @@ export default function FocusTab({
                                           {completedToday && (
                                             <span
                                               className={cn(
-                                                "focus-task-completed-pill inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-bold",
+                                                "focus-task-completed-pill inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold shadow-sm",
                                                 mainAccent.softClass,
                                                 mainAccent.borderClass,
                                                 mainAccent.textClass,
@@ -777,15 +791,15 @@ export default function FocusTab({
                                               }
                                               title={t.completedToday}
                                             >
-                                              <CheckSquare className="h-3 w-3" />
+                                              <CheckSquare className="h-3.5 w-3.5" />
                                             </span>
                                           )}
                                           <span
                                             className={cn(
-                                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border",
                                               sub.frequency === "daily"
-                                                ? "bg-cyan-600/10 text-cyan-700 dark:text-cyan-400"
-                                                : "bg-violet-500/10 text-violet-600 dark:text-violet-300",
+                                                ? "bg-cyan-500/[0.08] text-cyan-700 dark:text-cyan-400 border-cyan-500/15"
+                                                : "bg-violet-500/[0.08] text-violet-600 dark:text-violet-300 border-violet-500/15",
                                             )}
                                           >
                                             {sub.frequency === "daily"
@@ -796,194 +810,95 @@ export default function FocusTab({
                                                 ? "أسبوعي"
                                                 : "Weekly"}
                                           </span>
-                                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-300">
-                                            <Weight className="h-3 w-3" />
-                                            {sub.impact_weight}
-                                          </span>
-                                          {sub.time_required_minutes ? (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                              <Clock className="h-3 w-3" />
-                                              {sub.time_required_minutes}m
-                                            </span>
-                                          ) : null}
                                         </div>
-
-                                        {editingTaskId !== sub.id && (
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <button
-                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] dark:bg-background/30"
-                                                title={
-                                                  isArabic ? "المزيد" : "More"
-                                                }
-                                              >
-                                                <MoreVertical className="h-4 w-4" />
-                                              </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent
-                                              align={isArabic ? "start" : "end"}
-                                              className="w-48"
-                                            >
-                                              <DropdownMenuItem
-                                                onClick={() =>
-                                                  onStartEditingTask(
-                                                    sub.id,
-                                                    sub.task_description,
-                                                  )
-                                                }
-                                                className="cursor-pointer"
-                                              >
-                                                <Edit2 className="h-4 w-4" />
-                                                <span>{t.renameTask}</span>
-                                              </DropdownMenuItem>
-                                              <DropdownMenuSeparator />
-                                              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                                {isArabic
-                                                  ? "الوزن:"
-                                                  : "Weight:"}
-                                              </div>
-                                              <div className="flex gap-1 px-2 pb-1">
-                                                {[1, 2, 3, 4, 5].map((w) => (
-                                                  <button
-                                                    key={w}
-                                                    onClick={() =>
-                                                      onUpdateTaskWeight(
-                                                        sub.id,
-                                                        w,
-                                                      )
-                                                    }
-                                                    className={cn(
-                                                      "h-7 w-7 rounded-lg text-xs font-bold transition-colors",
-                                                      sub.impact_weight === w
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
-                                                    )}
-                                                  >
-                                                    {w}
-                                                  </button>
-                                                ))}
-                                              </div>
-                                              <DropdownMenuSeparator />
-                                              <DropdownMenuItem
-                                                onClick={() =>
-                                                  onDeleteTask(sub.id)
-                                                }
-                                                variant="destructive"
-                                                className="cursor-pointer"
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                                <span>{t.deleteTask}</span>
-                                              </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        )}
                                       </div>
                                     </div>
                                   );
                                 })}
                               </div>
                             ) : (
-                              <div className="flex justify-center rounded-xl border border-dashed border-border/50 bg-background/70 px-3 py-3 dark:bg-background/20 sm:justify-start">
-                                <button
-                                  onClick={() => onStartAddingSub(main.id)}
-                                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                  {isArabic
-                                    ? "إضافة أول خطوة"
-                                    : "Add first step"}
-                                </button>
+                              <div className="py-6 text-center text-xs text-muted-foreground/75">
+                                {isArabic
+                                  ? "لا توجد خطوات فرعية بعد. اضغط على \"+\" لإضافة خطوة."
+                                  : "No subtasks yet. Click '+' in main task menu to add."}
                               </div>
                             )}
 
-                            {/* Add subtask composer */}
+                            {/* Subtask composer inline */}
                             {composerVisible && (
-                              <div
-                                className={cn(
-                                  "mt-3 rounded-xl border border-dashed border-border/50 p-3",
-                                  mainAccent.softClass,
-                                  mainAccent.borderClass,
-                                )}
-                              >
-                                <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
-                                  <span
-                                    className={cn(
-                                      "h-2.5 w-2.5 rounded-full",
-                                      mainAccent.swatchClass,
-                                    )}
-                                  />
-                                  <span>
-                                    {isArabic
-                                      ? "أضف خطوة سريعة داخل هذا المسار"
-                                      : "Add a quick step inside this track"}
-                                  </span>
-                                </div>
-                                <input
-                                  value={newSubText}
-                                  onChange={(e) =>
-                                    onSetNewSubText(e.target.value)
-                                  }
-                                  placeholder={
-                                    isArabic
-                                      ? "مهمة فرعية جديدة..."
-                                      : "New subtask..."
-                                  }
-                                  className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") onAddSub(main.id);
-                                    if (e.key === "Escape") onCancelAddingSub();
-                                  }}
-                                />
-                                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                                  <select
-                                    value={newSubFreq}
-                                    onChange={(e) =>
-                                      onSetNewSubFreq(
-                                        e.target.value as "daily" | "weekly",
-                                      )
-                                    }
-                                    className="flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-xs sm:text-sm"
-                                  >
-                                    <option value="daily">
-                                      {isArabic ? "يومي" : "Daily"}
-                                    </option>
-                                    <option value="weekly">
-                                      {isArabic ? "أسبوعي" : "Weekly"}
-                                    </option>
-                                  </select>
+                              <div className="mt-3 rounded-xl border border-dashed border-border/50 bg-background/50 p-3 dark:bg-background/10 animate-in fade-in slide-in-from-top-2 duration-200 ease-out-quart">
+                                <div className="flex flex-col gap-2.5">
                                   <input
-                                    type="number"
-                                    min={1}
-                                    max={5}
-                                    value={newSubWeight}
-                                    onChange={(e) =>
-                                      onSetNewSubWeight(
-                                        Number(e.target.value) || 1,
-                                      )
+                                    placeholder={
+                                      isArabic
+                                        ? "أدخل وصف الخطوة الفرعية..."
+                                        : "Enter subtask description..."
                                     }
-                                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-center text-xs sm:w-24 sm:text-sm"
-                                    title={isArabic ? "الوزن" : "Weight"}
+                                    value={newSubText}
+                                    onChange={(e) =>
+                                      onSetNewSubText(e.target.value)
+                                    }
+                                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter")
+                                        onAddSub(main.id);
+                                      if (e.key === "Escape")
+                                        onCancelAddingSub();
+                                    }}
                                   />
-                                  <button
-                                    onClick={() => onAddSub(main.id)}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
-                                  >
-                                    <Save className="h-4 w-4" />
-                                    {isArabic ? "حفظ" : "Save"}
-                                  </button>
-                                  <button
-                                    onClick={onCancelAddingSub}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-muted-foreground hover:opacity-90"
-                                  >
-                                    <X className="h-4 w-4" />
-                                    {t.cancel}
-                                  </button>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex rounded-lg border border-border bg-background p-0.5 text-[11px] font-semibold">
+                                      <button
+                                        onClick={() =>
+                                          onSetNewSubFreq("daily")
+                                        }
+                                        className={cn(
+                                          "rounded-md px-2 py-1 transition-colors",
+                                          newSubFreq === "daily"
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground",
+                                        )}
+                                      >
+                                        {isArabic ? "يومي" : "Daily"}
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          onSetNewSubFreq("weekly")
+                                        }
+                                        className={cn(
+                                          "rounded-md px-2 py-1 transition-colors",
+                                          newSubFreq === "weekly"
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground",
+                                        )}
+                                      >
+                                        {isArabic ? "أسبوعي" : "Weekly"}
+                                      </button>
+                                    </div>
+
+                                    <button
+                                      onClick={() => onAddSub(main.id)}
+                                      className="ms-auto inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
+                                    >
+                                      <Plus className="h-3.5 w-3.5" />
+                                      {isArabic ? "إضافة" : "Add"}
+                                    </button>
+                                    <button
+                                      onClick={onCancelAddingSub}
+                                      className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:opacity-90"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                      {t.cancel}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )}
+                              </div>
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -991,153 +906,88 @@ export default function FocusTab({
               })}
             </div>
           )}
-        </div>
 
-        {/* Add main task composer */}
-        {addingMain && (
-          <div className="shrink-0 border-t border-border/60 px-3 py-3 sm:px-4 sm:py-4">
-            <div className="rounded-xl border border-dashed border-border/50 bg-primary/[0.05] p-3 sm:p-4">
-              <div className="space-y-3">
-                <div>
-                  <h3 className="text-sm font-bold tracking-tight text-foreground">
-                    {isArabic
-                      ? "أضف مساراً رئيسياً جديداً"
-                      : "Add a new main track"}
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {isArabic
-                      ? "اسم واضح مع تكرار ووزن مناسب."
-                      : "A clear title with the right cadence and weight."}
-                  </p>
-                </div>
-
-                <input
-                  value={newMainText}
-                  onChange={(e) => onSetNewMainText(e.target.value)}
-                  placeholder={
-                    isArabic ? "مهمة رئيسية جديدة..." : "New main task..."
-                  }
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onAddMain();
-                    if (e.key === "Escape") onCloseNewMainComposer();
-                  }}
-                />
-
-                <div
-                  className={cn(
-                    "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold",
-                    newMainAccent.softClass,
-                    newMainAccent.borderClass,
-                    newMainAccent.textClass,
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 h-2.5 w-2.5 rounded-full",
-                      newMainAccent.swatchClass,
-                    )}
-                  />
-                  <span>
-                    {newMainColor
-                      ? isArabic
-                        ? "هذا اللون سينحفظ مع المسار الرئيسي ويظل ظاهراً في التحليلات."
-                        : "This color will be saved with the main track and stay visible in analytics."
-                      : isArabic
-                        ? "سيتم اختيار لون تلقائي يحافظ على تميّز هذا المسار داخل اللوحة."
-                        : "An automatic accent will keep this track visually distinct inside the board."}
-                  </span>
-                </div>
-
-                <TaskColorPicker
-                  value={newMainColor}
-                  seed={newMainText.trim() || "main-task-preview"}
-                  language={language}
-                  onSelect={onSetNewMainColor}
-                >
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors hover:bg-muted/20",
-                      newMainAccent.softClass,
-                      newMainAccent.borderClass,
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "h-3 w-3 rounded-full",
-                          newMainAccent.swatchClass,
-                        )}
-                      />
-                      <span className="font-semibold text-foreground">
-                        {isArabic
-                          ? "اختيار لون المسار الرئيسي"
-                          : "Choose main track color"}
-                      </span>
-                    </span>
-                    <span
-                      className={cn(
-                        "flex items-center gap-1 text-xs font-bold",
-                        newMainAccent.textClass,
-                      )}
-                    >
-                      <Palette className="h-3.5 w-3.5" />
-                      {newMainColor
-                        ? isArabic
-                          ? "لون محفوظ"
-                          : "Saved color"
-                        : isArabic
-                          ? "تلقائي"
-                          : "Auto"}
-                    </span>
-                  </button>
-                </TaskColorPicker>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <select
-                    value={newMainFreq}
-                    onChange={(e) =>
-                      onSetNewMainFreq(e.target.value as "daily" | "weekly")
-                    }
-                    className="flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-xs sm:text-sm"
-                  >
-                    <option value="daily">{isArabic ? "يومي" : "Daily"}</option>
-                    <option value="weekly">
-                      {isArabic ? "أسبوعي" : "Weekly"}
-                    </option>
-                  </select>
+          {/* Main Task Composer Inline */}
+          {addingMain && (
+            <div className="shrink-0 border-t border-border/50 bg-muted/[0.02] p-4 animate-in fade-in slide-in-from-bottom-5 duration-300 ease-out-quart">
+              <div className="rounded-2xl border border-primary/20 bg-background/50 p-4 shadow-sm backdrop-blur-sm dark:bg-background/10">
+                <div className="flex flex-col gap-3.5">
                   <input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={newMainWeight}
-                    onChange={(e) =>
-                      onSetNewMainWeight(Number(e.target.value) || 1)
+                    placeholder={
+                      isArabic
+                        ? "ما هو المسار الرئيسي الجديد الذي تريد التركيز عليه؟"
+                        : "What main track do you want to focus on?"
                     }
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-center text-xs sm:w-28 sm:text-sm"
-                    title={isArabic ? "الوزن (1-10)" : "Weight (1-10)"}
+                    value={newMainText}
+                    onChange={(e) => onSetNewMainText(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onAddMain();
+                      if (e.key === "Escape") onCloseNewMainComposer();
+                    }}
                   />
-                  <button
-                    onClick={onAddMain}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98]"
-                  >
-                    <Save className="h-4 w-4" />
-                    {isArabic ? "حفظ" : "Save"}
-                  </button>
-                  <button
-                    onClick={onCloseNewMainComposer}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-muted-foreground hover:opacity-90"
-                  >
-                    <X className="h-4 w-4" />
-                    {t.cancel}
-                  </button>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex rounded-lg border border-border bg-background p-0.5 text-[11px] font-bold">
+                      <button
+                        onClick={() => onSetNewMainFreq("daily")}
+                        className={cn(
+                          "rounded-md px-2.5 py-1.5 transition-colors",
+                          newMainFreq === "daily"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {isArabic ? "يومي" : "Daily"}
+                      </button>
+                      <button
+                        onClick={() => onSetNewMainFreq("weekly")}
+                        className={cn(
+                          "rounded-md px-2.5 py-1.5 transition-colors",
+                          newMainFreq === "weekly"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {isArabic ? "أسبوعي" : "Weekly"}
+                      </button>
+                    </div>
+
+                    <TaskColorPicker
+                      value={newMainColor}
+                      onSelect={onSetNewMainColor}
+                      language={language}
+                    >
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground"
+                      >
+                        <Palette className="h-3.5 w-3.5" />
+                        {newMainColor ? (isArabic ? 'تغيير اللون' : 'Change Color') : (isArabic ? 'اختر لوناً' : 'Choose Color')}
+                      </button>
+                    </TaskColorPicker>
+
+                    <button
+                      onClick={onAddMain}
+                      className="ms-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-md shadow-primary/15 hover:opacity-90 active:scale-95 transition-all duration-200"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {isArabic ? "إضافة المسار" : "Add Track"}
+                    </button>
+                    <button
+                      onClick={onCloseNewMainComposer}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted/70 active:scale-95 transition-all duration-200"
+                    >
+                      <X className="h-4 w-4" />
+                      {t.cancel}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
     </div>
   );

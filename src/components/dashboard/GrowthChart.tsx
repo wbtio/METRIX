@@ -12,13 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BarChart2, ChevronDown, Layers, TrendingUp } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { BarChart2, Layers, TrendingUp } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -28,7 +22,7 @@ import {
 import { translations, type Language } from "@/lib/translations";
 import { cn, formatNumberEn, localeWithEnglishDigits } from "@/lib/utils";
 
-type TimeRange = "7d" | "30d" | "60d" | "90d" | "120d" | "year" | "all";
+type TimeRange = "7d" | "30d" | "year" | "all";
 type ChartType = "bar" | "line" | "area";
 type BucketMode = "day" | "month";
 
@@ -40,9 +34,6 @@ type BucketMode = "day" | "month";
 const RANGE_TO_DAYS: Record<TimeRange, number | null> = {
   "7d": 7,
   "30d": 30,
-  "60d": 60,
-  "90d": 90,
-  "120d": 120,
   year: 365,
   all: null,
 };
@@ -54,9 +45,6 @@ const RANGE_TO_DAYS: Record<TimeRange, number | null> = {
 const DAY_BUCKET_RANGES: ReadonlySet<TimeRange> = new Set<TimeRange>([
   "7d",
   "30d",
-  "60d",
-  "90d",
-  "120d",
 ]);
 
 interface GrowthChartProps {
@@ -411,7 +399,7 @@ export default function GrowthChart({
   const containerClass = cn(
     embedded
       ? "rounded-none border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent"
-      : "relative flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-2 shadow-sm shadow-black/[0.02] sm:p-2.5",
+      : "relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-2.5 shadow-[0_1px_3px_-1px_rgba(0,0,0,0.03)] sm:p-3 dark:shadow-[0_1px_3px_-1px_rgba(0,0,0,0.15)]",
     fillHeight && "h-full min-h-0",
     className,
   );
@@ -419,21 +407,9 @@ export default function GrowthChart({
   const timeRangeOptions: { key: TimeRange; label: string }[] = [
     { key: "7d", label: t.thisWeek },
     { key: "30d", label: t.thisMonth },
-    { key: "60d", label: t.sixtyDays },
-    { key: "90d", label: t.ninetyDays },
-    { key: "120d", label: t.oneTwentyDays },
     { key: "year", label: t.thisYear },
     { key: "all", label: t.allTime },
   ];
-  const primaryTimeRangeOptions = timeRangeOptions.filter((option) =>
-    ["7d", "30d", "year"].includes(option.key),
-  );
-  const secondaryTimeRangeOptions = timeRangeOptions.filter((option) =>
-    ["60d", "90d", "120d", "all"].includes(option.key),
-  );
-  const activeSecondaryOption = secondaryTimeRangeOptions.find(
-    (option) => option.key === timeRange,
-  );
 
   const chartTypeOptions: {
     key: ChartType;
@@ -643,15 +619,15 @@ export default function GrowthChart({
     <div className={containerClass} dir={isArabic ? "rtl" : "ltr"}>
       {/* Top accent removed for cleaner design */}
 
-      <div className="pb-0.5 sm:pb-1">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="pb-1 sm:pb-1.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           <div
             className="flex min-w-0 flex-1"
             role="tablist"
             aria-label={isArabic ? "النطاق الزمني" : "Time range"}
           >
-            <div className="inline-flex max-w-full shrink-0 gap-0.5 rounded-xl border border-border/40 bg-muted/30 p-0.5 sm:p-0.5">
-              {primaryTimeRangeOptions.map((option) => (
+            <div className="inline-flex max-w-full shrink-0 gap-1 rounded-xl border border-border/40 bg-muted/25 p-0.5">
+              {timeRangeOptions.map((option) => (
                 <button
                   key={option.key}
                   type="button"
@@ -659,7 +635,7 @@ export default function GrowthChart({
                   onClick={() => setTimeRange(option.key)}
                   aria-selected={timeRange === option.key}
                   className={cn(
-                    "h-7 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-semibold leading-none transition-all sm:h-[26px] sm:px-2.5",
+                    "h-8 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold leading-none transition-all duration-200 active:scale-95 sm:h-7 sm:px-2.5",
                     isArabic
                       ? "min-w-[3rem] tracking-normal"
                       : "min-w-[2.75rem] tabular-nums",
@@ -671,46 +647,10 @@ export default function GrowthChart({
                   {option.label}
                 </button>
               ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "inline-flex h-7 min-w-[3.4rem] items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 text-[11px] font-semibold leading-none transition-all sm:h-[26px]",
-                      activeSecondaryOption
-                        ? "bg-background text-foreground shadow-sm ring-1 ring-border/40"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                    )}
-                    aria-label={
-                      isArabic ? "المزيد من المدد" : "More time ranges"
-                    }
-                  >
-                    <span className="truncate">
-                      {activeSecondaryOption?.label ||
-                        (isArabic ? "المزيد" : "More")}
-                    </span>
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align={isArabic ? "start" : "end"}
-                  className="min-w-28"
-                >
-                  {secondaryTimeRangeOptions.map((option) => (
-                    <DropdownMenuItem
-                      key={option.key}
-                      onClick={() => setTimeRange(option.key)}
-                      className="cursor-pointer text-xs"
-                    >
-                      {option.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
 
-          <div className="inline-flex shrink-0 rounded-xl border border-border/40 bg-muted/30 p-0.5 sm:p-0.5">
+          <div className="inline-flex shrink-0 rounded-xl border border-border/40 bg-muted/25 p-0.5">
             {chartTypeOptions.map((option) => (
               <button
                 key={option.key}
@@ -719,7 +659,7 @@ export default function GrowthChart({
                 aria-pressed={chartType === option.key}
                 aria-label={option.label}
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-lg transition-all sm:h-[26px] sm:w-[26px] sm:rounded-[10px]",
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 sm:h-7 sm:w-7 sm:rounded-[10px]",
                   chartType === option.key
                     ? "bg-background text-foreground shadow-sm ring-1 ring-border/40"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -733,20 +673,20 @@ export default function GrowthChart({
         </div>
       </div>
 
-      <div className="mt-1 flex flex-1 min-h-0">
-        <div className="flex w-full min-w-0 flex-1 min-h-0 overflow-hidden rounded-xl border border-border/40 bg-muted/[0.08] p-1.5 sm:p-2">
+      <div className="mt-1.5 flex flex-1 min-h-0">
+        <div className="flex w-full min-w-0 flex-1 min-h-0 overflow-hidden rounded-xl border border-border/30 bg-muted/[0.05] p-2 sm:p-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
           {chartData.length === 0 ? (
             <div
               className={cn(
-                "flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/50 bg-card/[0.03] px-4 text-center text-sm text-muted-foreground",
+                "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/40 bg-card/[0.03] px-5 text-center text-sm text-muted-foreground",
                 emptyStateClass,
               )}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.06] text-primary border border-primary/10">
-                <BarChart2 className="h-5 w-5" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/[0.07] text-primary border border-primary/[0.12] shadow-sm shadow-primary/5">
+                <BarChart2 className="h-6 w-6" />
               </div>
-              <p className="font-bold text-foreground tracking-tight">{t.noDataYet}</p>
-              <p className="max-w-xs text-xs leading-relaxed text-muted-foreground/80">
+              <p className="font-extrabold text-foreground tracking-tight text-[15px]">{t.noDataYet}</p>
+              <p className="max-w-xs text-xs leading-relaxed text-muted-foreground/60">
                 {labels.noRangeData}
               </p>
             </div>

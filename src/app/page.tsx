@@ -16,7 +16,6 @@ import { createClient } from "@/utils/supabase/client";
 import { translations, type Language } from "@/lib/translations";
 import { getLocalDateKey, getLocalWeekStartMonday } from "@/lib/task-periods";
 import { useStreakReminder } from "@/hooks/useStreakReminder";
-// import { useTelegramReminder } from "@/hooks/useTelegramReminder";
 import type { User } from "@supabase/supabase-js";
 
 type AppView = "home" | "dashboard" | "settings" | "goals" | "create-goal";
@@ -69,9 +68,6 @@ export default function Home() {
 
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
-
-  // Periodic Telegram reminder dispatch — disabled: now handled server-side via Supabase Edge Function cron
-  // useTelegramReminder();
 
   const fetchTaskStats = useCallback(
     async (goalIds: string[]) => {

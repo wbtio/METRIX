@@ -1,0 +1,29 @@
+{
+  "id": "21cecda9",
+  "phase": "completed",
+  "pageUrl": "/",
+  "sourceFile": "src/components/HomePage.tsx",
+  "expectedVariants": 2,
+  "arrivedVariants": 2,
+  "visibleVariant": 1,
+  "paramValues": {
+    "glow": 0.5,
+    "radius": "xl"
+  },
+  "pendingEventSeq": null,
+  "pendingEvent": null,
+  "deliveryLease": null,
+  "checkpointRevision": 7,
+  "activeOwner": "b87a9d7b",
+  "sourceMarkers": {},
+  "fallbackMode": null,
+  "annotationArtifacts": [],
+  "diagnostics": [
+    {
+      "error": "carbonize_cleanup_required",
+      "file": "src/components/HomePage.tsx",
+      "message": "Accepted variant still has carbonize markers that must be folded into source CSS."
+    }
+  ],
+  "updatedAt": "2026-05-24T15:00:14.209Z"
+}

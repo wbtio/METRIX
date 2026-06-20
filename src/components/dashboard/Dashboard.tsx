@@ -149,6 +149,7 @@ export default function Dashboard({
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     onLogModalChange?.(showLogModal);
@@ -355,34 +356,51 @@ export default function Dashboard({
   // --- Data Fetch ---
   const fetchTasks = useCallback(async () => {
     setLoadingTasks(true);
-    const { data, error } = await supabase
-      .from("sub_layers")
-      .select("*")
-      .eq("goal_id", goal.id)
-      .order("sort_order", { ascending: true });
+    setFetchError(null);
+    try {
+      const { data, error } = await supabase
+        .from("sub_layers")
+        .select("*")
+        .eq("goal_id", goal.id)
+        .order("sort_order", { ascending: true });
 
-    if (!error && data) {
-      setTasks(
-        (data as TaskRow[]).map((row) => ({
-          id: row.id,
-          goal_id: row.goal_id,
-          task_description: row.task_description,
-          impact_weight: row.impact_weight,
-          frequency: row.frequency,
-          time_required_minutes: row.time_required_minutes,
-          completion_criteria: row.completion_criteria,
-          task_type: row.task_type || "main",
-          parent_task_id: row.parent_task_id || null,
-          sort_order: row.sort_order || 0,
-          icon: row.icon || null,
-          accent_color: row.accent_color || null,
-        })),
+      if (error) {
+        setFetchError(
+          isArabic
+            ? "تعذر تحميل المهام. حاول مرة أخرى."
+            : "Could not load tasks. Please try again.",
+        );
+        console.error("fetchTasks error:", error);
+      } else if (data) {
+        setTasks(
+          (data as TaskRow[]).map((row) => ({
+            id: row.id,
+            goal_id: row.goal_id,
+            task_description: row.task_description,
+            impact_weight: row.impact_weight,
+            frequency: row.frequency,
+            time_required_minutes: row.time_required_minutes,
+            completion_criteria: row.completion_criteria,
+            task_type: row.task_type || "main",
+            parent_task_id: row.parent_task_id || null,
+            sort_order: row.sort_order || 0,
+            icon: row.icon || null,
+            accent_color: row.accent_color || null,
+          })),
+        );
+        // DO NOT auto-expand mains initially (User request)
+        // setExpandedMains(new Set());
+      }
+    } catch (err) {
+      setFetchError(
+        isArabic
+          ? "تعذر تحميل المهام. حاول مرة أخرى."
+          : "Could not load tasks. Please try again.",
       );
-      // DO NOT auto-expand mains initially (User request)
-      // setExpandedMains(new Set());
+      console.error("fetchTasks error:", err);
     }
     setLoadingTasks(false);
-  }, [goal.id, supabase]);
+  }, [goal.id, supabase, isArabic]);
 
   const fetchCheckins = useCallback(async () => {
     // Fetch current-period checkins for all tasks of this goal
@@ -1325,6 +1343,8 @@ export default function Dashboard({
     },
   ];
 
+  const activeIndex = tabItems.findIndex((t) => t.key === activeTab);
+
   // --- Render ---
   const taskCount = useMemo(() => {
     const subs = hierarchy.flatMap((m) => m.subtasks);
@@ -1396,23 +1416,39 @@ export default function Dashboard({
       {/* ===== Log Progress Button ===== */}
       <button
         onClick={() => setShowLogModal(true)}
-        className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm shadow-primary/10 transition-all duration-200 hover:shadow-md hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+        className="flex w-full shrink-0 items-center justify-center gap-2.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/15 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 hover:shadow-primary/20 active:translate-y-0 active:scale-[0.98]"
       >
-        <Flame className="w-4 h-4" />
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary-foreground/15">
+          <Flame className="w-3.5 h-3.5" />
+        </span>
         {t.logProgressButton}
       </button>
 
       {/* ===== Tabs ===== */}
-      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-border/40 bg-muted/50 p-1 h-11">
+      <div className="relative flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-border/40 bg-muted/[0.04] p-1 h-12">
+        {/* Sliding active background indicator */}
+        <div 
+          className="absolute top-1 bottom-1 rounded-[10px] bg-background shadow-sm shadow-black/[0.03] ring-1 ring-border/40"
+          style={{
+            width: 'calc((100% - 16px) / 3)',
+            left: isArabic 
+              ? 'auto' 
+              : `calc(4px + ${activeIndex} * ((100% - 16px) / 3 + 4px))`,
+            right: isArabic 
+              ? `calc(4px + ${activeIndex} * ((100% - 16px) / 3 + 4px))` 
+              : 'auto',
+            transition: 'all 300ms cubic-bezier(0.25, 1, 0.5, 1)'
+          }}
+        />
         {tabItems.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap",
+              "relative z-10 flex-1 min-w-0 flex items-center justify-center gap-2 py-2 px-2 rounded-[10px] text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap active:scale-95",
               activeTab === tab.key
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/30",
+                ? "text-foreground font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/10",
             )}
           >
             <span className="[&_svg]:h-4 [&_svg]:w-4 opacity-80">{tab.icon}</span>
@@ -1421,102 +1457,130 @@ export default function Dashboard({
         ))}
       </div>
 
+      {/* ===== Error Banner ===== */}
+      {fetchError && (
+        <div className="shrink-0 rounded-xl border border-destructive/15 bg-destructive/[0.06] px-4 py-3 text-sm text-destructive shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </span>
+            <span className="font-semibold">{fetchError}</span>
+            <button
+              onClick={() => {
+                setFetchError(null);
+                fetchTasks();
+              }}
+              className="ms-auto rounded-xl bg-destructive/10 px-3 py-1.5 text-xs font-bold hover:bg-destructive/20 transition-colors active:scale-95"
+            >
+              {isArabic ? "إعادة المحاولة" : "Retry"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ===== Tab Content ===== */}
       <div
         className={cn(
-          "min-h-0 flex-1 rounded-2xl border border-border/40 bg-card/20 p-3 sm:p-4 shadow-sm shadow-black/[0.02]",
+          "min-h-0 flex-1 rounded-2xl border border-border/40 bg-card/20 p-3.5 sm:p-5 shadow-[0_1px_3px_-1px_rgba(0,0,0,0.02)]",
           activeTab === "chart"
             ? "scrollbar-hide relative z-0 touch-pan-y overflow-y-scroll overscroll-contain pb-24 [-webkit-overflow-scrolling:touch] sm:pb-4"
             : "overflow-hidden",
         )}
       >
         {activeTab === "focus" && (
-          <FocusTab
-            language={language}
-            isArabic={isArabic}
-            dailyFocus={dailyFocus}
-            dailyFocusHistory={dailyFocusHistory}
-            missedDailyFocusHistory={missedDailyFocusHistory}
-            dailyFocusLoading={dailyFocusLoading}
-            dailyFocusSubmitting={dailyFocusSubmitting}
-            dailyFocusAddingSuggestionId={addingSuggestionId}
-            dailyFocusError={dailyFocusError}
-            dailyFocusAnswer={dailyFocusAnswer}
-            filteredHierarchy={filteredHierarchy}
-            hierarchy={hierarchy}
-            loadingTasks={loadingTasks}
-            focusStats={focusStats}
-            expandedMains={expandedMains}
-            addingMain={addingMain}
-            addingSubFor={addingSubFor}
-            newMainText={newMainText}
-            newMainFreq={newMainFreq}
-            newMainWeight={newMainWeight}
-            newMainColor={newMainColor}
-            newMainAccent={newMainAccent}
-            newSubText={newSubText}
-            newSubFreq={newSubFreq}
-            newSubWeight={newSubWeight}
-            editingTaskId={editingTaskId}
-            editingText={editingText}
-            isChecked={isChecked}
-            isCompletedToday={isCompletedToday}
-            shouldAnimateTask={shouldAnimateTask}
-            onToggleExpand={toggleExpand}
-            onToggleCheckin={toggleCheckin}
-            onOpenNewMainComposer={openNewMainComposer}
-            onCloseNewMainComposer={closeNewMainComposer}
-            onAddMain={handleAddMain}
-            onStartAddingSub={handleStartAddingSub}
-            onCancelAddingSub={() => setAddingSubFor(null)}
-            onAddSub={handleAddSub}
-            onStartEditingTask={handleStartEditingTask}
-            onCancelEditingTask={() => setEditingTaskId(null)}
-            onRenameTask={handleRenameTask}
-            onDeleteTask={handleDeleteTask}
-            onUpdateTaskIcon={handleUpdateTaskIcon}
-            onUpdateTaskColor={handleUpdateTaskColor}
-            onUpdateTaskWeight={handleUpdateTaskWeight}
-            onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
-            onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
-            onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
-            onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
-            onSetNewMainText={setNewMainText}
-            onSetNewMainFreq={setNewMainFreq}
-            onSetNewMainWeight={setNewMainWeight}
-            onSetNewMainColor={setNewMainColor}
-            onSetNewSubText={setNewSubText}
-            onSetNewSubFreq={setNewSubFreq}
-            onSetNewSubWeight={setNewSubWeight}
-            onSetEditingText={setEditingText}
-          />
+          <div className="h-full min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out-quart">
+            <FocusTab
+              language={language}
+              isArabic={isArabic}
+              dailyFocus={dailyFocus}
+              dailyFocusHistory={dailyFocusHistory}
+              missedDailyFocusHistory={missedDailyFocusHistory}
+              dailyFocusLoading={dailyFocusLoading}
+              dailyFocusSubmitting={dailyFocusSubmitting}
+              dailyFocusAddingSuggestionId={addingSuggestionId}
+              dailyFocusError={dailyFocusError}
+              dailyFocusAnswer={dailyFocusAnswer}
+              filteredHierarchy={filteredHierarchy}
+              hierarchy={hierarchy}
+              loadingTasks={loadingTasks}
+              focusStats={focusStats}
+              expandedMains={expandedMains}
+              addingMain={addingMain}
+              addingSubFor={addingSubFor}
+              newMainText={newMainText}
+              newMainFreq={newMainFreq}
+              newMainWeight={newMainWeight}
+              newMainColor={newMainColor}
+              newMainAccent={newMainAccent}
+              newSubText={newSubText}
+              newSubFreq={newSubFreq}
+              newSubWeight={newSubWeight}
+              editingTaskId={editingTaskId}
+              editingText={editingText}
+              isChecked={isChecked}
+              isCompletedToday={isCompletedToday}
+              shouldAnimateTask={shouldAnimateTask}
+              onToggleExpand={toggleExpand}
+              onToggleCheckin={toggleCheckin}
+              onOpenNewMainComposer={openNewMainComposer}
+              onCloseNewMainComposer={closeNewMainComposer}
+              onAddMain={handleAddMain}
+              onStartAddingSub={handleStartAddingSub}
+              onCancelAddingSub={() => setAddingSubFor(null)}
+              onAddSub={handleAddSub}
+              onStartEditingTask={handleStartEditingTask}
+              onCancelEditingTask={() => setEditingTaskId(null)}
+              onRenameTask={handleRenameTask}
+              onDeleteTask={handleDeleteTask}
+              onUpdateTaskIcon={handleUpdateTaskIcon}
+              onUpdateTaskColor={handleUpdateTaskColor}
+              onUpdateTaskWeight={handleUpdateTaskWeight}
+              onSetDailyFocusAnswer={handleDailyFocusAnswerChange}
+              onAppendDailyFocusTranscript={handleAppendDailyFocusTranscript}
+              onSubmitDailyFocusAnswer={handleSubmitDailyFocusAnswer}
+              onAddDailyFocusSuggestion={handleAddDailyFocusSuggestion}
+              onSetNewMainText={setNewMainText}
+              onSetNewMainFreq={setNewMainFreq}
+              onSetNewMainWeight={setNewMainWeight}
+              onSetNewMainColor={setNewMainColor}
+              onSetNewSubText={setNewSubText}
+              onSetNewSubFreq={setNewSubFreq}
+              onSetNewSubWeight={setNewSubWeight}
+              onSetEditingText={setEditingText}
+            />
+          </div>
         )}
 
         {activeTab === "chart" && (
-          <div className="scrollbar-thin min-h-full space-y-3">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem] md:items-stretch">
-              <div className="w-full min-w-0 md:flex md:min-h-0">
-                <GrowthChart
-                  data={chartData}
-                  language={language}
-                  fillHeight
-                  className="w-full"
-                />
+          <div className="h-full min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out-quart">
+            <div className="scrollbar-thin min-h-full space-y-3">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem] md:items-stretch">
+                <div className="w-full min-w-0 md:flex md:min-h-0">
+                  <GrowthChart
+                    data={chartData}
+                    language={language}
+                    fillHeight
+                    className="w-full"
+                  />
+                </div>
+                <div className="w-full min-w-0 md:flex">
+                  <DayCalendarGrid
+                    logs={logs}
+                    goalStartDate={goal.created_at}
+                    language={language}
+                    loading={!logsLoaded}
+                  />
+                </div>
               </div>
-              <div className="w-full min-w-0 md:flex">
-                <DayCalendarGrid
-                  logs={logs}
-                  goalStartDate={goal.created_at}
-                  language={language}
-                />
-              </div>
+              <TaskInsights goalId={goal.id} tasks={tasks} language={language} />
             </div>
-            <TaskInsights goalId={goal.id} tasks={tasks} language={language} />
           </div>
         )}
 
         {activeTab === "challenge" && (
-          <div className="h-full min-h-0 overflow-hidden">
+          <div className="h-full min-h-0 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out-quart">
             <ChallengeTab
               goalId={goal.id}
               currentPoints={goal.current_points}

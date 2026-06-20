@@ -3,12 +3,11 @@
 import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Sun, Moon, Globe, Target, Bell, BellOff, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2, Send, MessageCircle, Clock, CircleHelp, CheckCircle2, Bot, Plus, ChevronDown, ChevronUp, RefreshCw
+    Sun, Moon, Globe, Target, Flame, Crown, LogOut, User, Camera, Trash2, ScrollText, Download, Loader2
 } from 'lucide-react';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
-import { isNotificationsEnabled, setNotificationsEnabled, getNotificationPermission } from '@/hooks/useStreakReminder';
 import { getIconComponent } from '@/components/goal/IconPicker';
 import { buildTaskHierarchy, type TaskRow } from '@/lib/task-hierarchy';
 import {
@@ -67,113 +66,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
     const [totalLogs, setTotalLogs] = useState(0);
     const [maxStreak, setMaxStreak] = useState(0);
     const [signingOut, setSigningOut] = useState(false);
-    const [notifEnabled, setNotifEnabled] = useState(false);
-    const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
     const [isManifestoOpen, setIsManifestoOpen] = useState(false);
-
-    // Telegram state
-    const [telegramLinked, setTelegramLinked] = useState(false);
-    const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
-    const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null);
-    const [telegramLinkCode, setTelegramLinkCode] = useState<string | null>(null);
-    const [telegramLoading, setTelegramLoading] = useState(false);
-    const [telegramGuideOpen, setTelegramGuideOpen] = useState(false);
-    const [telegramError, setTelegramError] = useState<string | null>(null);
-    const [telegramRefreshing, setTelegramRefreshing] = useState(false);
-
-    // Per-goal reminders state
-    interface GoalReminder {
-        id: string;
-        goal_id: string;
-        reminder_time: string;
-        reminder_count: number;
-        enabled: boolean;
-    }
-    const [goalReminders, setGoalReminders] = useState<GoalReminder[]>([]);
-    const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
-
-    const getLocalTimezone = () => {
-        if (typeof Intl === 'undefined') return 'UTC';
-        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    };
-
-    const persistTelegramPreferences = async (updates: Record<string, unknown> = {}) => {
-        try {
-            await fetch('/api/telegram/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    timezone: getLocalTimezone(),
-                    language,
-                    ...updates,
-                }),
-            });
-        } catch (error) {
-            console.error('Error saving Telegram preferences:', error);
-        }
-    };
-
-    const fetchGoalReminders = async () => {
-        try {
-            const res = await fetch('/api/goal-reminders');
-            if (res.ok) {
-                const data = await res.json();
-                setGoalReminders(data.data || []);
-            }
-        } catch (error) {
-            console.error('Error fetching goal reminders:', error);
-        }
-    };
-
-    const handleAddGoalReminder = async (goalId: string) => {
-        try {
-            const res = await fetch('/api/goal-reminders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    goalId,
-                    reminderTime: '21:00',
-                    reminderCount: 3,
-                    timezone: getLocalTimezone(),
-                }),
-            });
-            if (res.ok) {
-                await fetchGoalReminders();
-            }
-        } catch (error) {
-            console.error('Error adding goal reminder:', error);
-        }
-    };
-
-    const handleUpdateGoalReminder = async (id: string, updates: Partial<GoalReminder>) => {
-        try {
-            const res = await fetch('/api/goal-reminders', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id,
-                    ...updates,
-                    timezone: updates.reminder_time ? getLocalTimezone() : undefined,
-                }),
-            });
-            if (res.ok) {
-                await fetchGoalReminders();
-            }
-        } catch (error) {
-            console.error('Error updating goal reminder:', error);
-        }
-    };
-
-    const handleDeleteGoalReminder = async (id: string) => {
-        try {
-            const res = await fetch(`/api/goal-reminders?id=${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setGoalReminders(prev => prev.filter(r => r.id !== id));
-            }
-        } catch (error) {
-            console.error('Error deleting goal reminder:', error);
-        }
-    };
 
     // Profile state
     const [displayName, setDisplayName] = useState('');
@@ -185,8 +78,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         if (typeof window === 'undefined') return;
         const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
         if (savedTheme) setTheme(savedTheme);
-        setNotifEnabled(isNotificationsEnabled());
-        setNotifPermission(getNotificationPermission());
         fetchStats();
     }, []);
 
@@ -245,96 +136,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         }
     };
 
-    const fetchTelegramStatus = useCallback(async (showLoader = false) => {
-        if (showLoader) setTelegramRefreshing(true);
-        try {
-            const res = await fetch('/api/telegram/status');
-            if (res.ok) {
-                const data = await res.json();
-                setTelegramLinked(data.linked);
-                setTelegramUsername(data.username);
-                if (data.linked) {
-                    setTelegramDeepLink(null);
-                    setTelegramLinkCode(null);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching Telegram status:', error);
-        } finally {
-            if (showLoader) setTelegramRefreshing(false);
-        }
-    }, []);
-
-    const handleGenerateTelegramLink = async () => {
-        setTelegramLoading(true);
-        setTelegramError(null);
-        setTelegramGuideOpen(true);
-        try {
-            const res = await fetch('/api/telegram/link', { method: 'POST' });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setTelegramError(
-                    data.error ||
-                    (isArabic
-                        ? 'تعذر إنشاء رابط تيليغرام. تأكد من إعدادات البوت وحاول مرة ثانية.'
-                        : 'Could not create the Telegram link. Check bot setup and try again.')
-                );
-                return;
-            }
-            if (res.ok) {
-                setTelegramDeepLink(data.deepLink);
-                setTelegramLinkCode(data.code);
-            }
-        } catch (error) {
-            console.error('Error generating Telegram link:', error);
-            setTelegramError(
-                isArabic
-                    ? 'صار خطأ أثناء الاتصال بالسيرفر.'
-                    : 'A server connection error happened.'
-            );
-        } finally {
-            setTelegramLoading(false);
-        }
-    };
-
-    const handleDisconnectTelegram = async () => {
-        setTelegramLoading(true);
-        try {
-            const res = await fetch('/api/telegram/disconnect', { method: 'POST' });
-            if (res.ok) {
-                setTelegramLinked(false);
-                setTelegramUsername(null);
-                setTelegramDeepLink(null);
-                setTelegramLinkCode(null);
-            }
-        } catch (error) {
-            console.error('Error disconnecting Telegram:', error);
-        } finally {
-            setTelegramLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        fetchTelegramStatus();
-        fetchGoalReminders();
-        persistTelegramPreferences();
-    }, []);
-
-    useEffect(() => {
-        if (!telegramGuideOpen || telegramLinked || !telegramDeepLink) return;
-
-        let checks = 0;
-        const intervalId = window.setInterval(async () => {
-            checks += 1;
-            await fetchTelegramStatus(false);
-            if (checks >= 30) {
-                window.clearInterval(intervalId);
-            }
-        }, 2000);
-
-        return () => window.clearInterval(intervalId);
-    }, [fetchTelegramStatus, telegramDeepLink, telegramGuideOpen, telegramLinked]);
 
     const handleThemeChange = (newTheme: 'light' | 'dark') => {
         setTheme(newTheme);
@@ -351,7 +152,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         localStorage.setItem('language', lang);
         document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
         document.documentElement.setAttribute('lang', lang);
-        void persistTelegramPreferences({ language: lang });
     };
 
     const handleSignOut = async () => {
@@ -360,16 +160,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
         window.location.href = '/login';
     };
 
-    const handleToggleNotifications = async () => {
-        if (notifEnabled) {
-            await setNotificationsEnabled(false);
-            setNotifEnabled(false);
-        } else {
-            const granted = await setNotificationsEnabled(true);
-            setNotifEnabled(granted);
-            setNotifPermission(getNotificationPermission());
-        }
-    };
 
     const handleDisplayNameSave = async () => {
         if (!user) return;
@@ -656,137 +446,31 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                 open={isManifestoOpen}
                 onOpenChange={setIsManifestoOpen}
             />
-            <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
-                <DialogContent
-                    className="max-h-[90dvh] overflow-y-auto w-[95vw] sm:max-w-lg gap-0 p-0 rounded-2xl sm:rounded-[22px]"
-                    dir={isArabic ? 'rtl' : 'ltr'}
-                >
-                    {/* Header */}
-                    <div className={`${isArabic ? 'text-right' : 'text-left'} p-5 sm:p-6 border-b border-border/40`}>
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/[0.08] border border-cyan-500/15">
-                            <Bot className="h-5 w-5 text-cyan-600" />
-                        </div>
-                        <DialogTitle className="text-lg sm:text-xl font-bold">
-                            {isArabic ? 'ربط تيليغرام مع METRIX' : 'Connect Telegram to METRIX'}
-                        </DialogTitle>
-                        <DialogDescription className="mt-1.5 text-sm leading-relaxed text-muted-foreground/80">
-                            {isArabic
-                                ? 'اربط حسابك حتى تصلك رسالة تأكيد داخل البوت، وبعدها تذكيرات الأهداف عند الحاجة.'
-                                : 'Link your account to receive a confirmation message in the bot, then goal reminders when needed.'}
-                        </DialogDescription>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-5 sm:p-6 space-y-4">
-                        {telegramError && (
-                            <div className="rounded-xl border border-destructive/15 bg-destructive/[0.04] px-4 py-3 text-xs font-semibold leading-5 text-destructive">
-                                {telegramError}
-                            </div>
-                        )}
-
-                        {telegramLinked ? (
-                            /* Linked state */
-                            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4 sm:p-5">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500/[0.08] border border-emerald-500/15">
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                                    </div>
-                                    <p className="text-sm font-bold text-foreground">
-                                        {isArabic ? 'تم الربط بنجاح' : 'Successfully Linked'}
-                                    </p>
-                                </div>
-                                <p className="text-xs leading-relaxed text-muted-foreground">
-                                    {isArabic
-                                        ? `تيليغرام مربوط الآن${telegramUsername ? ` بحساب @${telegramUsername}` : ''}. رسالة التأكيد وصلت داخل البوت.`
-                                        : `Telegram is linked${telegramUsername ? ` to @${telegramUsername}` : ''}. The confirmation message was sent inside the bot.`}
-                                </p>
-                            </div>
-                        ) : (
-                            /* Steps */
-                            <div className="rounded-xl border border-border/50 bg-card/40 p-4 sm:p-5">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-cyan-500/[0.08] border border-cyan-500/15">
-                                        <MessageCircle className="h-5 w-5 text-cyan-600" />
-                                    </div>
-                                    <p className="text-sm font-bold text-foreground">
-                                        {isArabic ? 'خطوات الربط' : 'Connection Steps'}
-                                    </p>
-                                </div>
-
-                                <div className="space-y-0">
-                                    {[
-                                        isArabic ? 'افتح البوت من الزر بالأسفل.' : 'Open the bot from the button below.',
-                                        isArabic ? 'اضغط Start داخل تيليغرام.' : 'Tap Start inside Telegram.',
-                                        isArabic ? 'راح توصلك رسالة تأكيد داخل البوت، والموقع يحدّث الحالة تلقائياً.' : 'The bot sends a confirmation, and this page updates automatically.',
-                                    ].map((text, i) => (
-                                        <div key={i} className={`flex items-start gap-3 py-2.5 ${i < 2 ? 'border-b border-border/30' : ''}`}>
-                                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] border border-primary/10 text-[11px] font-bold text-primary/70 mt-0.5">
-                                                {i + 1}
-                                            </div>
-                                            <p className={`text-xs leading-5 text-muted-foreground ${isArabic ? 'text-right' : 'text-left'} flex-1 pt-0.5`}>
-                                                {text}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {telegramLinkCode && (
-                                    <div className="mt-4 rounded-xl border border-border/50 bg-background/70 px-4 py-3">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                            {isArabic ? 'كود الربط' : 'Link code'}
-                                        </p>
-                                        <p className="font-mono text-base font-bold tracking-[0.2em] text-foreground select-all">
-                                            {telegramLinkCode}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex-col sm:flex-row items-stretch sm:items-center gap-2.5 border-t border-border/40 px-5 sm:px-6 py-4 bg-muted/[0.03]">
-                        {telegramDeepLink && !telegramLinked && (
-                            <a
-                                href={telegramDeepLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 active:scale-[0.97] sm:flex-1"
-                            >
-                                <Send className="h-4 w-4 shrink-0" />
-                                {t.openInTelegram}
-                            </a>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setTelegramError(null);
-                                fetchTelegramStatus(true);
-                            }}
-                            disabled={telegramLoading || telegramRefreshing}
-                            className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-muted/40 active:scale-[0.97] disabled:opacity-50 sm:flex-1"
-                        >
-                            {telegramRefreshing ? (
-                                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            ) : (
-                                <RefreshCw className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                            )}
-                            {isArabic ? 'تحديث الحالة' : 'Refresh status'}
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             <div className="bg-card/40 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-[22px] border border-border/60 shadow-sm shadow-black/[0.02] flex-1 flex flex-col min-h-0">
                 {/* Tabs */}
-                <div className="flex gap-1 mb-3 p-1 rounded-xl bg-muted/50 border border-border/40 h-11">
+                <div className="relative flex gap-1 mb-3 p-1 rounded-xl bg-muted/50 border border-border/40 h-11">
+                    {/* Sliding active background indicator */}
+                    <div 
+                        className="absolute top-1 bottom-1 rounded-lg bg-background shadow-sm ring-1 ring-border/50"
+                        style={{
+                            width: 'calc((100% - 12px) / 2)',
+                            left: isArabic 
+                              ? 'auto' 
+                              : `calc(4px + ${activeTab === 'profile' ? 1 : 0} * ((100% - 12px) / 2 + 4px))`,
+                            right: isArabic 
+                              ? `calc(4px + ${activeTab === 'profile' ? 1 : 0} * ((100% - 12px) / 2 + 4px))` 
+                              : 'auto',
+                            transition: 'all 300ms cubic-bezier(0.25, 1, 0.5, 1)'
+                        }}
+                    />
                     <button
                         onClick={() => setActiveTab('general')}
                         className={cn(
-                            "flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                            "relative z-10 flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 active:scale-95",
                             activeTab === 'general'
-                                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                ? "text-foreground font-bold"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <Globe className="w-4 h-4 opacity-80" />
@@ -795,10 +479,10 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                     <button
                         onClick={() => setActiveTab('profile')}
                         className={cn(
-                            "flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                            "relative z-10 flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 active:scale-95",
                             activeTab === 'profile'
-                                ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                ? "text-foreground font-bold"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <User className="w-4 h-4 opacity-80" />
@@ -808,7 +492,7 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
 
                 <ScrollArea className="flex-1 min-h-0 pr-1" dir={isArabic ? 'rtl' : 'ltr'}>
                     {activeTab === 'general' ? (
-                    <>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out-quart">
                     <div className="bg-card/40 rounded-2xl border border-border/60 overflow-hidden divide-y divide-border/40 shadow-sm shadow-black/[0.02]">
                         {/* Appearance */}
                         <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/5 transition-colors">
@@ -877,220 +561,6 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                                 </button>
                             </div>
                         </div>
-
-                        {/* Notifications */}
-                        <div className="p-3 sm:p-4 flex flex-row items-center justify-between gap-3 hover:bg-muted/5 transition-colors">
-                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className={cn("shrink-0 w-8 h-8 rounded-[10px] border flex items-center justify-center transition-colors", notifEnabled ? "bg-primary/[0.08] border-primary/10" : "bg-muted/40 border-border/30")}>
-                                    {notifEnabled ? <Bell className="w-3.5 h-3.5 text-primary" /> : <BellOff className="w-3.5 h-3.5 text-muted-foreground" />}
-                                </div>
-                                <p className="font-bold text-foreground text-sm">{t.notifications}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                {notifPermission === 'unsupported' ? (
-                                    <span className="text-[10px] text-muted-foreground/60 font-medium bg-muted/30 px-2 py-0.5 rounded-full">{t.notificationsUnsupported}</span>
-                                ) : notifPermission === 'denied' ? (
-                                    <span className="text-[10px] text-destructive/70 font-medium bg-destructive/[0.06] px-2 py-0.5 rounded-full">{t.notificationsBlocked}</span>
-                                ) : (
-                                    <button
-                                        onClick={handleToggleNotifications}
-                                        className={cn(
-                                            "relative w-9 h-5 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30",
-                                            notifEnabled ? "bg-primary" : "bg-muted-foreground/30"
-                                        )}
-                                        role="switch"
-                                        aria-checked={notifEnabled}
-                                        title={notifEnabled ? t.notificationsEnabled : t.notificationsDisabled}
-                                    >
-                                        <span className={cn(
-                                            "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300",
-                                            notifEnabled ? "inset-inline-end-0.5" : "inset-inline-start-0.5"
-                                        )} />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Per-Goal Reminders */}
-                        <div className="p-3 sm:p-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
-                                    <Clock className="w-3.5 h-3.5 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-foreground text-sm">{t.goalReminders}</p>
-                                    <p className="text-[10px] text-muted-foreground/80">{t.goalRemindersDesc}</p>
-                                </div>
-                                <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[160px] sm:max-w-none">
-                                    <span className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap",
-                                        notifEnabled
-                                            ? "border-primary/15 bg-primary/[0.06] text-primary"
-                                            : "border-border bg-muted/30 text-muted-foreground"
-                                    )}>
-                                        {isArabic ? 'المتصفح' : 'Browser'}
-                                    </span>
-                                    <span className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap",
-                                        telegramLinked
-                                            ? "border-emerald-500/15 bg-emerald-500/[0.06] text-emerald-700 dark:text-emerald-300"
-                                            : "border-border bg-muted/30 text-muted-foreground"
-                                    )}>
-                                        {telegramLinked ? (isArabic ? 'متصل' : 'Linked') : (isArabic ? 'غير متصل' : 'Off')}
-                                    </span>
-                                </div>
-                            </div>
-                            {!telegramLinked && notifPermission !== 'granted' && (
-                                <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.03] px-3 py-2.5 text-[11px] font-medium leading-5 text-muted-foreground">
-                                    {isArabic
-                                        ? 'اربط تيليغرام حتى تصلك التذكيرات داخل البوت إذا إشعارات المتصفح غير متاحة.'
-                                        : 'Link Telegram to receive reminders in the bot when browser notifications are unavailable.'}
-                                </div>
-                            )}
-
-                            <div className="mt-3 space-y-2.5">
-                                {goals.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center gap-2 py-6 text-muted-foreground/60">
-                                        <Target className="w-5 h-5 opacity-50" />
-                                        <p className="text-xs font-medium">{t.noGoalsProfileHint}</p>
-                                    </div>
-                                ) : (
-                                    goals.map((goal) => {
-                                        const GoalIcon = getIconComponent(goal.icon || 'Target');
-                                        const remindersForGoal = goalReminders.filter((r) => r.goal_id === goal.id);
-                                        const reminderCount = remindersForGoal.length;
-                                        const isExpanded = expandedGoalId === goal.id;
-
-                                        return (
-                                            <div
-                                                key={goal.id}
-                                                className="rounded-xl border border-border/60 bg-card p-3 transition-all duration-200 hover:border-border/80 hover:shadow-sm hover:-translate-y-px active:translate-y-0 dark:bg-card/50"
-                                            >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex min-w-0 items-center gap-2.5">
-                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/[0.08] border border-primary/10">
-                                                            <GoalIcon className="h-4 w-4 text-primary" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <h4 className="truncate text-sm font-bold text-foreground">
-                                                                {goal.title}
-                                                            </h4>
-                                                            <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                                                {reminderCount === 0
-                                                                    ? (isArabic ? 'لم تضف تذكيرات بعد' : 'No reminders set')
-                                                                    : isArabic
-                                                                        ? `${reminderCount} ${reminderCount === 1 ? 'تذكير' : 'تذكيرات'}`
-                                                                        : `${reminderCount} ${reminderCount === 1 ? 'reminder' : 'reminders'}`}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setExpandedGoalId((prev) =>
-                                                                prev === goal.id ? null : goal.id,
-                                                            )
-                                                        }
-                                                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-foreground"
-                                                        aria-label={isArabic ? 'تبديل عرض الأوقات' : 'Toggle reminder times'}
-                                                    >
-                                                        {isExpanded ? (
-                                                            <ChevronUp className="h-4 w-4" />
-                                                        ) : (
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        )}
-                                                    </button>
-                                                </div>
-
-                                                {isExpanded && (
-                                                    <div className="mt-3 pt-3 border-t border-border/30">
-                                                        {reminderCount === 0 ? (
-                                                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-muted-foreground/60">
-                                                                <Clock className="w-5 h-5 opacity-40" />
-                                                                <p className="text-[11px] text-center">
-                                                                    {isArabic
-                                                                        ? 'لا توجد أوقات مضافة. أضف وقتاً جديداً.'
-                                                                        : 'No reminder times added. Add a new time below.'}
-                                                                </p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="space-y-1.5">
-                                                                {remindersForGoal.map((reminder) => (
-                                                                    <div
-                                                                        key={reminder.id}
-                                                                        className="grid h-9 grid-cols-[minmax(0,1fr)_80px_28px] sm:grid-cols-[minmax(0,1fr)_92px_30px] items-center gap-0.5 sm:gap-1 rounded-lg border border-border/50 bg-background/70 p-0.5"
-                                                                    >
-                                                                        <div className="flex h-8 min-w-0 items-center gap-1 rounded-md bg-background/80 px-2">
-                                                                            <Clock className="h-3 w-3 shrink-0 text-muted-foreground/60" />
-                                                                            <Input
-                                                                                type="time"
-                                                                                value={reminder.reminder_time}
-                                                                                onChange={(e) =>
-                                                                                    handleUpdateGoalReminder(reminder.id, {
-                                                                                        reminder_time: e.target.value,
-                                                                                    })
-                                                                                }
-                                                                                aria-label={isArabic ? 'وقت التذكير' : 'Reminder time'}
-                                                                                className="h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs font-semibold shadow-none focus-visible:ring-0"
-                                                                            />
-                                                                        </div>
-                                                                        <Select
-                                                                            value={String(reminder.reminder_count)}
-                                                                            onValueChange={(value) =>
-                                                                                handleUpdateGoalReminder(reminder.id, {
-                                                                                    reminder_count: Number(value),
-                                                                                })
-                                                                            }
-                                                                        >
-                                                                            <SelectTrigger
-                                                                                size="sm"
-                                                                                aria-label={isArabic ? 'عدد التذكيرات' : 'Reminder attempts'}
-                                                                                className="h-8 w-full border-border/50 bg-background/80 px-2 text-xs font-semibold shadow-none"
-                                                                            >
-                                                                                <SelectValue />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                {[1, 2, 3, 4, 5].map((n) => (
-                                                                                    <SelectItem key={n} value={String(n)}>
-                                                                                        {n} {t.times}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="ghost"
-                                                                            size="icon-xs"
-                                                                            onClick={() => handleDeleteGoalReminder(reminder.id)}
-                                                                            className="h-8 w-[30px] text-destructive/70 hover:bg-destructive/[0.08] hover:text-destructive"
-                                                                            title={isArabic ? 'حذف' : 'Remove'}
-                                                                        >
-                                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                                        </Button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        <Button
-                                                            type="button"
-                                                            variant="secondary"
-                                                            size="sm"
-                                                            onClick={() => handleAddGoalReminder(goal.id)}
-                                                            className="mt-2.5 h-8 w-full bg-primary/[0.08] text-xs font-semibold text-primary hover:bg-primary/15 border border-primary/10"
-                                                        >
-                                                            <Plus className="me-1 h-3 w-3" />
-                                                            {t.addTime}
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
                     </div>
 
                     {/* Matrix Story */}
@@ -1111,76 +581,9 @@ export default function SettingsPage({ user, language, setLanguage, goals, onPro
                             </button>
                         </div>
                     </div>
-
-                    {/* Telegram Bot */}
-                    <div className="mt-3 rounded-2xl border border-border/60 bg-card/30 p-3 sm:p-4 shadow-sm shadow-black/[0.02]">
-                        <div className="flex items-center gap-2.5">
-                            <div className="shrink-0 w-8 h-8 rounded-[10px] bg-primary/[0.08] border border-primary/10 flex items-center justify-center">
-                                <MessageCircle className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="font-bold text-foreground text-sm leading-tight">{t.telegramBot}</p>
-                                <p className="text-[10px] text-muted-foreground/80 line-clamp-1">{t.telegramBotDesc}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon-sm"
-                                    onClick={() => setTelegramGuideOpen(true)}
-                                    className="bg-background/70 text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground border-border/50"
-                                    title={isArabic ? 'شرح الربط' : 'Connection guide'}
-                                >
-                                    <CircleHelp className="h-3.5 w-3.5" />
-                                </Button>
-                                {telegramLinked ? (
-                                    <div className="flex max-w-[140px] sm:max-w-[200px] items-center overflow-hidden rounded-lg border border-border/60 bg-background/80">
-                                        <span className="min-w-0 flex-1 truncate border-e border-border/40 px-2 text-[11px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                            {telegramUsername ? `@${telegramUsername}` : t.telegramConnected}
-                                        </span>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={handleDisconnectTelegram}
-                                            disabled={telegramLoading}
-                                            className="h-8 shrink-0 rounded-none px-1.5 sm:px-2 text-[11px] sm:text-xs font-semibold text-destructive/70 hover:bg-destructive/[0.08] hover:text-destructive"
-                                        >
-                                            {telegramLoading ? '...' : t.disconnectTelegram}
-                                        </Button>
-                                    </div>
-                                ) : telegramDeepLink ? (
-                                    <Button
-                                        asChild
-                                        size="sm"
-                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-semibold"
-                                    >
-                                        <a
-                                        href={telegramDeepLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        >
-                                            <Send className="w-3 h-3" />
-                                            <span className="hidden sm:inline">{t.openInTelegram}</span>
-                                        </a>
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={handleGenerateTelegramLink}
-                                        disabled={telegramLoading}
-                                        className="h-8 shrink-0 px-2 text-[11px] sm:text-xs font-semibold"
-                                    >
-                                        {telegramLoading ? '...' : t.connectTelegram}
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
                     </div>
-                    </>
                 ) : (
-                    <div className="space-y-4 px-0.5 py-0.5 sm:px-1">
+                    <div className="space-y-4 px-0.5 py-0.5 sm:px-1 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out-quart">
                         {/* Profile section */}
                         <section className="space-y-3">
                             {profileMessage && (

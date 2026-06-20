@@ -1,8 +1,6 @@
 'use client';
 
 import { MatrixManifestoDialog } from '@/components/login/MatrixManifestoDialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -10,18 +8,11 @@ import Image from 'next/image';
 
 const MANIFESTO_STORAGE_KEY = 'metrix-login-manifesto-seen';
 
-type EmailAuthMode = 'signin' | 'signup';
-
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [isManifestoOpen, setIsManifestoOpen] = useState(false);
-  const [emailAuthMode, setEmailAuthMode] = useState<EmailAuthMode>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailAuthLoading, setEmailAuthLoading] = useState(false);
-  const [emailAuthError, setEmailAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -56,91 +47,9 @@ export default function LoginPage() {
     }
   };
 
-  const redirectAfterAuth = () => {
-    router.push('/');
-    router.refresh();
-  };
-
-  const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setEmailAuthError(null);
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
-      setEmailAuthError('أدخل البريد الإلكتروني وكلمة المرور');
-      return;
-    }
-
-    if (password.length < 6) {
-      setEmailAuthError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-      return;
-    }
-
-    setEmailAuthLoading(true);
-
-    try {
-      if (emailAuthMode === 'signup') {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-
-        if (signUpError) {
-          setEmailAuthError(signUpError.message);
-          return;
-        }
-
-        if (signUpData.session) {
-          redirectAfterAuth();
-          return;
-        }
-
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-
-        if (signInError) {
-          setEmailAuthError(
-            'تم إنشاء الحساب. إذا كان تأكيد البريد مفعّلاً في Supabase، افتح رابط التأكيد ثم سجّل الدخول.'
-          );
-          return;
-        }
-
-        if (signInData.session) {
-          redirectAfterAuth();
-        }
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
-
-      if (error) {
-        setEmailAuthError(
-          error.message.includes('Invalid login credentials')
-            ? 'البريد أو كلمة المرور غير صحيحة'
-            : error.message
-        );
-        return;
-      }
-
-      if (data.session) {
-        redirectAfterAuth();
-      }
-    } finally {
-      setEmailAuthLoading(false);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center justify-center animate-pulse gap-4">
           <div className="w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
         </div>
@@ -149,10 +58,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4"
-    >
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <MatrixManifestoDialog
         open={isManifestoOpen}
         onOpenChange={setIsManifestoOpen}
@@ -211,118 +117,6 @@ export default function LoginPage() {
               </svg>
               <span>تسجيل الدخول باستخدام جوجل</span>
             </button>
-
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">أو</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            <section
-              aria-labelledby="temp-email-auth-heading"
-              className="space-y-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h2
-                  id="temp-email-auth-heading"
-                  className="text-sm font-semibold text-foreground"
-                >
-                  بريد إلكتروني وكلمة مرور
-                </h2>
-                <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                  مؤقت
-                </span>
-              </div>
-
-              <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmailAuthMode('signin');
-                    setEmailAuthError(null);
-                  }}
-                  className={`flex-1 rounded-md py-2 text-xs font-medium transition-colors ${
-                    emailAuthMode === 'signin'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  تسجيل الدخول
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmailAuthMode('signup');
-                    setEmailAuthError(null);
-                  }}
-                  className={`flex-1 rounded-md py-2 text-xs font-medium transition-colors ${
-                    emailAuthMode === 'signup'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  إنشاء حساب
-                </button>
-              </div>
-
-              <form onSubmit={handleEmailAuth} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="login-email">البريد الإلكتروني</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    autoComplete="email"
-                    dir="ltr"
-                    className="text-start"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={emailAuthLoading}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="login-password">كلمة المرور</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    autoComplete={
-                      emailAuthMode === 'signup' ? 'new-password' : 'current-password'
-                    }
-                    dir="ltr"
-                    className="text-start"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={emailAuthLoading}
-                    minLength={6}
-                    required
-                  />
-                </div>
-
-                {emailAuthError ? (
-                  <p className="text-xs text-destructive" role="alert">
-                    {emailAuthError}
-                  </p>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={emailAuthLoading}
-                  className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {emailAuthLoading
-                    ? 'جاري المعالجة...'
-                    : emailAuthMode === 'signup'
-                      ? 'إنشاء حساب في قاعدة البيانات'
-                      : 'تسجيل الدخول'}
-                </button>
-              </form>
-
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                الحساب يُنشأ في Supabase Auth (قاعدة البيانات) بنفس طريقة حساب جوجل.
-              </p>
-            </section>
 
             <button
               type="button"

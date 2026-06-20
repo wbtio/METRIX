@@ -38,6 +38,7 @@ interface DayCalendarGridProps {
   logs: Log[];
   goalStartDate: string;
   language?: Language;
+  loading?: boolean;
 }
 
 interface CalendarCell {
@@ -85,6 +86,7 @@ export default function DayCalendarGrid({
   logs,
   goalStartDate,
   language = "en",
+  loading = false,
 }: DayCalendarGridProps) {
   const isArabic = language === "ar";
   const labels = {
@@ -324,14 +326,40 @@ export default function DayCalendarGrid({
     setIsMonthPickerOpen(false);
   };
 
+  if (loading) {
+    return (
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-transparent bg-card/35 p-1 shadow-sm backdrop-blur-xl sm:p-2">
+        <div className="rounded-lg border border-border/45 bg-background/45 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-1">
+          <div className="flex items-center gap-0.5" dir="ltr">
+            <div className="h-7 w-7 shrink-0 rounded-lg bg-muted/40 animate-pulse" />
+            <div className="mx-auto h-4 w-24 rounded-md bg-muted/40 animate-pulse" />
+            <div className="h-7 w-7 shrink-0 rounded-lg bg-muted/40 animate-pulse" />
+          </div>
+        </div>
+        <div className="mt-1 flex flex-1 flex-col sm:mt-1.5">
+          <div className="mb-1 grid grid-cols-7 gap-0.5 rounded-lg border border-border/35 bg-muted/10 p-0.5 sm:mb-1.5 sm:gap-1">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-5 rounded-md bg-muted/30 animate-pulse sm:h-6" />
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1 flex-1">
+            {Array.from({ length: 42 }).map((_, i) => (
+              <div key={i} className="h-6 rounded-md bg-muted/20 animate-pulse min-[390px]:h-7 min-[500px]:h-8 md:aspect-square md:h-auto" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
-        className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-transparent bg-card/35 p-1 shadow-sm backdrop-blur-xl sm:p-2"
+        className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border/40 bg-card/40 p-1.5 shadow-[0_1px_3px_-1px_rgba(0,0,0,0.03)] backdrop-blur-xl sm:p-2.5 dark:shadow-[0_1px_3px_-1px_rgba(0,0,0,0.15)]"
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <div className="rounded-lg border border-border/45 bg-background/45 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-1">
-          <div className="flex items-center gap-0.5" dir="ltr">
+        <div className="rounded-xl border border-border/40 bg-background/50 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-1.5">
+          <div className="flex items-center gap-1" dir="ltr">
             <button
               type="button"
               onClick={() => {
@@ -466,7 +494,7 @@ export default function DayCalendarGrid({
                 return (
                   <div
                     key={`blank-${index}`}
-                    className="h-6 rounded-md bg-transparent min-[390px]:h-7 min-[500px]:h-8 md:aspect-square md:h-auto"
+                    className="h-6 rounded-lg bg-transparent min-[390px]:h-7 min-[500px]:h-8 md:aspect-square md:h-auto"
                   />
                 );
               }
@@ -503,23 +531,23 @@ export default function DayCalendarGrid({
                   }}
                   onMouseLeave={() => setTooltip(null)}
                   className={cn(
-                    "group relative h-6 rounded-md border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-1 focus-visible:ring-offset-card min-[390px]:h-7 min-[500px]:h-8 md:aspect-square md:h-auto",
+                    "group relative h-6 rounded-lg border text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1 focus-visible:ring-offset-card min-[390px]:h-7 min-[500px]:h-8 md:aspect-square md:h-auto",
                     day.isBeforeStart || day.isAfterToday
-                      ? "border-border/35 bg-muted/10 text-muted-foreground/35"
+                      ? "border-border/30 bg-muted/[0.08] text-muted-foreground/30"
                       : heatClass(activityValue, monthStats.peakActivity, day.hasLogs),
-                    day.isToday && !isSelected && !day.hasLogs && "shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.18)]",
+                    day.isToday && !isSelected && !day.hasLogs && "ring-2 ring-primary/20 ring-inset shadow-sm",
                     isSelectable &&
-                      "hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-sm",
+                      "hover:-translate-y-0.5 hover:bg-primary/8 hover:shadow-md hover:shadow-primary/10 active:scale-95",
                     isSelected &&
-                      "scale-[1.02] brightness-95",
+                      "scale-[1.02] brightness-95 ring-2 ring-primary/30 ring-inset",
                     day.badge === "strong" &&
                       !day.isBeforeStart &&
                       !day.isAfterToday &&
-                      "shadow-none",
+                      "shadow-sm shadow-chart-2/20",
                     day.badge === "exceptional" &&
                       !day.isBeforeStart &&
                       !day.isAfterToday &&
-                      "shadow-none",
+                      "shadow-md shadow-chart-5/20",
                   )}
                   aria-label={`${day.date} ${day.logCount > 0 ? `${day.logCount} ${labels.logs}` : labels.noActivity}${badgeLabel ? ` ${badgeLabel}` : ""}`}
                 >
@@ -527,7 +555,7 @@ export default function DayCalendarGrid({
                     className={cn(
                       "absolute left-1 top-0.5 text-[10px] font-bold leading-none min-[390px]:top-1 min-[390px]:text-[11px] sm:left-1.5 sm:top-1.5 sm:text-xs",
                       day.isBeforeStart || day.isAfterToday
-                        ? "text-muted-foreground/40"
+                        ? "text-muted-foreground/35"
                         : day.hasLogs
                           ? day.logCount >= 3
                             ? "text-primary-foreground drop-shadow-sm"
@@ -541,12 +569,12 @@ export default function DayCalendarGrid({
                   {day.hasLogs && !day.isBeforeStart && !day.isAfterToday && (
                     <span
                       className={cn(
-                        "absolute bottom-0.5 right-1 h-1 w-1 rounded-full opacity-80 min-[390px]:bottom-1 sm:bottom-1.5 sm:right-1.5 sm:h-1.5 sm:w-1.5",
+                        "absolute bottom-0.5 right-1 h-1.5 w-1.5 rounded-full opacity-90 min-[390px]:bottom-1 sm:bottom-1.5 sm:right-1.5 sm:h-2 sm:w-2 ring-2 ring-background",
                         day.badge === "exceptional"
                           ? "bg-chart-5 dark:bg-chart-3"
                           : day.badge === "strong"
                             ? "bg-chart-2"
-                            : "bg-foreground/80 dark:bg-foreground/90",
+                            : "bg-foreground/70 dark:bg-foreground/80",
                       )}
                     />
                   )}
@@ -603,7 +631,7 @@ export default function DayCalendarGrid({
 
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-[200] whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-[11px] text-popover-foreground shadow-md"
+          className="pointer-events-none fixed z-[200] whitespace-nowrap rounded-xl border border-border/50 bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg shadow-black/10"
           style={{
             left: tooltip.x,
             top: tooltip.y,
@@ -622,24 +650,24 @@ export default function DayCalendarGrid({
 
       {selectedDate && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-background/70 p-0 backdrop-blur-sm sm:p-4 lg:items-center"
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-background/60 p-0 backdrop-blur-md sm:p-4 lg:items-center"
           onClick={() => setSelectedDate(null)}
         >
           <div
-            className="relative flex max-h-[calc(100dvh-0.75rem-env(safe-area-inset-bottom))] w-full max-w-none flex-col overflow-hidden rounded-t-[20px] border border-border bg-card shadow-2xl sm:max-h-[85vh] sm:w-[min(calc(100vw-2rem),28rem)] sm:rounded-[22px] lg:w-[min(calc(100vw-3rem),42rem)] lg:max-w-2xl lg:rounded-2xl"
+            className="relative flex max-h-[calc(100dvh-0.75rem-env(safe-area-inset-bottom))] w-full max-w-none flex-col overflow-hidden rounded-t-[24px] border border-border/60 bg-card shadow-2xl shadow-black/10 sm:max-h-[85vh] sm:w-[min(calc(100vw-2rem),28rem)] sm:rounded-[24px] lg:w-[min(calc(100vw-3rem),42rem)] lg:max-w-2xl lg:rounded-2xl"
             onClick={(event) => event.stopPropagation()}
             dir={isArabic ? "rtl" : "ltr"}
           >
-            <div className="flex justify-center py-2">
-              <div className="h-1 w-9 rounded-full bg-muted-foreground/20" />
+            <div className="flex justify-center py-3">
+              <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
             </div>
 
-            <div className="flex items-start justify-between gap-3 border-b border-border px-3 pb-2.5 sm:px-4 sm:pb-3">
+            <div className="flex items-start justify-between gap-4 border-b border-border/40 px-4 pb-3 sm:px-5 sm:pb-4">
               <div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                   {labels.dayDetail}
                 </p>
-                <p className="mt-0.5 text-[13px] font-bold text-foreground sm:text-sm">
+                <p className="mt-1 text-[15px] font-extrabold text-foreground sm:text-base">
                   {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(
                     locale,
                     {
@@ -652,7 +680,7 @@ export default function DayCalendarGrid({
                 {selectedDayBadgeLabel && (
                   <div
                     className={cn(
-                      "mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1",
+                      "mt-2.5 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1",
                       selectedDayBadge === "exceptional"
                         ? "bg-chart-5/12 text-chart-5 ring-chart-5/20 dark:bg-chart-3/12 dark:text-chart-3 dark:ring-chart-3/20"
                         : "bg-chart-2/12 text-chart-2 ring-chart-2/20",
@@ -663,10 +691,10 @@ export default function DayCalendarGrid({
                 )}
               </div>
 
-              <div className="flex shrink-0 items-center gap-2 pt-1">
+              <div className="flex shrink-0 items-center gap-2.5 pt-1">
                 {selectedLogs.length > 0 && (
-                  <div className="flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20">
-                    <Flame className="h-3 w-3" />
+                  <div className="flex items-center gap-1.5 rounded-xl bg-primary/[0.1] px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/20 shadow-sm">
+                    <Flame className="h-3.5 w-3.5" />
                     <span>
                       +
                       {formatNumberEn(
@@ -681,18 +709,18 @@ export default function DayCalendarGrid({
                 <button
                   type="button"
                   onClick={() => setSelectedDate(null)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted/60 hover:text-foreground active:scale-95"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:space-y-2.5 sm:p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-3.5 sm:p-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
               {selectedLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground sm:py-12">
-                  <CalendarDays className="h-8 w-8 opacity-20" />
-                  <span className="text-sm">{labels.noLogsForDay}</span>
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground sm:py-14">
+                  <CalendarDays className="h-10 w-10 opacity-25" />
+                  <span className="text-sm font-semibold">{labels.noLogsForDay}</span>
                 </div>
               ) : (
                 selectedLogs
@@ -718,10 +746,10 @@ export default function DayCalendarGrid({
                     return (
                       <div
                         key={log.id}
-                        className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3.5"
+                        className="space-y-2.5 rounded-xl border border-border/40 bg-muted/[0.04] p-4 shadow-sm transition-all duration-200 hover:border-border/60 hover:shadow-md"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-medium text-muted-foreground">
+                          <span className="text-[11px] font-bold text-muted-foreground/70">
                             {new Date(log.created_at).toLocaleTimeString(
                               locale,
                               {
@@ -730,8 +758,8 @@ export default function DayCalendarGrid({
                               },
                             )}
                           </span>
-                          <div className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary ring-1 ring-primary/15">
-                            <Star className="h-2.5 w-2.5 fill-current" />
+                          <div className="flex items-center gap-1.5 rounded-xl bg-primary/[0.08] px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20 shadow-sm">
+                            <Star className="h-3 w-3 fill-current" />
                             <span>
                               +{formatNumberEn(log.ai_score ?? 0)}
                             </span>
@@ -741,7 +769,7 @@ export default function DayCalendarGrid({
                         {performanceLabel && (
                           <div
                             className={cn(
-                              "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1",
+                              "inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 shadow-sm",
                               performanceMeta?.performance_tier ===
                                 "exceptional"
                                 ? "bg-chart-5/12 text-chart-5 ring-chart-5/20 dark:bg-chart-3/12 dark:text-chart-3 dark:ring-chart-3/20"
@@ -757,7 +785,7 @@ export default function DayCalendarGrid({
                         )}
 
                         <p
-                          className="text-sm font-medium leading-relaxed text-foreground"
+                          className="text-sm font-semibold leading-relaxed text-foreground"
                           dir={inputRTL ? "rtl" : "ltr"}
                           style={{ textAlign: inputRTL ? "right" : "left" }}
                         >
@@ -765,8 +793,8 @@ export default function DayCalendarGrid({
                         </p>
 
                         {log.ai_feedback && (
-                          <div className="flex items-start gap-2 border-t border-border/40 pt-2 text-[11px] text-muted-foreground">
-                            <MessageSquare className="mt-0.5 h-3 w-3 shrink-0 text-primary/60" />
+                          <div className="flex items-start gap-2.5 border-t border-border/30 pt-2.5 text-xs text-muted-foreground/80">
+                            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/50" />
                             <p
                               className="italic leading-relaxed"
                               dir={feedbackRTL ? "rtl" : "ltr"}

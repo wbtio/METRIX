@@ -1,0 +1,23 @@
+{
+  "id": "f43ac451",
+  "phase": "discarded",
+  "pageUrl": "/",
+  "sourceFile": "src/components/progress/ProgressLogDialog.tsx",
+  "expectedVariants": 3,
+  "arrivedVariants": 3,
+  "visibleVariant": 2,
+  "paramValues": {
+    "hover-intensity": 0.5,
+    "border-style": "glass"
+  },
+  "pendingEventSeq": null,
+  "pendingEvent": null,
+  "deliveryLease": null,
+  "checkpointRevision": 4,
+  "activeOwner": "b3cf0ca7",
+  "sourceMarkers": {},
+  "fallbackMode": null,
+  "annotationArtifacts": [],
+  "diagnostics": [],
+  "updatedAt": "2026-05-24T15:11:15.651Z"
+}

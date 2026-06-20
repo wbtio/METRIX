@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Loader2,
     CheckCircle,
@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { translations, type Language } from '@/lib/translations';
 import { createClient } from '@/utils/supabase/client';
+import { Slider } from '@/components/ui/slider';
 
 interface GoalCreatorPageProps {
     initialGoalText: string;
@@ -142,6 +143,27 @@ export default function GoalCreatorPage({
     const [refusedMessage, setRefusedMessage] = useState<string | null>(null);
 
     const [expandedMainTasks, setExpandedMainTasks] = useState<Record<number, boolean>>({});
+
+    const [tunerDuration, setTunerDuration] = useState<number>(90);
+    const [tunerDifficulty, setTunerDifficulty] = useState<'easy' | 'medium' | 'hard' | 'expert' | 'legendary'>('medium');
+
+    const tunerPoints = useMemo(() => {
+        const multipliers = {
+            easy: 50,
+            medium: 100,
+            hard: 150,
+            expert: 200,
+            legendary: 250,
+        };
+        const multiplier = multipliers[tunerDifficulty] || 100;
+        return Math.max(1000, tunerDuration * multiplier);
+    }, [tunerDuration, tunerDifficulty]);
+
+    useEffect(() => {
+        if (planResult?.plan?.estimated_total_days) {
+            setTunerDuration(Number(planResult.plan.estimated_total_days) || 90);
+        }
+    }, [planResult]);
 
     useEffect(() => {
         const shouldGuard = !guardDismissed && (
@@ -336,8 +358,8 @@ export default function GoalCreatorPage({
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            const targetPoints = 10000;
-            const totalDays = Math.max(1, Number(planResult.plan?.estimated_total_days) || 90);
+            const targetPoints = tunerPoints;
+            const totalDays = tunerDuration;
             const adjustedCompletionDate = new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000).toISOString();
 
             const goalTitle = planResult.plan?.goal_summary || initialGoalText.trim();
@@ -665,7 +687,6 @@ export default function GoalCreatorPage({
             ? planResult.main_tasks
             : ensurePlanHasMainTasks(planResult);
 
-        const totalDays = planResult?.plan?.estimated_total_days || 90;
         const dailyTasks = mainTasks.flatMap(m =>
             (m.subtasks || []).filter(s => s.frequency === 'daily')
         );
@@ -681,8 +702,12 @@ export default function GoalCreatorPage({
             >
                 {renderNotification()}
 
-                {/* Plan header */}
-                <div className="rounded-2xl border border-border bg-card/40 px-5 py-5 space-y-3">
+                {/* Plan header & Tuner Panel */}
+                <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-card/60 via-card/85 to-primary/5 backdrop-blur-md shadow-lg transition-all duration-300 hover:shadow-xl hover:border-primary/30 p-6 space-y-6 relative overflow-hidden">
+                    {/* Background decorative glowing element */}
+                    <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
                     <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                             <Target className="w-5 h-5 text-primary" />
@@ -699,28 +724,165 @@ export default function GoalCreatorPage({
                         </div>
                     </div>
 
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-2 pt-1">
-                        <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 text-primary mb-1">
-                                <CalendarDays className="w-3.5 h-3.5" />
+                    <hr className="border-border/60" />
+
+                    {/* Plan Tuner Controls */}
+                    <div className="space-y-6">
+                        {/* Plan Tuner Header */}
+                        <div className="flex items-center gap-3">
+                            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/20">
+                                <Zap className="size-4 animate-pulse" />
+                            </span>
+                            <div>
+                                <h3 className="text-sm font-bold text-foreground">
+                                    {isArabic ? 'مُعدّل الخطة الديناميكي' : 'Dynamic Plan Tuner'}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    {isArabic ? 'اضبط المدة ومستوى الصعوبة لتعديل إجمالي النقاط المستهدفة' : 'Fine-tune your timeline and difficulty to calculate custom effort points'}
+                                </p>
                             </div>
-                            <p className="font-bold text-base text-foreground">{totalDays}</p>
-                            <p className="text-[10px] text-muted-foreground">{isArabic ? 'يوم' : 'days'}</p>
                         </div>
-                        <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 text-cyan-700 dark:text-cyan-400 mb-1">
-                                <Repeat className="w-3.5 h-3.5" />
+
+                        {/* Dynamic Points Display */}
+                        <div className="relative group rounded-2xl bg-muted/30 border border-border/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden">
+                            <div className="space-y-1 text-center sm:text-left rtl:sm:text-right">
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    {isArabic ? 'إجمالي نقاط الهدف' : 'Total Goal Points'}
+                                </span>
+                                <div className="flex items-center justify-center sm:justify-start gap-1 text-[10px] text-muted-foreground">
+                                    <span>{tunerDuration} {isArabic ? 'يوم' : 'days'}</span>
+                                    <span>×</span>
+                                    <span>
+                                        {tunerDifficulty === 'easy' ? '50' : tunerDifficulty === 'medium' ? '100' : tunerDifficulty === 'hard' ? '150' : tunerDifficulty === 'expert' ? '200' : '250'} {isArabic ? 'نقطة/يوم' : 'pts/day'}
+                                    </span>
+                                </div>
                             </div>
-                            <p className="font-bold text-base text-foreground">{dailyTasks.length}</p>
-                            <p className="text-[10px] text-muted-foreground">{isArabic ? 'يومي' : 'daily'}</p>
+                            <div className="relative flex items-center justify-center min-w-[130px] py-1.5 px-4 rounded-xl bg-gradient-to-r from-primary/10 to-indigo-500/10 border border-primary/25 shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
+                                <span className="text-lg sm:text-xl font-black text-primary tracking-tight">
+                                    {tunerPoints.toLocaleString()} {isArabic ? 'نقطة' : 'pts'}
+                                </span>
+                            </div>
                         </div>
-                        <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 text-violet-600 dark:text-violet-400 mb-1">
-                                <ListTodo className="w-3.5 h-3.5" />
+
+                        {/* Timeline Slider */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold flex items-center gap-2">
+                                    <Clock className="size-4 text-muted-foreground" />
+                                    {isArabic ? 'المدة الزمنية للهدف' : 'Goal Timeline'}
+                                </span>
+                                <span className="font-bold text-xs bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full">
+                                    {tunerDuration} {isArabic ? 'يوم' : 'days'}
+                                </span>
                             </div>
-                            <p className="font-bold text-base text-foreground">{weeklyTasks.length}</p>
-                            <p className="text-[10px] text-muted-foreground">{isArabic ? 'أسبوعي' : 'weekly'}</p>
+                            <Slider
+                                min={7}
+                                max={365}
+                                step={1}
+                                value={[tunerDuration]}
+                                onValueChange={([val]) => setTunerDuration(val)}
+                                className="py-2"
+                            />
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                <span>7 {isArabic ? 'أيام' : 'days'}</span>
+                                <span className="flex items-center gap-1.5 font-medium text-foreground bg-muted/40 px-2 py-0.5 rounded-md border border-border/30">
+                                    <CalendarDays className="size-3.5 text-muted-foreground" />
+                                    {isArabic ? 'تاريخ الإنجاز المتوقع:' : 'Estimated completion:'} {' '}
+                                    {new Date(Date.now() + tunerDuration * 24 * 60 * 60 * 1000).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                                <span>365 {isArabic ? 'يوم' : 'days'}</span>
+                            </div>
+                        </div>
+
+                        {/* Difficulty Gamified Tiers */}
+                        <div className="space-y-3">
+                            <span className="text-sm font-semibold flex items-center gap-2">
+                                <Zap className="size-4 text-muted-foreground" />
+                                {isArabic ? 'مستوى الصعوبة والالتزام' : 'Difficulty & Commitment Level'}
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                {(['easy', 'medium', 'hard', 'expert', 'legendary'] as const).map((tier) => {
+                                    const active = tunerDifficulty === tier;
+                                    const tierMeta = {
+                                        easy: {
+                                            labelEn: 'Easy',
+                                            labelAr: 'سهل',
+                                            rate: '50/d',
+                                            classes: 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+                                            activeClasses: 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.35)] dark:text-emerald-950 dark:font-bold'
+                                        },
+                                        medium: {
+                                            labelEn: 'Medium',
+                                            labelAr: 'متوسط',
+                                            rate: '100/d',
+                                            classes: 'border-sky-500/20 text-sky-600 dark:text-sky-400',
+                                            activeClasses: 'bg-sky-500 text-white border-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.35)] dark:text-sky-950 dark:font-bold'
+                                        },
+                                        hard: {
+                                            labelEn: 'Hard',
+                                            labelAr: 'صعب',
+                                            rate: '150/d',
+                                            classes: 'border-amber-500/20 text-amber-600 dark:text-amber-400',
+                                            activeClasses: 'bg-amber-500 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.35)] dark:text-amber-950 dark:font-bold'
+                                        },
+                                        expert: {
+                                            labelEn: 'Expert',
+                                            labelAr: 'خبير',
+                                            rate: '200/d',
+                                            classes: 'border-rose-500/20 text-rose-600 dark:text-rose-400',
+                                            activeClasses: 'bg-rose-500 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.35)] dark:text-rose-950 dark:font-bold'
+                                        },
+                                        legendary: {
+                                            labelEn: 'Legendary',
+                                            labelAr: 'أسطوري',
+                                            rate: '250/d',
+                                            classes: 'border-purple-500/20 text-purple-600 dark:text-purple-400',
+                                            activeClasses: 'bg-purple-500 text-white border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.35)] dark:text-purple-950 dark:font-bold'
+                                        }
+                                    }[tier];
+
+                                    return (
+                                        <button
+                                            key={tier}
+                                            type="button"
+                                            onClick={() => setTunerDifficulty(tier)}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center p-2.5 rounded-xl border bg-card/40 transition-all duration-300 hover:scale-[1.03] select-none",
+                                                active ? tierMeta.activeClasses : cn("border-border hover:bg-muted/40 hover:border-border/80", tierMeta.classes)
+                                            )}
+                                        >
+                                            <span className="text-xs font-bold leading-none">
+                                                {isArabic ? tierMeta.labelAr : tierMeta.labelEn}
+                                            </span>
+                                            <span className={cn("text-[9px] font-medium mt-1 leading-none opacity-80", active ? "text-white dark:text-emerald-950" : "text-muted-foreground")}>
+                                                {tierMeta.rate}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Habits & Milestones Stats Row */}
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div className="rounded-xl bg-muted/30 border border-border/50 px-3 py-2.5 text-center flex flex-col items-center justify-center">
+                                <div className="flex items-center gap-1.5 text-cyan-700 dark:text-cyan-400 mb-1">
+                                    <Repeat className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] text-muted-foreground font-semibold uppercase">{isArabic ? 'عادات يومية' : 'Daily Habits'}</span>
+                                </div>
+                                <p className="font-bold text-base text-foreground">{dailyTasks.length}</p>
+                            </div>
+                            <div className="rounded-xl bg-muted/30 border border-border/50 px-3 py-2.5 text-center flex flex-col items-center justify-center">
+                                <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400 mb-1">
+                                    <ListTodo className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] text-muted-foreground font-semibold uppercase">{isArabic ? 'مهام أسبوعية' : 'Weekly Milestones'}</span>
+                                </div>
+                                <p className="font-bold text-base text-foreground">{weeklyTasks.length}</p>
+                            </div>
                         </div>
                     </div>
                 </div>

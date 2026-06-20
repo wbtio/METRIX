@@ -145,8 +145,8 @@ export default function DailyFocusQuestionDialog({
                 <>
                   <p
                     className={cn(
-                      "whitespace-pre-line text-base font-semibold leading-7 text-foreground sm:text-[1.0625rem] sm:leading-relaxed",
-                      "text-start",
+                      "whitespace-pre-line text-[15px] font-semibold leading-8 text-foreground sm:text-base sm:leading-8",
+                      "text-start break-words",
                     )}
                   >
                     {dailyFocus?.question || t.dailyFocusUnavailable}
