@@ -73,8 +73,8 @@ export default function Home() {
   // Background check for streaks at risk → browser notification
   useStreakReminder(language);
 
-  // Deep link listener for Capacitor OAuth callback (when app is already running)
-  useCapacitorAuth(() => {
+  // Deep link listener for Capacitor OAuth callback + cold-start launch URL check
+  const { checkLaunchUrl } = useCapacitorAuth(() => {
     const refresh = async () => {
       const {
         data: { user: u },
@@ -160,6 +160,11 @@ export default function Home() {
 
   useEffect(() => {
     const initData = async () => {
+      // Cold-start: check if app was launched from a deep link (OAuth callback)
+      if (isNativeApp()) {
+        await checkLaunchUrl();
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -181,18 +186,7 @@ export default function Home() {
     };
 
     initData();
-  }, [fetchGoals, router, supabase]);
-
-  // Keep access token in sync with auth state changes
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAccessToken(session?.access_token ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, [fetchGoals, router, supabase, checkLaunchUrl]);
 
   // Load persisted language from localStorage after hydration
   useEffect(() => {

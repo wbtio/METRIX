@@ -7,6 +7,15 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code');
   const origin = requestUrl.origin;
 
+  // Mobile app flow: redirect back to the app via deep link WITHOUT exchanging the code.
+  // The app exchanges it itself (it has the PKCE code_verifier in its localStorage).
+  const isNative = requestUrl.searchParams.get('native') === '1';
+  if (isNative && code) {
+    const deepLink = `com.metrix.app://auth?code=${encodeURIComponent(code)}`;
+    return NextResponse.redirect(deepLink);
+  }
+
+  // Web flow: exchange code for session and redirect home
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(

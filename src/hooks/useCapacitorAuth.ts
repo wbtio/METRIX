@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { isNativeApp, setAccessToken } from "@/lib/api";
+import { checkLaunchUrl, setupAppUrlOpenListener } from "@/lib/deep-link-auth";
 
 export function useCapacitorAuth(onAuthSuccess?: () => void) {
   const supabase = createClient();
@@ -15,7 +16,7 @@ export function useCapacitorAuth(onAuthSuccess?: () => void) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "com.metrix.app://auth",
+          redirectTo: "https://metrix-beryl-zeta.vercel.app/auth/callback?native=1",
           skipBrowserRedirect: true,
         },
       });
@@ -39,42 +40,28 @@ export function useCapacitorAuth(onAuthSuccess?: () => void) {
     }
   }, [supabase]);
 
+  // Set up appUrlOpen listener for warm-start deep links
   useEffect(() => {
     if (!isNativeApp()) return;
 
-    let listener: { remove: () => void } | undefined;
+    let cleanup: (() => void) | undefined;
+    setupAppUrlOpenListener(() => onAuthSuccessRef.current?.()).then((fn) => {
+      cleanup = fn;
+    });
 
-    (async () => {
-      const { App } = await import("@capacitor/app");
-      listener = await App.addListener(
-        "appUrlOpen",
-        async ({ url }: { url: string }) => {
-          try {
-            const parsed = new URL(url);
-            const code = parsed.searchParams.get("code");
-            if (code) {
-              const { data, error } =
-                await supabase.auth.exchangeCodeForSession(code);
-              if (error) {
-                console.error("Code exchange error:", error.message);
-                return;
-              }
-              if (data.session?.access_token) {
-                setAccessToken(data.session.access_token);
-              }
-              onAuthSuccessRef.current?.();
-            }
-          } catch (e) {
-            console.error("Deep link parse error:", e);
-          }
-        },
-      );
-    })();
+    return () => cleanup?.();
+  }, []);
 
-    return () => {
-      listener?.remove();
-    };
+  // Keep access token in sync with auth state changes
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, [supabase]);
 
-  return { signInWithGoogle };
+  return { signInWithGoogle, checkLaunchUrl };
 }
