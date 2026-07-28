@@ -80,7 +80,7 @@ npm run dev
 
 **Muntadhar Ahmed Jawad**
 - 📧 Email: [muntzr557@gmail.com](mailto:muntzr557@gmail.com)
-- 📱 Phone / WhatsApp: +964 787 629 4108 *(add your full number)*
+- 📱 Phone / WhatsApp: +964 787 629 4108 
 - 🌐 Brand: **wbtio**
 - 📍 Basra, Iraq 🇮🇶
 
